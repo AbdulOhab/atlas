@@ -7,7 +7,8 @@
 /* ---------------------------------------------------------------------------
    Theme tokens. Dark is the default because this is long-form night reading;
    light exists for daylight. Accents encode section membership:
-   teal = concept module, violet = technology, amber = design. They are never
+   teal = concept module, violet = technology, amber = design, blue = coding,
+   pink = learn. They are never decorative.
    decorative.
 --------------------------------------------------------------------------- */
 
@@ -36,6 +37,8 @@
   --tech-soft: rgba(91, 70, 184, 0.1);
   --coding: #1f6fb2;
   --coding-soft: rgba(31, 111, 178, 0.1);
+  --learn: #b0487c;
+  --learn-soft: rgba(176, 72, 124, 0.1);
 
   /* Status tones for HTTP method and status badges. */
   --tone-green: #1a7f4e;
@@ -87,6 +90,8 @@
   --tech-soft: rgba(173, 148, 247, 0.12);
   --coding: #6cb2ee;
   --coding-soft: rgba(108, 178, 238, 0.12);
+  --learn: #ef8fc0;
+  --learn-soft: rgba(239, 143, 192, 0.12);
 
   --tone-green: #5cc98f;
   --tone-green-soft: rgba(92, 201, 143, 0.1);
@@ -354,7 +359,8 @@
 html.section-collapsed-concepts [data-section="concepts"] [data-section-body],
 html.section-collapsed-tech [data-section="tech"] [data-section-body],
 html.section-collapsed-designs [data-section="designs"] [data-section-body],
-html.section-collapsed-coding [data-section="coding"] [data-section-body] {
+html.section-collapsed-coding [data-section="coding"] [data-section-body],
+html.section-collapsed-learn [data-section="learn"] [data-section-body] {
   display: none;
 }
 

@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ThemeScript } from "@/components/layout/ThemeScript";
 import "./globals.css";
 
-const SITE_URL = "https://atlas-sysdes.vercel.app";
+const SITE_URL = "https://github.com/AbdulOhab/atlas";
 const DESCRIPTION =
   "Concept modules and worked system design problems, with architecture diagrams and trade-offs.";
 
@@ -18,8 +18,7 @@ export const metadata: Metadata = {
   },
   description: DESCRIPTION,
   applicationName: "System Design Atlas",
-  authors: [{ name: "Mert Kahyaoğlu", url: "https://github.com/mertkahyaoglu" }],
-  creator: "Mert Kahyaoğlu",
+  authors: [{ name: "AbdulOhab", url: "https://github.com/AbdulOhab" }],
   keywords: [
     "system design",
     "system design interview",

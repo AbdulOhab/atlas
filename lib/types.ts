@@ -1,7 +1,7 @@
-export type DocGroup = "concept" | "design" | "tech" | "coding";
+export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn";
 
-/** The two halves of the atlas, each with its own route: /docs and /coding. */
-export type Track = "sysdesign" | "coding";
+/** The three halves of the atlas, each with its own route: /docs, /coding and /learn. */
+export type Track = "sysdesign" | "coding" | "learn";
 
 /** Facets used by the filter bar. Kept as a union so new facets fail loudly. */
 export type TagKind = "concept" | "tech" | "pattern";
@@ -30,6 +30,10 @@ export interface DocMeta {
   hardPart?: string;
   /** Technology pages only: the two-word role, e.g. "Event log". */
   role?: string;
+  /** Learn docs only: which family the topic belongs to. */
+  category?: string;
+  /** Learn docs only: the source site's difficulty badge. */
+  level?: string;
   tags: string[];
   /** Coding docs only: id of the animated visualisation above the body. */
   viz?: string;
@@ -89,6 +93,104 @@ export interface CodingDetails {
   followUps: FollowUp[];
 }
 
+/** One row of a learn doc's Python structures table. */
+export interface LearnStructureOp {
+  op: string;
+  code: string;
+  cost: string;
+}
+
+export interface LearnStructure {
+  concept: string;
+  /** What you actually reach for in Python. */
+  python: string;
+  /** Other names the interviewer might use. */
+  aliases: string[];
+  declaration: string;
+  ops: LearnStructureOp[];
+}
+
+/** One side of a learn doc's brute-force vs optimized comparison. */
+export interface LearnApproach {
+  name: string;
+  time: string;
+  space: string;
+  quote: string;
+  pros: string[];
+  cons: string[];
+}
+
+/** The brute-force-vs-optimized panel of a learn doc. */
+export interface LearnBrute {
+  title: string;
+  strategy: string;
+  quote: string;
+  brute: LearnApproach;
+  optimized: LearnApproach;
+  tradeoff: string;
+  tip: string;
+  /** The input size the ops comparison is drawn at. */
+  atN?: string;
+}
+
+/** One math idea a learn doc assumes. */
+export interface LearnMathConcept {
+  id: string;
+  title: string;
+  plain: string;
+  visual: string;
+  analogy: string;
+}
+
+/** One step of a learn doc's code walkthrough. */
+export interface LearnWalkthroughStep {
+  title: string;
+  detail: string;
+  math?: string;
+  cost?: string;
+  /** 1-indexed lines of the walkthrough code this step touches. */
+  lines: number[];
+}
+
+export interface LearnWalkthrough {
+  problem: string;
+  tagline: string;
+  time: string;
+  space: string;
+  code: string;
+  steps: LearnWalkthroughStep[];
+}
+
+/** A practice challenge attached to a learn doc. */
+export interface LearnChallenge {
+  title: string;
+  difficulty: string;
+  description: string;
+  hints: string[];
+  optimal?: string;
+}
+
+/** The structured sections of a learn doc, read from frontmatter. */
+export interface LearnDetails {
+  complexity: {
+    best: string;
+    average: string;
+    worst: string;
+    space: string;
+  };
+  /** The same costs, explained in words. */
+  explained?: {
+    time?: string;
+    space?: string;
+    visual?: string;
+  };
+  structures: LearnStructure[];
+  brute?: LearnBrute;
+  math: LearnMathConcept[];
+  walkthrough?: LearnWalkthrough;
+  challenges: LearnChallenge[];
+}
+
 /** The structured sections of a technology doc, read from frontmatter. */
 export interface TechDetails {
   /** The two-word role, repeated from `DocMeta` so the panels are self-contained. */
@@ -133,6 +235,8 @@ export interface Doc extends DocMeta {
   tech?: TechDetails;
   /** Coding docs only, for the same reason. */
   coding?: CodingDetails;
+  /** Learn docs only, for the same reason. */
+  learn?: LearnDetails;
 }
 
 export interface TocEntry {

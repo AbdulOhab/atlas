@@ -15,6 +15,7 @@ interface SidebarProps {
   tech: DocMeta[];
   designs: DocMeta[];
   coding: DocMeta[];
+  learn: DocMeta[];
 }
 
 /** Ids match the `section-collapsed-*` rules in globals.css. */
@@ -46,6 +47,13 @@ const SECTIONS = [
     heading: "Concepts",
     note: "Data structures and algorithms. Read in order — each builds on the last.",
     accent: "var(--coding)",
+  },
+  {
+    id: "learn",
+    track: "learn",
+    heading: "Topics",
+    note: "Visual interview prep, scraped from learningto.co. Read in order — the Big-O page comes first for a reason.",
+    accent: "var(--learn)",
   },
 ] as const satisfies readonly { id: string; track: Track; heading: string; note: string; accent: string }[];
 
@@ -107,7 +115,7 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
   );
 }
 
-export function Sidebar({ concepts, tech, designs, coding }: SidebarProps) {
+export function Sidebar({ concepts, tech, designs, coding, learn }: SidebarProps) {
   const pathname = usePathname();
   const open = useUiStore((s) => s.sidebarOpen);
   const setOpen = useUiStore((s) => s.setSidebarOpen);
@@ -121,9 +129,11 @@ export function Sidebar({ concepts, tech, designs, coding }: SidebarProps) {
     ? pathname.slice("/docs/".length)
     : pathname.startsWith("/coding/")
       ? pathname.slice("/coding/".length)
-      : "";
+      : pathname.startsWith("/learn/")
+        ? pathname.slice("/learn/".length)
+        : "";
 
-  const docsById: Record<SectionId, DocMeta[]> = { concepts, tech, designs, coding };
+  const docsById: Record<SectionId, DocMeta[]> = { concepts, tech, designs, coding, learn };
   const close = () => setOpen(false);
 
   // The store is restored from localStorage before the first client render,

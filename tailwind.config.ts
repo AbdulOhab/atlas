@@ -26,10 +26,12 @@ const config: Config = {
         design: "var(--design)",
         tech: "var(--tech)",
         coding: "var(--coding)",
+        learn: "var(--learn)",
         conceptSoft: "var(--concept-soft)",
         designSoft: "var(--design-soft)",
         techSoft: "var(--tech-soft)",
         codingSoft: "var(--coding-soft)",
+        learnSoft: "var(--learn-soft)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

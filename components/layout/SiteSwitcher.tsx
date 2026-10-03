@@ -21,6 +21,13 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     href: "/coding",
     accent: "var(--coding)",
   },
+  {
+    id: "learn",
+    label: "learn",
+    blurb: "Visual interview prep — costs, math, code, challenges",
+    href: "/learn",
+    accent: "var(--learn)",
+  },
 ];
 
 /** The sidebar logo doubles as the switch between the two halves of the atlas. */

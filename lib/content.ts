@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import matter from "gray-matter";
+import { LEARN_TITLES, slugifyHeading } from "./headings";
 import { parseScript } from "./script";
 import type {
   CodingDetails,
@@ -12,6 +13,11 @@ import type {
   DocMeta,
   FollowUp,
   InterviewScript,
+  LearnChallenge,
+  LearnDetails,
+  LearnMathConcept,
+  LearnStructure,
+  LearnWalkthrough,
   TechDetails,
   TechFact,
   TocEntry,
@@ -24,14 +30,15 @@ const GROUP_DIR: Record<DocGroup, string> = {
   design: "designs",
   tech: "tech",
   coding: "coding",
+  learn: "learn",
 };
 
 /**
  * Reading order of the groups: the ideas, then the tools, then the problems.
- * Coding sits last because it is a separate track with its own route, not a
- * step in the system design sequence.
+ * Coding and learn sit last because they are separate tracks with their own
+ * routes, not steps in the system design sequence.
  */
-const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding"];
+const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn"];
 
 const WORDS_PER_MINUTE = 200;
 
@@ -167,6 +174,155 @@ function codingWordCount(coding: CodingDetails | undefined): number {
   return text.split(/\s+/).filter(Boolean).length;
 }
 
+/** Words shown in the learn panels, counted for the same reason. */
+function learnWordCount(learn: LearnDetails | undefined): number {
+  if (!learn) return 0;
+  const e = learn.explained;
+  const text = [
+    Object.values(learn.complexity).join(" "),
+    e ? Object.values(e).join(" ") : "",
+    ...learn.structures.flatMap((s) => [s.concept, s.python, s.declaration, ...s.aliases, ...s.ops.flatMap((o) => [o.op, o.code, o.cost])]),
+    learn.brute
+      ? [
+          learn.brute.title,
+          learn.brute.strategy,
+          learn.brute.quote,
+          learn.brute.tradeoff,
+          learn.brute.tip,
+          ...[learn.brute.brute, learn.brute.optimized].flatMap((a) => [a.name, a.time, a.space, a.quote, ...a.pros, ...a.cons]),
+        ].join(" ")
+      : "",
+    ...learn.math.flatMap((m) => [m.title, m.plain, m.visual, m.analogy]),
+    learn.walkthrough
+      ? [learn.walkthrough.problem, learn.walkthrough.tagline, learn.walkthrough.code, ...learn.walkthrough.steps.flatMap((s) => [s.title, s.detail, s.math ?? "", s.cost ?? ""])].join(" ")
+      : "",
+    ...learn.challenges.flatMap((c) => [c.title, c.description, ...c.hints, c.optimal ?? ""]),
+  ].join(" ");
+  return text.split(/\s+/).filter(Boolean).length;
+}
+
+/**
+ * Learn docs keep the scraped study material in frontmatter: the big-O strip,
+ * the Python structures, the brute-force comparison, the math prerequisites,
+ * the walkthrough and the practice challenges.
+ */
+function readLearn(slug: string, data: Record<string, unknown>): LearnDetails | undefined {
+  const bigO = (data.bigO ?? {}) as Record<string, unknown>;
+  const explained = (data.explained ?? {}) as Record<string, unknown>;
+  const bruteRaw = (data.brute ?? {}) as Record<string, unknown>;
+
+  const approach = (value: unknown) => {
+    const a = (value ?? {}) as Record<string, unknown>;
+    return {
+      name: String(a.name ?? ""),
+      time: String(a.time ?? ""),
+      space: String(a.space ?? ""),
+      quote: String(a.quote ?? ""),
+      pros: strings(a.pros),
+      cons: strings(a.cons),
+    };
+  };
+
+  const learn: LearnDetails = {
+    complexity: {
+      best: String(bigO.best ?? ""),
+      average: String(bigO.average ?? ""),
+      worst: String(bigO.worst ?? ""),
+      space: String(bigO.space ?? ""),
+    },
+    explained:
+      explained.time || explained.space || explained.visual
+        ? {
+            time: explained.time ? String(explained.time) : undefined,
+            space: explained.space ? String(explained.space) : undefined,
+            visual: explained.visual ? String(explained.visual) : undefined,
+          }
+        : undefined,
+    structures: records<LearnStructure>(data.structures, (item) =>
+      item.concept && item.python
+        ? {
+            concept: String(item.concept),
+            python: String(item.python),
+            aliases: strings(item.aliases),
+            declaration: String(item.declaration ?? ""),
+            ops: records(item.ops, (op) =>
+              op.op && op.code ? { op: String(op.op), code: String(op.code), cost: String(op.cost ?? "") } : null,
+            ),
+          }
+        : null,
+    ),
+    brute:
+      bruteRaw.brute && bruteRaw.optimized
+        ? {
+            title: String(bruteRaw.title ?? ""),
+            strategy: String(bruteRaw.strategy ?? ""),
+            quote: String(bruteRaw.quote ?? ""),
+            brute: approach(bruteRaw.brute),
+            optimized: approach(bruteRaw.optimized),
+            tradeoff: String(bruteRaw.tradeoff ?? ""),
+            tip: String(bruteRaw.tip ?? ""),
+            atN: bruteRaw.atN ? String(bruteRaw.atN) : undefined,
+          }
+        : undefined,
+    math: records<LearnMathConcept>(data.math, (item) =>
+      item.title && item.plain
+        ? {
+            id: String(item.id ?? ""),
+            title: String(item.title),
+            plain: String(item.plain),
+            visual: String(item.visual ?? ""),
+            analogy: String(item.analogy ?? ""),
+          }
+        : null,
+    ),
+    walkthrough: records<LearnWalkthrough>(data.walkthrough ? [data.walkthrough] : [], (item) =>
+      item.problem && item.code
+        ? {
+            problem: String(item.problem),
+            tagline: String(item.tagline ?? ""),
+            time: String(item.time ?? ""),
+            space: String(item.space ?? ""),
+            code: String(item.code),
+            steps: records(item.steps, (step) =>
+              step.title
+                ? {
+                    title: String(step.title),
+                    detail: String(step.detail ?? ""),
+                    math: step.math ? String(step.math) : undefined,
+                    cost: step.cost ? String(step.cost) : undefined,
+                    lines: Array.isArray(step.lines) ? step.lines.map(Number).filter(Number.isFinite) : [],
+                  }
+                : null,
+            ),
+          }
+        : null,
+    ).at(0),
+    challenges: records<LearnChallenge>(data.challenges, (item) =>
+      item.title && item.description
+        ? {
+            title: String(item.title),
+            difficulty: String(item.difficulty ?? ""),
+            description: String(item.description),
+            hints: strings(item.hints),
+            optimal: item.optimal ? String(item.optimal) : undefined,
+          }
+        : null,
+    ),
+  };
+
+  const missing = [
+    !learn.complexity.average && "bigO",
+    learn.structures.length === 0 && "structures",
+    learn.math.length === 0 && "math",
+    learn.challenges.length === 0 && "challenges",
+  ].filter(Boolean);
+  if (missing.length > 0) {
+    console.warn(`[content] ${slug}: learn frontmatter is missing ${missing.join(", ")}`);
+  }
+
+  return learn;
+}
+
 /** Words shown in the design panels, so reading time still counts them. */
 function designWordCount(design: DesignDetails | undefined): number {
   if (!design) return 0;
@@ -210,8 +366,13 @@ function readGroup(group: DocGroup): Doc[] {
       const design = group === "design" ? readDesign(slug, data) : undefined;
       const tech = group === "tech" ? readTech(slug, data) : undefined;
       const coding = group === "coding" ? readCoding(slug, data) : undefined;
+      const learn = group === "learn" ? readLearn(slug, data) : undefined;
       const words =
-        content.split(/\s+/).length + designWordCount(design) + techWordCount(tech) + codingWordCount(coding);
+        content.split(/\s+/).length +
+        designWordCount(design) +
+        techWordCount(tech) +
+        codingWordCount(coding) +
+        learnWordCount(learn);
 
       const doc = {
         slug,
@@ -221,6 +382,8 @@ function readGroup(group: DocGroup): Doc[] {
         summary: String(data.summary ?? ""),
         hardPart: data.hardPart ? String(data.hardPart) : undefined,
         role: data.role ? String(data.role) : undefined,
+        category: data.category ? String(data.category) : undefined,
+        level: data.level ? String(data.level) : undefined,
         tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
         viz: data.viz ? String(data.viz) : undefined,
         readingMinutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)),
@@ -228,6 +391,7 @@ function readGroup(group: DocGroup): Doc[] {
         design,
         tech,
         coding,
+        learn,
       } satisfies Doc;
 
       return [doc];
@@ -253,11 +417,12 @@ export function getDocsByGroup(group: DocGroup): Doc[] {
 }
 
 /**
- * The atlas has two tracks with their own routes: system design under /docs
- * and coding under /coding. Lookups name the track, so a slug that happens to
- * exist in both can never resolve to the wrong page.
+ * The atlas has three tracks with their own routes: system design under /docs,
+ * coding under /coding and learn under /learn. Lookups name the track, so a
+ * slug that happens to exist in two tracks can never resolve to the wrong page.
  */
-const inTrack = (doc: DocMeta, track: Track) => (doc.group === "coding") === (track === "coding");
+const inTrack = (doc: DocMeta, track: Track) =>
+  track === "sysdesign" ? doc.group !== "coding" && doc.group !== "learn" : doc.group === track;
 
 export function getDocsInTrack(track: Track): Doc[] {
   return getAllDocs().filter((doc) => inTrack(doc, track));
@@ -285,7 +450,7 @@ export function getScript(slug: string): InterviewScript | undefined {
 
 /** Strip content so client components receive only what they render. */
 export function toMeta(doc: Doc): DocMeta {
-  const { content: _content, design: _design, tech: _tech, coding: _coding, ...meta } = doc;
+  const { content: _content, design: _design, tech: _tech, coding: _coding, learn: _learn, ...meta } = doc;
   return meta;
 }
 
@@ -308,18 +473,7 @@ export function getSiblings(slug: string, track: Track = "sysdesign"): { prev?: 
 const HEADING = /^(#{2,3})\s+(.+)$/gm;
 const FENCE = /```[\s\S]*?```/g;
 
-/**
- * Mirrors github-slugger (what rehype-slug uses) so anchors generated here
- * match rendered heading ids. Each space becomes its own hyphen, so
- * "API / Model" is `api--model`, not `api-model`.
- */
-export function slugifyHeading(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[`*~]/g, "")
-    .replace(/[^\w\s-]/g, "")
-    .replace(/ /g, "-");
-}
+export { LEARN_TITLES, slugifyHeading };
 
 /** Headings rendered by the design panels, which don't exist in the markdown body. */
 export const DESIGN_OPENING_TITLES = ["Primary concepts and the hard part", "Requirements"] as const;
@@ -370,6 +524,23 @@ export function codingToc(coding: CodingDetails): { opening: TocEntry[]; closing
     closing: [
       ...(coding.pitfalls.length > 0 ? [tocEntry(CODING_TITLES.pitfalls)] : []),
       ...(coding.followUps.length > 0 ? [tocEntry(CODING_TITLES.followUps)] : []),
+    ],
+  };
+}
+
+/** Headings rendered by the learn panels, which bracket the markdown body. */
+
+export function learnToc(learn: LearnDetails): { opening: TocEntry[]; closing: TocEntry[] } {
+  return {
+    opening: [
+      ...(learn.complexity.average ? [tocEntry(LEARN_TITLES.cost)] : []),
+      ...(learn.structures.length > 0 ? [tocEntry(LEARN_TITLES.structures)] : []),
+    ],
+    closing: [
+      ...(learn.brute ? [tocEntry(LEARN_TITLES.brute)] : []),
+      ...(learn.walkthrough ? [tocEntry(LEARN_TITLES.walkthrough)] : []),
+      ...(learn.math.length > 0 ? [tocEntry(LEARN_TITLES.math)] : []),
+      ...(learn.challenges.length > 0 ? [tocEntry(LEARN_TITLES.challenges)] : []),
     ],
   };
 }

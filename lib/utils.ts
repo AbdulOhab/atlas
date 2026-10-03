@@ -25,12 +25,16 @@ export function accentVar(group: DocGroup) {
   return { "--accent": `var(--${group})` } as React.CSSProperties;
 }
 
-/** Where a document lives: the coding track has its own route, everything else is under /docs. */
+/** Where a document lives: the coding and learn tracks have their own routes, everything else is under /docs. */
 export function docHref(doc: Pick<DocMeta, "group" | "slug">) {
-  return doc.group === "coding" ? `/coding/${doc.slug}` : `/docs/${doc.slug}`;
+  if (doc.group === "coding") return `/coding/${doc.slug}`;
+  if (doc.group === "learn") return `/learn/${doc.slug}`;
+  return `/docs/${doc.slug}`;
 }
 
 /** Which half of the atlas a path belongs to — decides what the sidebar lists. */
 export function trackOf(pathname: string): Track {
-  return pathname === "/coding" || pathname.startsWith("/coding/") ? "coding" : "sysdesign";
+  if (pathname === "/coding" || pathname.startsWith("/coding/")) return "coding";
+  if (pathname === "/learn" || pathname.startsWith("/learn/")) return "learn";
+  return "sysdesign";
 }

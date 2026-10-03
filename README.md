@@ -1,7 +1,5 @@
 # System Design Atlas
 
-**[Read it at atlas-sysdes.vercel.app →](https://atlas-sysdes.vercel.app)**
-
 A reading app for system design interviews: concept modules built from the ground
 up, pages on the technologies those designs name, and worked designs with rendered
 architecture diagrams.
@@ -13,14 +11,20 @@ Some designs carry a worked interview script, the same design spoken aloud as a
 45-minute round.
 
 A second track covers the other half of the interview loop. Under
-[/coding](https://atlas-sysdes.vercel.app/coding), thirteen data structures and
+[/coding](/coding), thirteen data structures and
 algorithms — hash tables through dynamic programming — each open with a
 visualisation you step through while the implementation runs line by line beside
-it. The logo in the sidebar switches between the two tracks.
+it.
+
+A third track, [/learn](/learn), carries sixteen
+visual-interview-prep topics (imported from [learningto.co](https://learningto.co)):
+every page runs the same circle — the big-O costs and what they mean, the Python
+structures to reach for, a brute force you name out loud and its optimized answer,
+the math the topic assumes, a step through the code, and practice challenges with
+progressive hints. The logo in the sidebar switches between the three tracks.
 
 Contributions are welcome, particularly corrections. See
-[CONTRIBUTING.md](CONTRIBUTING.md). If the atlas is useful to you, you can
-[sponsor it](https://github.com/sponsors/mertkahyaoglu).
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Running it
 
@@ -48,6 +52,8 @@ app/
   docs/[slug]/page.tsx    document page, statically generated per file
   coding/page.tsx         coding track index
   coding/[slug]/page.tsx  coding concept page, with its visualisation
+  learn/page.tsx          learn track index
+  learn/[slug]/page.tsx   learn topic page, with its panels
 components/
   layout/                 sidebar, top bar, theme toggle
   home/                   hero, filter bar, cards
@@ -57,6 +63,7 @@ components/
   ui/                     tag, search input, badges, empty state
 lib/
   content.ts              filesystem loader, TOC builder, sibling lookup
+  headings.ts             client-safe heading ids and learn panel titles
   tags.ts                 tag registry (single source of truth)
   glossary.ts             abbreviations and their expansions, shown on hover
   search.ts               filter and sort logic, pure and testable
@@ -70,6 +77,7 @@ content/
   tech/*.md               technology pages
   designs/*.md            designs
   coding/*.md             coding concepts
+  learn/*.md              learn topics (scraped from learningto.co)
 scripts/
   check-viz.mjs           validates every visualisation, run in CI
   check-abbr.mjs          fails on an abbreviation missing from the glossary, run in CI
