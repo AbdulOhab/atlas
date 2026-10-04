@@ -10,13 +10,6 @@ bigO:
   average: N/A
   worst: N/A
   space: N/A
-explained:
-  time: 'Big-O is itself the topic here. The key classes in order: O(1) < O(log n) < O(n) < O(n log n)
-    < O(n²) < O(2ⁿ) < O(n!). Anything above O(n log n) is generally too slow for large inputs.'
-  space: Same Big-O classes apply to memory usage. A recursive algorithm might be O(n) time and O(n) space
-    due to the call stack. An iterative version might be O(n) time and O(1) space.
-  visual: 'A complexity cheat sheet: plot all classes on the same graph. See how quickly 2ⁿ and n! become
-    vertical while O(n log n) stays nearly flat in comparison.'
 structures:
 - concept: Array
   python: list
@@ -105,6 +98,15 @@ math:
     go.
   analogy: Looking up a word in a dictionary if you already know the exact page number. It does not matter
     how thick the dictionary is.
+  why: 'Accessing array[3] is O(1) because the computer calculates the memory address directly: start
+    + 3 * item_size. One calculation, done.'
+- id: linear-complexity
+  title: Linear growth - O(n)
+  plain: If you have 10 items to check, you do 10 steps. 1,000 items? 1,000 steps. The work grows at exactly
+    the same rate as the input.
+  visual: A straight diagonal line on a graph. Double the input, double the time. No surprises.
+  analogy: Reading every page of a book. If the book is twice as long, it takes twice as long to read.
+  why: O(n) is usually the target for one-pass algorithms like simple array traversals.
 - id: logarithm-halving
   title: Logarithms - "how many times can you cut in half?"
   plain: 'log₂(n) answers this question: if you start with n things and keep cutting the group in half,
@@ -114,6 +116,8 @@ math:
     size. The number of levels in that tree is log₂(n).
   analogy: A phone book with 1,024 names. Flip to the middle - is your name before or after? Flip to the
     middle of the surviving half. Repeat. You find any name in at most 10 flips, not 1,024.
+  why: Any algorithm that cuts its remaining work in half each step runs in O(log n). Binary search, balanced
+    tree lookups, and heap operations all work this way.
 - id: quadratic-growth
   title: Quadratic growth - n²
   plain: n² means n multiplied by itself. If n is 10, that is 100. If n is 100, that is 10,000. If n is
@@ -122,6 +126,8 @@ math:
     grid has 100 tiles. A 100×100 grid has 10,000.
   analogy: Comparing every person in a room to every other person for a secret handshake. 10 people =
     100 handshakes. 100 people = 10,000 handshakes.
+  why: Nested loops typically mean O(n²). Two-pointer techniques and hash maps exist specifically to avoid
+    this.
 - id: exponential-growth
   title: Exponents - doubling chains
   plain: 2ⁿ means you start with 1 and double it n times. n=10 gives you 1,024. n=20 gives you 1,048,576.
@@ -130,6 +136,8 @@ math:
     up. Compare it side by side with a straight line (linear) and the difference is shocking.
   analogy: A chain letter. You send it to 2 friends. Each of them sends it to 2 friends. After 30 rounds,
     over a billion letters have been sent.
+  why: Brute-force recursive solutions that branch into 2 sub-problems at every step hit O(2ⁿ). That is
+    why memoization and dynamic programming matter so much.
 - id: summation-series
   title: Summation - adding up a series
   plain: 1 + 2 + 3 + ... + n always equals n×(n+1)/2. For n=10 that is 55. For n=100 that is 5,050. This
@@ -138,6 +146,8 @@ math:
     so the total is roughly n²/2.
   analogy: Stacking cannon balls in a triangle. The bottom row has n balls, the next has n-1, the next
     has n-2. Total balls = n(n+1)/2.
+  why: 'When an outer loop runs n times and an inner loop runs 1 time on the first pass, 2 on the second,
+    3 on the third... the total work is this triangle sum: O(n²).'
 - id: big-o-definition
   title: What Big-O actually means
   plain: Big-O describes how the number of operations grows as input size n grows. It ignores constants
@@ -149,15 +159,31 @@ math:
     10% compound raise. Early on $50k is better. After ~10 years, the percentage-growth job overtakes
     it and keeps growing faster. Big-O is like asking "which job pays more after 20 years?" - the initial
     salary becomes irrelevant.
+  why: Big-O is the universal language interviewers use to compare solutions. A solution might be faster
+    for small inputs but worse for large ones. Big-O captures the long-term behavior.
 challenges:
 - title: Complexity Analysis Practice
   difficulty: easy
   description: 'Implement three functions with specific complexity targets, then verify by counting operations.
     Goal: understand why complexity classes matter in practice.'
+  starter: "# Part 1: Implement a function that is O(n log n)\ndef find_duplicates_n_log_n(nums):\n  \
+    \  # Sort first, then scan for adjacent duplicates\n    pass\n\n# Part 2: Improve it to O(n) using\
+    \ a hash set\ndef find_duplicates_linear(nums):\n    pass\n\n# Part 3: O(n) time and O(1) space\n\
+    # if nums contains values in range [1, n]\ndef find_duplicates_constant_space(nums):\n    # Use the\
+    \ array itself as a hash map by negating visited indices\n    pass\n\ntest = [4, 3, 2, 7, 8, 2, 3,\
+    \ 1]\nprint(find_duplicates_n_log_n(test))\nprint(find_duplicates_linear(test))\nprint(find_duplicates_constant_space(test))\n"
+  tests:
+  - input: find_duplicates_linear([4,3,2,7,8,2,3,1])
+    expected: '[2,3]'
+  - input: find_duplicates_constant_space([4,3,2,7,8,2,3,1])
+    expected: '[2,3]'
   hints:
   - 'O(n log n): sort the array, then scan for adjacent equal elements.'
   - 'O(n): use a set to track seen numbers. If num already in set, it is a duplicate.'
   - 'O(1) space trick: for each num, negate nums[abs(num)-1]. If it''s already negative, it''s a duplicate.'
+  tags:
+  - complexity-analysis
+  - google-favorite
   optimal: O(n) time, O(1) space
 ---
 
@@ -229,3 +255,36 @@ print(f"Binary search steps for n={n}: {bs_steps}")
 print(f"Linear search would need: {n} steps")
 print(f"Ratio: {n // bs_steps}x faster")
 ```
+
+## Big-O reference table
+
+The cost of every structure on one card, the way the source site shows it before a phone screen.
+
+| Structure | Operation | Cost |
+| --- | --- | --- |
+| **Array** | Access | `O(1)` |
+|  | Search | `O(n)` |
+|  | Insert end | `O(1)*` |
+|  | Insert mid | `O(n)` |
+| **Hash Map** | Get/Set | `O(1)*` |
+|  | Delete | `O(1)*` |
+|  | Search value | `O(n)` |
+|  | Iterate | `O(n)` |
+| **Linked List** | Access | `O(n)` |
+|  | Search | `O(n)` |
+|  | Insert head | `O(1)` |
+|  | Delete known | `O(1)` |
+| **Binary Search** | Search | `O(log n)` |
+|  | Insert | `O(log n)` |
+| **Balanced BST** | Search | `O(log n)` |
+|  | Insert | `O(log n)` |
+|  | Delete | `O(log n)` |
+| **Heap** | Peek min/max | `O(1)` |
+|  | Push | `O(log n)` |
+|  | Pop | `O(log n)` |
+|  | Heapify | `O(n)` |
+| **Graph (BFS/DFS)** | Traversal | `O(V+E)` |
+|  | Dijkstra (heap) | `O((V+E) log V)` |
+| **Merge / Quick Sort** | Sort | `O(n log n)` |
+|  | Space (merge) | `O(n)` |
+|  | Space (quick) | `O(log n)` |

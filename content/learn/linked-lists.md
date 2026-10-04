@@ -1,6 +1,7 @@
 ---
 title: Linked Lists
 order: 3
+viz: linked-list
 summary: Pointer manipulation mastery. Google loves linked list problems because they test careful thinking
   about references and edge cases. Learn reversal, cycle detection with Floyd's algorithm, and merge patterns.
 category: Data structures
@@ -10,13 +11,6 @@ bigO:
   average: O(n)
   worst: O(n)
   space: O(1)
-explained:
-  time: O(n) to traverse or search - you follow pointers one at a time from head to tail. O(1) to insert
-    or delete once you already have the node - just redirect a couple of arrows.
-  space: O(1) for iterative traversal. O(n) for recursive traversal because each recursive call sits on
-    the call stack.
-  visual: A chain of paper clips. To find clip number 50, you count through 50 clips one by one. But to
-    add a clip in the middle, you just unhook one link and reattach.
 structures:
 - concept: Linked List
   python: class ListNode (no built-in)
@@ -67,6 +61,13 @@ brute:
   tip: I can detect the cycle with a hash set in O(n) time and space. But we can do O(1) space using the
     fast/slow pointer technique.
 math:
+- id: linear-complexity
+  title: Linear growth - O(n)
+  plain: If you have 10 items to check, you do 10 steps. 1,000 items? 1,000 steps. The work grows at exactly
+    the same rate as the input.
+  visual: A straight diagonal line on a graph. Double the input, double the time. No surprises.
+  analogy: Reading every page of a book. If the book is twice as long, it takes twice as long to read.
+  why: O(n) is usually the target for one-pass algorithms like simple array traversals.
 - id: pointer-following
   title: Pointer following - arrows in memory
   plain: A pointer is just a number that tells you where something else is in memory. "Node.next" means
@@ -76,6 +77,8 @@ math:
     pointing to the next box. The last box has an arrow pointing to "null" (nothing).
   analogy: A scavenger hunt where each clue tells you where the next clue is hidden. You cannot skip to
     the end - you have to follow each clue in order.
+  why: Linked list operations are O(n) to reach a specific node because you must follow pointers one at
+    a time. There is no shortcut like array indexing.
 - id: recursion-call-stack
   title: Recursion - functions that call themselves
   plain: A recursive function solves a big problem by solving a slightly smaller version of the same problem,
@@ -88,6 +91,8 @@ math:
   analogy: To find the total weight of a stack of boxes, you pick up the top box, weigh it, then ask someone
     to tell you the total weight of the remaining stack. They do the same thing. Eventually the last person
     just says "zero, there are no boxes left."
+  why: Trees, graphs, and divide-and-conquer algorithms are all inherently recursive. Once recursion clicks,
+    these topics open up.
 walkthrough:
   problem: Linked List Reversal
   tagline: Reverse a chain of nodes by redirecting each arrow. No extra memory needed.
@@ -173,20 +178,52 @@ challenges:
   difficulty: easy
   description: Reverse a singly linked list iteratively. Given the head of a linked list, return the head
     of the reversed list.
+  starter: "class ListNode:\n    def __init__(self, val=0, next=None):\n        self.val = val\n     \
+    \   self.next = next\n\ndef reverse_list(head):\n    # Iterative O(n) time, O(1) space\n    pass\n\
+    \n# Helper to build and print\ndef make_list(vals):\n    dummy = ListNode(0)\n    c = dummy\n    for\
+    \ v in vals:\n        c.next = ListNode(v); c = c.next\n    return dummy.next\n\ndef to_list(h):\n\
+    \    res = []\n    while h: res.append(h.val); h = h.next\n    return res\n\nprint(to_list(reverse_list(make_list([1,\
+    \ 2, 3, 4, 5]))))  # [5,4,3,2,1]\nprint(to_list(reverse_list(make_list([1, 2]))))            # [2,1]\n\
+    print(to_list(reverse_list(None)))                         # []\n"
+  tests:
+  - input: reversed [1,2,3,4,5]
+    expected: '[5,4,3,2,1]'
+  - input: reversed [1,2]
+    expected: '[2,1]'
   hints:
   - 'You need three pointers: prev (starts None), curr, and next.'
   - 'At each step: save curr.next, point curr.next to prev, advance both prev and curr.'
   - After the loop, prev is the new head.
+  tags:
+  - pointer-manipulation
+  - google-favorite
   optimal: O(n) time, O(1) space
 - title: Linked List Cycle II
   difficulty: medium
   description: Given a linked list, return the node where the cycle begins. If there is no cycle, return
     None. Floyd's algorithm can detect the cycle AND find the entry point.
+  starter: "class ListNode:\n    def __init__(self, val=0, next=None):\n        self.val = val\n     \
+    \   self.next = next\n\ndef detect_cycle(head):\n    # Phase 1: detect cycle with slow/fast pointers\n\
+    \    # Phase 2: find entry point\n    pass\n\n# Build a list with cycle for testing\ndef make_cycle_list(vals,\
+    \ pos):\n    nodes = [ListNode(v) for v in vals]\n    for i in range(len(nodes) - 1):\n        nodes[i].next\
+    \ = nodes[i + 1]\n    if pos >= 0:\n        nodes[-1].next = nodes[pos]\n    return nodes[0] if nodes\
+    \ else None\n\nhead = make_cycle_list([3, 2, 0, -4], 1)\nresult = detect_cycle(head)\nprint(result.val\
+    \ if result else None)  # 2 (cycle at index 1)\n\nhead2 = make_cycle_list([1, 2], -1)\nprint(detect_cycle(head2))\
+    \  # None\n"
+  tests:
+  - input: cycle at index 1 in [3,2,0,-4]
+    expected: node with val 2
+  - input: no cycle in [1,2]
+    expected: None
   hints:
   - 'Phase 1: use slow (1 step) and fast (2 steps). If they meet, a cycle exists.'
   - 'Phase 2: when they meet, reset one pointer to head.'
   - Advance both one step at a time - they'll meet at the cycle entry.
   - 'Mathematical proof: distance from head to entry == distance from meeting point to entry.'
+  tags:
+  - floyds-algorithm
+  - two-pointers
+  - google-favorite
   optimal: O(n) time, O(1) space
 ---
 

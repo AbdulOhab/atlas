@@ -1,6 +1,7 @@
 ---
 title: Binary Search
 order: 4
+category: Algorithms
 summary: "Halve the candidate set on every comparison. Trivial to describe, easy to write wrong, and far more general than \"find a value in a sorted array\"."
 hardPart: "Recognising it when there is no array to search — the answer space itself is often the thing that is monotone."
 viz: binary-search

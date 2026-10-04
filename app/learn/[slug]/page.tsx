@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { buildToc, getDoc, getDocsInTrack, getSiblings, learnToc, LEARN_TITLES, slugifyHeading, toMeta } from "@/lib/content";
+import { vizzes } from "@/lib/viz/registry";
 import { accentVar } from "@/lib/utils";
 import { TopBar } from "@/components/layout/TopBar";
 import { DocHeader } from "@/components/docs/DocHeader";
@@ -16,6 +17,7 @@ import {
 import { PrevNext } from "@/components/docs/PrevNext";
 import { Toc } from "@/components/docs/Toc";
 import { ReadingProgress } from "@/components/docs/ReadingProgress";
+import { VizFigure } from "@/components/viz/VizFigure";
 
 interface PageProps {
   params: { slug: string };
@@ -50,6 +52,7 @@ export default function LearnPage({ params }: PageProps) {
   const panels = learn ? learnToc(learn) : { opening: [], closing: [] };
   const toc = [...panels.opening, ...buildToc(doc.content), ...panels.closing];
   const { prev, next } = getSiblings(doc.slug, "learn");
+  const viz = doc.viz ? vizzes[doc.viz] : undefined;
 
   // Learn tags are topic words from the source site, not entries in the system
   // design tag registry, which would warn on them and link them into the wrong
@@ -63,6 +66,7 @@ export default function LearnPage({ params }: PageProps) {
       <div className="mx-auto flex max-w-shell gap-12 px-4 pb-24 pt-10 sm:px-8">
         <main id="doc-main" className="min-w-0 flex-1">
           <DocHeader doc={meta} />
+          {viz && <VizFigure viz={viz} />}
           <article className="doc doc-wide">
             {learn && <LearnOverview learn={learn} />}
             {learn && learn.structures.length > 0 && <LearnStructures structures={learn.structures} />}

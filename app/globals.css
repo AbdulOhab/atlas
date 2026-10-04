@@ -359,8 +359,8 @@
 html.section-collapsed-concepts [data-section="concepts"] [data-section-body],
 html.section-collapsed-tech [data-section="tech"] [data-section-body],
 html.section-collapsed-designs [data-section="designs"] [data-section-body],
-html.section-collapsed-coding [data-section="coding"] [data-section-body],
-html.section-collapsed-learn [data-section="learn"] [data-section-body] {
+html.section-collapsed-data-structures [data-section="data-structures"] [data-section-body],
+html.section-collapsed-algo [data-section="algo"] [data-section-body] {
   display: none;
 }
 
@@ -514,19 +514,25 @@ html.section-collapsed-learn [data-section="learn"] [data-section-body] {
 .flow-node__text {
   display: flex;
   min-width: 0;
+  flex: 1 1 auto;
   flex-direction: column;
+  overflow: hidden;
 }
 .flow-node__title {
+  overflow: hidden;
   font-size: 12px;
   font-weight: 500;
   line-height: 18px;
-  white-space: pre;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .flow-node__detail {
+  overflow: hidden;
   color: var(--ink-muted);
   font-size: 11px;
   line-height: 16px;
-  white-space: pre;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .flow-node__badge {
@@ -993,7 +999,7 @@ html.section-collapsed-learn [data-section="learn"] [data-section-body] {
 .pg-node {
   --heat: 0;
   --util: 0;
-  min-width: 190px;
+  width: 190px;
   padding-bottom: 12px;
   cursor: grab;
   border-color: color-mix(in srgb, var(--tone-red) calc(var(--heat) * 1%), color-mix(in srgb, var(--tone) 55%, var(--rule)));

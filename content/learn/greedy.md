@@ -1,6 +1,7 @@
 ---
 title: Greedy Algorithms
 order: 15
+viz: intervals
 summary: Greedy algorithms make the locally optimal choice at each step. Proving a greedy works requires
   showing the greedy choice property and optimal substructure. Interval problems are the classic greedy
   domain.
@@ -11,14 +12,6 @@ bigO:
   average: O(n log n)
   worst: O(n log n)
   space: O(1)
-explained:
-  time: Usually O(n log n) because greedy algorithms often need to sort first (sort by deadline, sort
-    by finish time, sort by value/weight ratio). The greedy selection phase itself is typically O(n).
-  space: Usually O(1) to O(n). Greedy algorithms process items one by one and usually do not need to store
-    much state.
-  visual: 'Interval scheduling: lay all intervals on a timeline. Sort by end time. Greedily pick the one
-    that ends earliest and does not overlap the previous pick. Each selection is one O(1) step after the
-    O(n log n) sort.'
 structures:
 - concept: Array
   python: list
@@ -83,16 +76,29 @@ math:
   analogy: Hiking to the tallest mountain. If you always walk uphill, you might reach the top of a small
     hill and get stuck. To find the tallest peak, sometimes you have to go downhill first (which greedy
     never does).
+  why: Knowing when greedy works (interval scheduling, Huffman coding, Dijkstra) vs when it fails (coin
+    change with arbitrary denominations, general knapsack) is the key insight for this category.
 challenges:
 - title: Jump Game
   difficulty: medium
   description: Given an integer array `nums` where `nums[i]` is the maximum jump length from position
     i, return true if you can reach the last index from index 0.
+  starter: "def can_jump(nums):\n    # Track the farthest index reachable\n    pass\n\nprint(can_jump([2,\
+    \ 3, 1, 1, 4]))  # True\nprint(can_jump([3, 2, 1, 0, 4]))  # False\nprint(can_jump([0]))         \
+    \     # True\n"
+  tests:
+  - input: can_jump([2,3,1,1,4])
+    expected: 'True'
+  - input: can_jump([3,2,1,0,4])
+    expected: 'False'
   hints:
   - Iterate forward, tracking the farthest index reachable so far.
   - If your current index exceeds the farthest reachable, you are stuck.
   - max_reach = max(max_reach, i + nums[i])
   - If i <= max_reach at every step and max_reach >= last_index, return True.
+  tags:
+  - greedy
+  - google-favorite
   optimal: O(n) time, O(1) space
 ---
 

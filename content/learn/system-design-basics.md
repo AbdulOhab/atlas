@@ -11,16 +11,6 @@ bigO:
   average: O(1)
   worst: O(n)
   space: O(n)
-explained:
-  time: System design does not use Big-O notation directly. Instead we talk about latency (milliseconds
-    per request) and throughput (requests per second). A hash map lookup is O(1) - roughly 100 nanoseconds.
-    A database query might be O(log n) - roughly 1-10 milliseconds. A full table scan is O(n) - potentially
-    seconds.
-  space: 'Storage is measured in bytes: KB (10³), MB (10⁶), GB (10⁹), TB (10¹²). A tweet is ~140 bytes.
-    1 billion tweets = 140 GB. Knowing rough byte sizes for common data types lets you estimate storage
-    needs.'
-  visual: 'A latency number cheat sheet: L1 cache = 1ns, main memory = 100ns, SSD = 100µs, disk = 10ms,
-    network round trip = 100ms. These numbers differ by orders of magnitude and determine system architecture.'
 structures:
 - concept: Hash Map
   python: dict
@@ -91,6 +81,8 @@ math:
   analogy: The difference between a lemonade stand and a restaurant and a fast food chain and a global
     food company. Same product, but each order of magnitude in scale requires fundamentally different
     systems.
+  why: System design interviewers often test whether you can reason about scale. "Handle 10 million users"
+    means understanding what changes at each order of magnitude, not just adding more servers.
 - id: modular-arithmetic
   title: Modulo - the remainder operation
   plain: The % symbol means "what is left over after dividing?" 7 % 3 = 1 because 7 = 2×3 + 1. 10 % 4
@@ -100,18 +92,38 @@ math:
     1.'
   analogy: A clock with 12 positions. If it is 10 o'clock and 5 hours pass, the hand lands at (10 + 5)
     % 12 = 3. The clock "wraps around" just like modulo does.
+  why: Hash tables use modulo to turn any key (even a huge number from hashing a string) into a valid
+    index. myKey.hashCode() % tableSize = which slot to use.
 challenges:
 - title: LRU Cache
   difficulty: hard
   description: Design a data structure that follows the LRU (Least Recently Used) cache constraint. Implement
     `get(key)` and `put(key, value)` both in O(1) time. When capacity is exceeded, evict the least recently
     used key.
+  starter: "class LRUCache:\n    def __init__(self, capacity):\n        # Need O(1) get and put with LRU\
+    \ eviction\n        # Hint: combine a hash map with a doubly linked list\n        pass\n\n    def\
+    \ get(self, key):\n        pass\n\n    def put(self, key, value):\n        pass\n\ncache = LRUCache(2)\n\
+    cache.put(1, 1)\ncache.put(2, 2)\nprint(cache.get(1))    # 1\ncache.put(3, 3)        # evicts key\
+    \ 2\nprint(cache.get(2))    # -1 (not found)\ncache.put(4, 4)        # evicts key 1\nprint(cache.get(1))\
+    \    # -1 (not found)\nprint(cache.get(3))    # 3\nprint(cache.get(4))    # 4\n"
+  tests:
+  - input: get(1) after put(1,1),put(2,2)
+    expected: '1'
+  - input: get(2) after put(3,3) evicts 2
+    expected: '-1'
+  - input: get(3) after put(4,4)
+    expected: '3'
   hints:
   - Hash map gives O(1) key lookup. Doubly linked list gives O(1) insertions and deletions.
   - 'Combine them: map stores key -> node, linked list maintains usage order.'
   - 'On access: remove node from its position, re-insert at the front (most recent).'
   - 'On eviction: remove node from the back (least recent), delete from map.'
   - Python's OrderedDict wraps this pattern cleanly.
+  tags:
+  - design
+  - hash-map
+  - linked-list
+  - google-favorite
   optimal: O(1) time, O(capacity) space
 ---
 

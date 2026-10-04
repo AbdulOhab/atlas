@@ -34,7 +34,7 @@ export function docHref(doc: Pick<DocMeta, "group" | "slug">) {
 
 /** Which half of the atlas a path belongs to — decides what the sidebar lists. */
 export function trackOf(pathname: string): Track {
-  if (pathname === "/coding" || pathname.startsWith("/coding/")) return "coding";
-  if (pathname === "/learn" || pathname.startsWith("/learn/")) return "learn";
+  if (pathname === "/coding" || pathname.startsWith("/coding/")) return "algorithms";
+  if (pathname === "/learn" || pathname.startsWith("/learn/")) return "algorithms";
   return "sysdesign";
 }

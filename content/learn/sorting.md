@@ -11,14 +11,6 @@ bigO:
   average: O(n log n)
   worst: O(n^2)
   space: O(log n)
-explained:
-  time: O(n log n) for efficient sorts (merge sort, heap sort). O(n²) for naive sorts (bubble, insertion,
-    selection). O(n) for special-case sorts when keys are bounded integers (counting sort, radix sort).
-  space: O(n) for merge sort (needs a temporary array). O(log n) for quicksort (call stack). O(1) for
-    heapsort (in-place).
-  visual: 'Merge sort: split a deck of 16 cards into halves, then quarters, then singles (log₂(16)=4 splits).
-    Merge the singles into sorted pairs - 8 merges. Merge pairs into fours - 4 merges. Each round does
-    n total work across 4 rounds = 4n = n log n.'
 structures:
 - concept: Array
   python: list
@@ -92,6 +84,8 @@ math:
     size. The number of levels in that tree is log₂(n).
   analogy: A phone book with 1,024 names. Flip to the middle - is your name before or after? Flip to the
     middle of the surviving half. Repeat. You find any name in at most 10 flips, not 1,024.
+  why: Any algorithm that cuts its remaining work in half each step runs in O(log n). Binary search, balanced
+    tree lookups, and heap operations all work this way.
 - id: quadratic-growth
   title: Quadratic growth - n²
   plain: n² means n multiplied by itself. If n is 10, that is 100. If n is 100, that is 10,000. If n is
@@ -100,6 +94,8 @@ math:
     grid has 100 tiles. A 100×100 grid has 10,000.
   analogy: Comparing every person in a room to every other person for a secret handshake. 10 people =
     100 handshakes. 100 people = 10,000 handshakes.
+  why: Nested loops typically mean O(n²). Two-pointer techniques and hash maps exist specifically to avoid
+    this.
 - id: summation-series
   title: Summation - adding up a series
   plain: 1 + 2 + 3 + ... + n always equals n×(n+1)/2. For n=10 that is 55. For n=100 that is 5,050. This
@@ -108,6 +104,8 @@ math:
     so the total is roughly n²/2.
   analogy: Stacking cannon balls in a triangle. The bottom row has n balls, the next has n-1, the next
     has n-2. Total balls = n(n+1)/2.
+  why: 'When an outer loop runs n times and an inner loop runs 1 time on the first pass, 2 on the second,
+    3 on the third... the total work is this triangle sum: O(n²).'
 - id: nlogn-complexity
   title: n log n - the sweet spot
   plain: 'n log n sits between n (linear) and n² (quadratic). For n=1000: n=1000, n log n≈10,000, n²=1,000,000.
@@ -116,6 +114,8 @@ math:
     gentle. n² curves upward steeply. For large inputs the gap between n log n and n² is enormous.
   analogy: Sorting a deck of cards by splitting it in half, sorting each half, then merging. Each split
     takes constant work per card. Because you only split log(n) times, the total is n log n.
+  why: Comparison-based sorting cannot do better than O(n log n). Bubble/insertion sort are O(n²). Merge
+    sort and heapsort hit the theoretical minimum of n log n.
 walkthrough:
   problem: Merge Sort
   tagline: Divide into halves, sort each half, then merge them back together.
@@ -202,11 +202,23 @@ challenges:
   difficulty: medium
   description: Given an array with values 0, 1, and 2 (representing red, white, blue), sort them in-place
     in a single pass without using Python's built-in sort.
+  starter: "def sort_colors(nums):\n    # Dutch National Flag algorithm\n    # Three pointers: low, mid,\
+    \ high\n    pass\n\nnums1 = [2, 0, 2, 1, 1, 0]\nsort_colors(nums1)\nprint(nums1)  # [0, 0, 1, 1, 2,\
+    \ 2]\n\nnums2 = [2, 0, 1]\nsort_colors(nums2)\nprint(nums2)  # [0, 1, 2]\n"
+  tests:
+  - input: sort_colors([2,0,2,1,1,0])
+    expected: '[0,0,1,1,2,2]'
+  - input: sort_colors([2,0,1])
+    expected: '[0,1,2]'
   hints:
   - 'Maintain three pointers: low (boundary of 0s), mid (current), high (boundary of 2s).'
   - 'If nums[mid] == 0: swap with nums[low], advance both.'
   - 'If nums[mid] == 1: just advance mid.'
   - 'If nums[mid] == 2: swap with nums[high], decrement high (don''t advance mid).'
+  tags:
+  - three-pointers
+  - in-place
+  - google-favorite
   optimal: O(n) time, O(1) space
 ---
 

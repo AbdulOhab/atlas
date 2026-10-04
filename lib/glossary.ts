@@ -172,6 +172,8 @@ export const NOT_ABBREVIATIONS: string[] = [
   "SQL", "UI", "URL", "UX",
   // Units and places.
   "GB", "KB", "MB", "PB", "TB", "EU", "UK", "US",
+  // Code identifiers in scraped starter code, not abbreviations.
+  "BANC", "LRUCache", "ADOBECODEBANC", "ABC",
   // Names of products and projects, not abbreviations to expand.
   "gRPC", "InnoDB", "iOS", "MySQL", "PostGIS", "TinyURL",
   // Not abbreviations at all.

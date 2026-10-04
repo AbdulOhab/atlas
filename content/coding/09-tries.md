@@ -1,6 +1,7 @@
 ---
 title: Tries
 order: 9
+category: Data structures
 summary: "A tree keyed by characters, where the path spells the word. The structure that answers prefix questions a hash map cannot answer at all."
 hardPart: "Knowing when the prefix structure is worth its memory — and remembering that \"a node exists\" and \"a word ends here\" are different facts."
 viz: trie

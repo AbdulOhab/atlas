@@ -74,8 +74,8 @@ export function ComponentNode({ id, data, selected }: NodeProps<PlaygroundNode>)
           <Icon strokeWidth={1.75} />
         </span>
         <span className="flow-node__text">
-          <span className="flow-node__title">{data.name}</span>
-          <span className="flow-node__detail">{detail}</span>
+          <span className="flow-node__title" title={data.name}>{data.name}</span>
+          <span className="flow-node__detail" title={detail}>{detail}</span>
         </span>
         {!def.source && (
           <span className="pg-node__meter" aria-hidden>

@@ -1,6 +1,7 @@
 ---
 title: Two Pointers
 order: 2
+category: Algorithms
 summary: Two indices walking the same array under a rule that lets each move retire part of the search. The technique that collapses a nested loop into one pass — when the data has an order to exploit.
 hardPart: Justifying the move. Anyone can write the loop; the signal is whether you can say what each step proves impossible.
 viz: two-pointers

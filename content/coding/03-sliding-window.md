@@ -1,6 +1,7 @@
 ---
 title: Sliding Window
 order: 3
+category: Algorithms
 summary: "A contiguous span with two edges that only ever move forward. Turns \"check every subarray\" into one pass — as long as the window's validity is monotone."
 hardPart: "Proving it is linear, and noticing when the window condition is not monotone enough for the technique to be valid at all."
 viz: sliding-window

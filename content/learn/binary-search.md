@@ -1,6 +1,7 @@
 ---
 title: Binary Search
 order: 11
+viz: binary-search
 summary: 'Binary search is deceptively tricky: off-by-one errors are everywhere. Beyond sorted array search,
   master the generalized template for searching over a monotonic answer space.'
 category: Algorithms
@@ -10,14 +11,6 @@ bigO:
   average: O(log n)
   worst: O(log n)
   space: O(1)
-explained:
-  time: O(log n) because each step cuts the search space in half. For n=1,000,000 that is at most 20 comparisons.
-    For n=1,000,000,000 it is at most 30.
-  space: O(1) for iterative binary search - just three variables (left, right, mid). O(log n) for recursive
-    due to call stack.
-  visual: 'Imagine a 30-level building with n=1,000,000,000 rooms, one per floor. Binary search: go to
-    floor 500,000,000. Too high? Go to floor 250,000,000. Each elevator ride halves the search space.
-    You find any room in 30 rides.'
 structures:
 - concept: Array
   python: list
@@ -108,6 +101,8 @@ math:
     size. The number of levels in that tree is log₂(n).
   analogy: A phone book with 1,024 names. Flip to the middle - is your name before or after? Flip to the
     middle of the surviving half. Repeat. You find any name in at most 10 flips, not 1,024.
+  why: Any algorithm that cuts its remaining work in half each step runs in O(log n). Binary search, balanced
+    tree lookups, and heap operations all work this way.
 - id: sorted-invariant
   title: The sorted order guarantee
   plain: Binary search only works because the array is sorted. Sorted order is the invariant - the thing
@@ -118,6 +113,8 @@ math:
     ignored.
   analogy: A guessing game where I say "higher" or "lower." With 100 numbers, you can always find mine
     in at most 7 guesses by guessing the midpoint each time. Because log₂(100) is about 7.
+  why: The sorted order invariant is the heart of binary search. Recognizing when you can binary search
+    on a problem (not just arrays - can also binary search on answer values) is a key interview skill.
 walkthrough:
   problem: Binary Search
   tagline: Cut the problem in half every step. Like finding a word in a dictionary.
@@ -129,8 +126,9 @@ walkthrough:
     \ - 1\n\n    return -1"
   steps:
   - title: The Setup - Sorted Array Required
-    detail: 'Binary search only works on a *sorted* array. We have [1, 3, 5, 7, 9, 11, 13, 15, 17, 19] and
-      we''re looking for 13. We start with two pointers: left at index 0, right at the last index (9).'
+    detail: 'Binary search only works on a *sorted* array. We have [1, 3, 5, 7, 9, 11, 13, 15, 17, 19]
+      and we''re looking for 13. We start with two pointers: left at index 0, right at the last index
+      (9).'
     math: null
     cost: O(1) setup
     lines:
@@ -192,20 +190,47 @@ challenges:
   difficulty: medium
   description: An integer array of unique elements was sorted then rotated at an unknown pivot. Given
     the array and a target, return the index of the target or -1 if not present. Must be O(log n).
+  starter: "def search(nums, target):\n    # Determine which half is sorted, then decide where to search\n\
+    \    pass\n\nprint(search([4, 5, 6, 7, 0, 1, 2], 0))  # 4\nprint(search([4, 5, 6, 7, 0, 1, 2], 3))\
+    \  # -1\nprint(search([1], 0))                      # -1\n"
+  tests:
+  - input: search([4,5,6,7,0,1,2], 0)
+    expected: '4'
+  - input: search([4,5,6,7,0,1,2], 3)
+    expected: '-1'
+  - input: search([1], 0)
+    expected: '-1'
   hints:
   - At least one half of the array is always fully sorted after rotation.
   - Compare nums[lo] with nums[mid] to determine which half is sorted.
   - If the left half is sorted and target is in [nums[lo], nums[mid]), search left.
   - Otherwise search right. Symmetric logic for right half sorted case.
+  tags:
+  - binary-search
+  - google-favorite
+  - common-pattern
   optimal: O(log n) time, O(1) space
 - title: Find Minimum in Rotated Sorted Array
   difficulty: medium
   description: Given a rotated sorted array of unique elements, find the minimum element in O(log n) time.
+  starter: "def find_min(nums):\n    # Binary search for the pivot/inflection point\n    pass\n\nprint(find_min([3,\
+    \ 4, 5, 1, 2]))        # 1\nprint(find_min([4, 5, 6, 7, 0, 1, 2]))  # 0\nprint(find_min([11, 13, 15,\
+    \ 17]))        # 11\n"
+  tests:
+  - input: find_min([3,4,5,1,2])
+    expected: '1'
+  - input: find_min([4,5,6,7,0,1,2])
+    expected: '0'
+  - input: find_min([11,13,15,17])
+    expected: '11'
   hints:
   - The minimum is at the rotation point.
   - If nums[mid] > nums[hi], the minimum is in the right half.
   - If nums[mid] <= nums[hi], the minimum is in the left half (including mid).
   - 'Loop condition: lo < hi (not lo <= hi).'
+  tags:
+  - binary-search
+  - common-pattern
   optimal: O(log n) time, O(1) space
 ---
 

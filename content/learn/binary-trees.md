@@ -1,6 +1,7 @@
 ---
 title: Binary Trees
 order: 6
+viz: binary-tree
 summary: Trees underlie databases, file systems, and compilers. Google frequently tests tree traversals,
   LCA, serialization, and BST properties. Master both recursive and iterative approaches.
 category: Data structures
@@ -10,13 +11,6 @@ bigO:
   average: O(log n)
   worst: O(n)
   space: O(h)
-explained:
-  time: O(log n) for search/insert/delete on a balanced BST because each comparison cuts the remaining
-    nodes in half. O(n) worst case if the tree is unbalanced (all nodes in one long line).
-  space: O(h) where h is the height - that is the maximum call stack depth during recursion. O(log n)
-    for balanced trees, O(n) for skewed trees.
-  visual: Imagine a "yes/no" game. Is the answer bigger or smaller than 50? Bigger. Bigger or smaller
-    than 75? Smaller. Each question eliminates half the remaining possibilities.
 structures:
 - concept: Binary Tree
   python: class TreeNode (no built-in)
@@ -45,6 +39,8 @@ math:
     size. The number of levels in that tree is log₂(n).
   analogy: A phone book with 1,024 names. Flip to the middle - is your name before or after? Flip to the
     middle of the surviving half. Repeat. You find any name in at most 10 flips, not 1,024.
+  why: Any algorithm that cuts its remaining work in half each step runs in O(log n). Binary search, balanced
+    tree lookups, and heap operations all work this way.
 - id: recursion-call-stack
   title: Recursion - functions that call themselves
   plain: A recursive function solves a big problem by solving a slightly smaller version of the same problem,
@@ -57,6 +53,8 @@ math:
   analogy: To find the total weight of a stack of boxes, you pick up the top box, weigh it, then ask someone
     to tell you the total weight of the remaining stack. They do the same thing. Eventually the last person
     just says "zero, there are no boxes left."
+  why: Trees, graphs, and divide-and-conquer algorithms are all inherently recursive. Once recursion clicks,
+    these topics open up.
 - id: tree-levels
   title: Tree levels and node counts
   plain: A balanced binary tree with n levels has about 2ⁿ nodes total. Conversely, if you have n nodes
@@ -66,26 +64,58 @@ math:
     has 8 nodes. Total nodes = 1+2+4+8 = 15 = 2⁴-1. Height is 3 = log₂(15) rounded.
   analogy: An org chart. The CEO is at the top. Each manager has two direct reports. With 10 levels, there
     are over 1,000 employees - but you can reach any employee with at most 10 steps down the hierarchy.
+  why: 'BST search, insert, and delete are all O(log n) on a balanced tree. This is the logarithm story:
+    height grows as log(n), so traversal steps stay small even for huge trees.'
 challenges:
 - title: Maximum Depth of Binary Tree
   difficulty: easy
   description: Given the root of a binary tree, return its maximum depth. The maximum depth is the number
     of nodes along the longest path from the root down to the farthest leaf.
+  starter: "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val =\
+    \ val\n        self.left = left\n        self.right = right\n\ndef max_depth(root):\n    # Recursive\
+    \ or iterative\n    pass\n\n# Build tree [3,9,20,None,None,15,7]\nroot = TreeNode(3)\nroot.left =\
+    \ TreeNode(9)\nroot.right = TreeNode(20)\nroot.right.left = TreeNode(15)\nroot.right.right = TreeNode(7)\n\
+    \nprint(max_depth(root))   # 3\nprint(max_depth(None))   # 0\n"
+  tests:
+  - input: max_depth([3,9,20,null,null,15,7])
+    expected: '3'
+  - input: max_depth([1,null,2])
+    expected: '2'
+  - input: max_depth(None)
+    expected: '0'
   hints:
   - 'Think recursively: the depth of a tree is 1 + max depth of its subtrees.'
   - 'Base case: if root is None, return 0.'
   - Alternatively, use BFS and count levels.
+  tags:
+  - recursion
+  - dfs
+  - google-favorite
   optimal: O(n) time, O(h) space
 - title: Validate Binary Search Tree
   difficulty: medium
   description: Given the root of a binary tree, determine if it is a valid binary search tree (BST). A
     BST requires that for every node, all left descendants are strictly less and all right descendants
     are strictly greater.
+  starter: "class TreeNode:\n    def __init__(self, val=0, left=None, right=None):\n        self.val =\
+    \ val\n        self.left = left\n        self.right = right\n\ndef is_valid_bst(root):\n    # Pass\
+    \ min/max bounds through recursion\n    pass\n\n# Valid BST: [2,1,3]\nr1 = TreeNode(2, TreeNode(1),\
+    \ TreeNode(3))\nprint(is_valid_bst(r1))   # True\n\n# Invalid: [5,1,4,None,None,3,6]\nr2 = TreeNode(5,\
+    \ TreeNode(1), TreeNode(4, TreeNode(3), TreeNode(6)))\nprint(is_valid_bst(r2))   # False\n"
+  tests:
+  - input: is_valid_bst([2,1,3])
+    expected: 'True'
+  - input: is_valid_bst([5,1,4,null,null,3,6])
+    expected: 'False'
   hints:
   - A naive check (left.val < root.val) is insufficient - think about the full subtree.
   - Pass a valid range (min_val, max_val) down to each recursive call.
   - Left child must be < root.val AND within inherited upper bound.
   - Right child must be > root.val AND within inherited lower bound.
+  tags:
+  - bst
+  - recursion
+  - google-favorite
   optimal: O(n) time, O(h) space
 ---
 

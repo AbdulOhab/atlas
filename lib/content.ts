@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { cache } from "react";
 import matter from "gray-matter";
 import { LEARN_TITLES, slugifyHeading } from "./headings";
 import { parseScript } from "./script";
@@ -21,7 +22,7 @@ import type {
   TechDetails,
   TechFact,
   TocEntry,
-  Track,
+  ContentTrack,
 } from "./types";
 
 const CONTENT_ROOT = path.join(process.cwd(), "content");
@@ -272,6 +273,7 @@ function readLearn(slug: string, data: Record<string, unknown>): LearnDetails | 
             plain: String(item.plain),
             visual: String(item.visual ?? ""),
             analogy: String(item.analogy ?? ""),
+            why: item.why ? String(item.why) : undefined,
           }
         : null,
     ),
@@ -303,7 +305,14 @@ function readLearn(slug: string, data: Record<string, unknown>): LearnDetails | 
             title: String(item.title),
             difficulty: String(item.difficulty ?? ""),
             description: String(item.description),
+            starter: item.starter ? String(item.starter) : undefined,
+            tests: records(item.tests, (tc) =>
+              tc.input !== undefined && tc.expected !== undefined
+                ? { input: String(tc.input), expected: String(tc.expected) }
+                : null,
+            ),
             hints: strings(item.hints),
+            tags: strings(item.tags),
             optimal: item.optimal ? String(item.optimal) : undefined,
           }
         : null,
@@ -403,13 +412,23 @@ function readGroup(group: DocGroup): Doc[] {
  * Read once per process. Content is static on disk, so caching here keeps
  * repeated calls across pages and layouts from re-parsing every file.
  */
-let cache: Doc[] | null = null;
+let builtCache: Doc[] | null = null;
+
+function readAllGroups(): Doc[] {
+  return GROUP_ORDER.flatMap(readGroup);
+}
+
+// In dev, re-read so markdown edits show up without restarting the server —
+// but only once per request. Without this, AppShell's five getDocsByGroup
+// calls plus a doc page's getDoc/getDocsInTrack/getSiblings each re-parse
+// every file in every group from scratch, turning one sidebar click into
+// ~8 full directory reads.
+const readAllGroupsOncePerRequest = cache(readAllGroups);
 
 export function getAllDocs(): Doc[] {
-  // In dev, re-read so markdown edits show up without restarting the server.
-  if (process.env.NODE_ENV !== "production") return GROUP_ORDER.flatMap(readGroup);
-  if (!cache) cache = GROUP_ORDER.flatMap(readGroup);
-  return cache;
+  if (process.env.NODE_ENV !== "production") return readAllGroupsOncePerRequest();
+  if (!builtCache) builtCache = readAllGroups();
+  return builtCache;
 }
 
 export function getDocsByGroup(group: DocGroup): Doc[] {
@@ -421,14 +440,14 @@ export function getDocsByGroup(group: DocGroup): Doc[] {
  * coding under /coding and learn under /learn. Lookups name the track, so a
  * slug that happens to exist in two tracks can never resolve to the wrong page.
  */
-const inTrack = (doc: DocMeta, track: Track) =>
+const inTrack = (doc: DocMeta, track: ContentTrack) =>
   track === "sysdesign" ? doc.group !== "coding" && doc.group !== "learn" : doc.group === track;
 
-export function getDocsInTrack(track: Track): Doc[] {
+export function getDocsInTrack(track: ContentTrack): Doc[] {
   return getAllDocs().filter((doc) => inTrack(doc, track));
 }
 
-export function getDoc(slug: string, track: Track = "sysdesign"): Doc | undefined {
+export function getDoc(slug: string, track: ContentTrack = "sysdesign"): Doc | undefined {
   return getDocsInTrack(track).find((doc) => doc.slug === slug);
 }
 
@@ -459,7 +478,7 @@ export function getAllMeta(): DocMeta[] {
 }
 
 /** Previous/next within the same group, for sequential reading. */
-export function getSiblings(slug: string, track: Track = "sysdesign"): { prev?: DocMeta; next?: DocMeta } {
+export function getSiblings(slug: string, track: ContentTrack = "sysdesign"): { prev?: DocMeta; next?: DocMeta } {
   const doc = getDoc(slug, track);
   if (!doc) return {};
   const siblings = getDocsByGroup(doc.group);

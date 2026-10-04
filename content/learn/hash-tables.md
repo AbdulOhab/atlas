@@ -1,6 +1,7 @@
 ---
 title: Hash Tables
 order: 5
+viz: hash-table
 summary: Hash tables trade space for time, turning O(n) searches into O(1). They appear in almost every
   interview problem. Master frequency counting, two-sum patterns, and grouping.
 category: Data structures
@@ -10,13 +11,6 @@ bigO:
   average: O(1)
   worst: O(n)
   space: O(n)
-explained:
-  time: O(1) average for get, set, delete. Worst case O(n) if many keys hash to the same slot (called
-    a collision), but good hash functions make this rare in practice.
-  space: O(n) to store n key-value pairs. The table itself also uses some extra space (called load factor
-    overhead).
-  visual: A row of numbered mailboxes. To deliver mail for "Alice", compute hash("Alice") % 100 to get
-    box number 42. To retrieve it later, compute the same thing. No searching needed.
 structures:
 - concept: Hash Map
   python: dict
@@ -107,6 +101,8 @@ math:
     go.
   analogy: Looking up a word in a dictionary if you already know the exact page number. It does not matter
     how thick the dictionary is.
+  why: 'Accessing array[3] is O(1) because the computer calculates the memory address directly: start
+    + 3 * item_size. One calculation, done.'
 - id: modular-arithmetic
   title: Modulo - the remainder operation
   plain: The % symbol means "what is left over after dividing?" 7 % 3 = 1 because 7 = 2×3 + 1. 10 % 4
@@ -116,6 +112,8 @@ math:
     1.'
   analogy: A clock with 12 positions. If it is 10 o'clock and 5 hours pass, the hand lands at (10 + 5)
     % 12 = 3. The clock "wraps around" just like modulo does.
+  why: Hash tables use modulo to turn any key (even a huge number from hashing a string) into a valid
+    index. myKey.hashCode() % tableSize = which slot to use.
 - id: hash-function-concept
   title: Hash functions - turning anything into a number
   plain: A hash function takes any input (a string, an object, anything) and converts it into a number.
@@ -125,25 +123,52 @@ math:
     → 7823. Try "banana" → 3241. Try "apple" again → 7823 (same every time).
   analogy: A library catalog number. The title "Moby Dick" always maps to the same shelf location number.
     Any librarian can compute the location without searching the entire library.
+  why: Hash(key) % tableSize tells you exactly which slot to store the value in. This is how O(1) lookup
+    is possible - no searching, just compute the address.
 challenges:
 - title: Group Anagrams
   difficulty: medium
   description: Given an array of strings, group the anagrams together. You can return the answer in any
     order. An anagram is a word formed by rearranging the letters of another word.
+  starter: "from collections import defaultdict\n\ndef group_anagrams(strs):\n    # Key insight: anagrams\
+    \ have the same sorted characters\n    pass\n\nprint(group_anagrams([\"eat\",\"tea\",\"tan\",\"ate\"\
+    ,\"nat\",\"bat\"]))\nprint(group_anagrams([\"\"]))   # [[\"\"]]\nprint(group_anagrams([\"a\"]))  #\
+    \ [[\"a\"]]\n"
+  tests:
+  - input: group_anagrams(["eat","tea","tan","ate","nat","bat"])
+    expected: 3 groups
+  - input: group_anagrams([""])
+    expected: '[[""]]'
   hints:
   - Two strings are anagrams if and only if their sorted characters are identical.
   - Use sorted(word) as a dictionary key (convert to tuple for hashability).
   - defaultdict(list) makes grouping clean.
+  tags:
+  - hash-map
+  - string
+  - google-favorite
   optimal: O(n * k log k) time, O(n * k) space
 - title: Subarray Sum Equals K
   difficulty: medium
   description: Given an array of integers `nums` and an integer `k`, return the total number of continuous
     subarrays whose sum equals `k`.
+  starter: "from collections import defaultdict\n\ndef subarray_sum(nums, k):\n    # Prefix sum + hash\
+    \ map approach\n    pass\n\nprint(subarray_sum([1, 1, 1], 2))       # 2\nprint(subarray_sum([1, 2,\
+    \ 3], 3))       # 2\nprint(subarray_sum([-1, -1, 1], 0))     # 1\n"
+  tests:
+  - input: subarray_sum([1,1,1], 2)
+    expected: '2'
+  - input: subarray_sum([1,2,3], 3)
+    expected: '2'
   hints:
   - Brute force is O(n^2). The trick is using prefix sums.
   - If prefix[j] - prefix[i] == k, then subarray (i,j] sums to k.
   - Store prefix sum counts in a map. For each position, check if (prefix - k) was seen.
   - 'Initialize map with {0: 1} to handle subarrays starting from index 0.'
+  tags:
+  - prefix-sum
+  - hash-map
+  - google-favorite
   optimal: O(n) time, O(n) space
 ---
 

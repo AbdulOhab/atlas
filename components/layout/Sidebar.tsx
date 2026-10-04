@@ -42,17 +42,17 @@ const SECTIONS = [
     accent: "var(--tech)",
   },
   {
-    id: "coding",
-    track: "coding",
-    heading: "Concepts",
-    note: "Data structures and algorithms. Read in order — each builds on the last.",
+    id: "data-structures",
+    track: "algorithms",
+    heading: "Data Structures",
+    note: "The structures themselves, from both the coding and learn tracks — sorted by what they are, not where they came from.",
     accent: "var(--coding)",
   },
   {
-    id: "learn",
-    track: "learn",
-    heading: "Topics",
-    note: "Visual interview prep, scraped from learningto.co. Read in order — the Big-O page comes first for a reason.",
+    id: "algo",
+    track: "algorithms",
+    heading: "Algorithms",
+    note: "Techniques, traversals and complexity — from both tracks, sorted by what they are, not where they came from.",
     accent: "var(--learn)",
   },
 ] as const satisfies readonly { id: string; track: Track; heading: string; note: string; accent: string }[];
@@ -133,7 +133,20 @@ export function Sidebar({ concepts, tech, designs, coding, learn }: SidebarProps
         ? pathname.slice("/learn/".length)
         : "";
 
-  const docsById: Record<SectionId, DocMeta[]> = { concepts, tech, designs, coding, learn };
+  // Coding and learn no longer get their own sidebar section — they're pooled
+  // and re-split by what each item actually is, so e.g. Hash Tables (coding)
+  // and Hash Tables (learn) both land under Data Structures regardless of
+  // which track wrote them.
+  const combined = [...coding, ...learn];
+  const dataStructureDocs = combined.filter((doc) => doc.category === "Data structures");
+  const algoDocs = combined.filter((doc) => doc.category !== "Data structures");
+  const docsById: Record<SectionId, DocMeta[]> = {
+    concepts,
+    tech,
+    designs,
+    "data-structures": dataStructureDocs,
+    algo: algoDocs,
+  };
   const close = () => setOpen(false);
 
   // The store is restored from localStorage before the first client render,

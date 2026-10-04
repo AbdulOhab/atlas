@@ -1,6 +1,7 @@
 ---
 title: Dynamic Programming
 order: 13
+viz: dynamic-programming
 summary: 'DP is the hardest category but appears in ~30% of Google hard problems. The key insight: optimal
   substructure + overlapping subproblems. Master the pattern recognition across 1D, 2D, and interval DP.'
 category: Algorithms
@@ -10,14 +11,6 @@ bigO:
   average: O(n^2)
   worst: O(n^2)
   space: O(n)
-explained:
-  time: O(n × m) for 2D DP problems where n and m are the table dimensions. Each cell is computed once
-    in O(1) or O(k) time (where k is some factor per cell, like coin denominations). Much better than
-    the O(2ⁿ) naive recursion.
-  space: O(n × m) for full table. Often reducible to O(n) or O(1) if only the previous row is needed.
-  visual: A crossword grid. You fill in cells from the top-left. Each cell's answer depends on its neighbors
-    to the top and left (already filled). The final answer is in the bottom-right corner. Fill time =
-    number of cells = n×m.
 structures:
 - concept: Array
   python: list
@@ -115,6 +108,8 @@ math:
     up. Compare it side by side with a straight line (linear) and the difference is shocking.
   analogy: A chain letter. You send it to 2 friends. Each of them sends it to 2 friends. After 30 rounds,
     over a billion letters have been sent.
+  why: Brute-force recursive solutions that branch into 2 sub-problems at every step hit O(2ⁿ). That is
+    why memoization and dynamic programming matter so much.
 - id: memoization-math
   title: Memoization - trading space for time
   plain: 'The key insight: if you have already computed a result, store it. If you see the same subproblem
@@ -125,6 +120,8 @@ math:
     result (green = lookup).'
   analogy: Doing your taxes every year. The first year is hard. But if you kept last year's return, you
     can copy and adjust instead of starting from scratch. Memoization is the filing cabinet.
+  why: Fibonacci without memo is O(2ⁿ). With memo it becomes O(n) because there are only n unique subproblems.
+    DP transforms exponential problems into polynomial ones.
 - id: dp-table-filling
   title: DP tables - filling a grid
   plain: Bottom-up DP builds a table where each cell depends only on cells you have already filled. You
@@ -134,6 +131,8 @@ math:
     earlier cells each new cell depends on. The bottom-right corner holds the final answer.
   analogy: Building a staircase from the ground up. You cannot place the 10th step until the 9th is stable.
     Each step depends on the ones below it.
+  why: The DP table makes the recurrence relation (the mathematical relationship between subproblems)
+    visible and concrete. Seeing it as a grid helps spot the pattern.
 walkthrough:
   problem: Dynamic Programming - Climbing Stairs
   tagline: Build up the answer from tiny known answers. Never recalculate the same thing twice.
@@ -204,21 +203,49 @@ challenges:
   difficulty: medium
   description: Given an integer array `coins` representing coin denominations and an integer `amount`,
     return the fewest number of coins needed to make up that amount. If not possible, return -1.
+  starter: "def coin_change(coins, amount):\n    # Bottom-up DP\n    pass\n\nprint(coin_change([1, 5,\
+    \ 11], 15))  # 3\nprint(coin_change([1, 5, 11], 11))  # 1\nprint(coin_change([2], 3))          # -1\n\
+    print(coin_change([1], 0))          # 0\n"
+  tests:
+  - input: coin_change([1,5,11], 15)
+    expected: '3'
+  - input: coin_change([1,5,11], 11)
+    expected: '1'
+  - input: coin_change([2], 3)
+    expected: '-1'
   hints:
   - dp[i] = minimum coins to make amount i.
   - dp[0] = 0 (base case), dp[i] = infinity initially.
   - 'For each amount, try each coin: dp[amt] = min(dp[amt], dp[amt-coin] + 1).'
   - The bottom-up approach processes amounts from 1 to target.
+  tags:
+  - dp
+  - unbounded-knapsack
+  - google-favorite
   optimal: O(n * amount) time, O(amount) space
 - title: Longest Common Subsequence
   difficulty: medium
   description: Given two strings `text1` and `text2`, return the length of their longest common subsequence.
     A subsequence is a sequence derived by deleting some characters without changing the relative order.
+  starter: "def lcs(text1, text2):\n    # 2D DP table\n    pass\n\nprint(lcs(\"abcde\", \"ace\"))    \
+    \ # 3 (\"ace\")\nprint(lcs(\"abc\", \"abc\"))       # 3 (\"abc\")\nprint(lcs(\"abc\", \"def\"))  \
+    \     # 0\n"
+  tests:
+  - input: lcs("abcde", "ace")
+    expected: '3'
+  - input: lcs("abc", "abc")
+    expected: '3'
+  - input: lcs("abc", "def")
+    expected: '0'
   hints:
   - dp[i][j] = LCS of text1[:i] and text2[:j].
   - 'If text1[i-1] == text2[j-1]: dp[i][j] = dp[i-1][j-1] + 1'
   - 'Otherwise: dp[i][j] = max(dp[i-1][j], dp[i][j-1])'
   - Build the table iterating both strings.
+  tags:
+  - dp
+  - 2d-dp
+  - google-favorite
   optimal: O(m*n) time, O(m*n) space
 ---
 

@@ -15,18 +15,11 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     accent: "var(--concept)",
   },
   {
-    id: "coding",
-    label: "coding",
-    blurb: "Data structures and algorithms, drawn step by step",
+    id: "algorithms",
+    label: "algorithms",
+    blurb: "Data structures and algorithms — step-by-step diagrams plus visual interview prep",
     href: "/coding",
     accent: "var(--coding)",
-  },
-  {
-    id: "learn",
-    label: "learn",
-    blurb: "Visual interview prep — costs, math, code, challenges",
-    href: "/learn",
-    accent: "var(--learn)",
   },
 ];
 

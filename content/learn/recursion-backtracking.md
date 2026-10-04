@@ -1,6 +1,7 @@
 ---
 title: Recursion & Backtracking
 order: 12
+viz: backtracking
 summary: Backtracking systematically explores all possibilities by building candidates incrementally and
   abandoning (pruning) paths that cannot lead to a solution. Essential for permutations, subsets, and
   constraint satisfaction.
@@ -11,13 +12,6 @@ bigO:
   average: O(2^n)
   worst: O(n!)
   space: O(n)
-explained:
-  time: 'O(k^n) in the worst case where k is the branching factor and n is the depth. For subsets (k=2):
-    O(2ⁿ). For permutations: O(n!). Pruning reduces this dramatically in practice.'
-  space: O(n) for the call stack and current path being explored (just one path at a time, not all paths
-    simultaneously).
-  visual: A maze where you try every path. When you hit a dead end you backtrack to the last fork and
-    try a different direction. Stack space = how deep you are in the maze, not the total number of paths.
 structures:
 - concept: Array
   python: list
@@ -83,6 +77,8 @@ math:
   analogy: To find the total weight of a stack of boxes, you pick up the top box, weigh it, then ask someone
     to tell you the total weight of the remaining stack. They do the same thing. Eventually the last person
     just says "zero, there are no boxes left."
+  why: Trees, graphs, and divide-and-conquer algorithms are all inherently recursive. Once recursion clicks,
+    these topics open up.
 - id: exponential-growth
   title: Exponents - doubling chains
   plain: 2ⁿ means you start with 1 and double it n times. n=10 gives you 1,024. n=20 gives you 1,048,576.
@@ -91,6 +87,8 @@ math:
     up. Compare it side by side with a straight line (linear) and the difference is shocking.
   analogy: A chain letter. You send it to 2 friends. Each of them sends it to 2 friends. After 30 rounds,
     over a billion letters have been sent.
+  why: Brute-force recursive solutions that branch into 2 sub-problems at every step hit O(2ⁿ). That is
+    why memoization and dynamic programming matter so much.
 - id: decision-tree
   title: Decision trees - branching choices
   plain: Backtracking builds a tree of decisions. At each step you have some number of choices (say, k
@@ -100,16 +98,34 @@ math:
     2: k² nodes. At depth 3: k³ nodes. The tree widens rapidly.'
   analogy: A menu with 3 courses and 5 choices per course. Total possible meals = 5×5×5 = 125. The decision
     tree has 3 levels and branches 5 ways at each level.
+  why: Backtracking explores this decision tree but prunes branches early when a partial solution is already
+    invalid. Good pruning turns an unworkable O(k^n) into something practical.
 challenges:
 - title: Combination Sum
   difficulty: medium
   description: Given an array of distinct integers `candidates` and a target integer `target`, return
     all unique combinations of candidates where the chosen numbers sum to target. The same number may
     be used multiple times.
+  starter: "def combination_sum(candidates, target):\n    result = []\n    def backtrack(start, path,\
+    \ remaining):\n        if remaining == 0:\n            result.append(path[:])\n            return\n\
+    \        for i in range(start, len(candidates)):\n            if candidates[i] > remaining:\n    \
+    \            continue\n            path.append(candidates[i])\n            # pass i (not i+1) to allow\
+    \ reuse\n            backtrack(i, path, remaining - candidates[i])\n            path.pop()\n    backtrack(0,\
+    \ [], target)\n    return result\n\nprint(combination_sum([2, 3, 6, 7], 7))  # [[2,2,3],[7]]\nprint(combination_sum([2,\
+    \ 3, 5], 8))     # [[2,2,2,2],[2,3,3],[3,5]]\n"
+  tests:
+  - input: combination_sum([2,3,6,7], 7)
+    expected: '[[2,2,3],[7]]'
+  - input: combination_sum([2,3,5], 8)
+    expected: '[[2,2,2,2],[2,3,3],[3,5]]'
   hints:
   - Use backtracking with a remaining sum.
   - Pass the current index (not index+1) to allow reuse of the same element.
   - Sort candidates first to enable early termination when candidates[i] > remaining.
+  tags:
+  - backtracking
+  - recursion
+  - google-favorite
   optimal: O(n^(t/m)) time, O(t/m) space
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: Stacks
 order: 5
+category: Data structures
 summary: "Last in, first out — and the structure behind matching, undo, recursion, and the monotonic trick that answers \"next greater\" for every element in one pass."
 hardPart: "Naming what the stack holds. \"Indices still waiting for an answer\" is a real invariant; \"the stack\" is not."
 viz: monotonic-stack

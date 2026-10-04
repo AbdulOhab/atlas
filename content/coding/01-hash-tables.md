@@ -1,6 +1,7 @@
 ---
 title: Hash Tables
 order: 1
+category: Data structures
 summary: An array you index by content instead of position. The one structure that turns a nested loop into a single pass, and the one whose O(1) comes with conditions.
 hardPart: Whether you can say why it is O(1) — and name the case where it is not — rather than reciting the number.
 viz: hash-table

@@ -1,6 +1,7 @@
 ---
 title: Graphs
 order: 10
+category: Data structures
 summary: "Nodes and edges, and two traversals that answer most questions about them. The hard part is usually recognising that a problem is a graph at all."
 hardPart: "Modelling — deciding what a node is and what an edge means — and then picking BFS, DFS or Dijkstra for the right reason."
 viz: graph-bfs

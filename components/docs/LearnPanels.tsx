@@ -315,6 +315,12 @@ export function LearnMathPanel({ concepts }: { concepts: LearnMathConcept[] }) {
                 <InlineMarkdown>{concept.analogy}</InlineMarkdown>
               </p>
             )}
+            {concept.why && (
+              <p className="mt-2 border-l-2 border-[color:var(--accent)] bg-[color:var(--accent-soft)] py-1.5 pl-3 pr-2 text-tiny leading-relaxed text-ink">
+                <span className="font-mono text-micro uppercase tracking-wider text-inkFaint">Why it matters </span>
+                <InlineMarkdown>{concept.why}</InlineMarkdown>
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -359,6 +365,42 @@ export function LearnChallengesPanel({ challenges }: { challenges: LearnChalleng
                 <p className="text-small leading-relaxed text-inkMuted">
                   <InlineMarkdown>{challenge.description}</InlineMarkdown>
                 </p>
+
+                {challenge.starter && (
+                  <div className="mt-3 rounded border border-rule bg-canvas px-3 py-2.5">
+                    <div className="mb-1.5 font-mono text-micro uppercase tracking-wider text-inkFaint">
+                      starter code
+                    </div>
+                    <pre className="overflow-x-auto font-mono text-micro leading-relaxed text-ink">
+                      <code>{challenge.starter}</code>
+                    </pre>
+                  </div>
+                )}
+
+                {challenge.tests.length > 0 && (
+                  <div className="mt-3 overflow-x-auto rounded border border-rule">
+                    <table className="w-full border-collapse text-tiny">
+                      <thead>
+                        <tr className="bg-canvas">
+                          <th className="border-b border-rule px-3 py-1.5 text-left font-mono text-micro uppercase tracking-wider text-inkFaint">
+                            Input
+                          </th>
+                          <th className="border-b border-rule px-3 py-1.5 text-left font-mono text-micro uppercase tracking-wider text-inkFaint">
+                            Expected
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {challenge.tests.map((tc, ti) => (
+                          <tr key={ti} className="border-t border-rule first:border-t-0">
+                            <td className="px-3 py-1.5 font-mono text-micro text-ink">{tc.input}</td>
+                            <td className="px-3 py-1.5 font-mono text-micro text-[color:var(--accent)]">{tc.expected}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
 
                 {challenge.hints.length > 0 && (
                   <div className="mt-3">

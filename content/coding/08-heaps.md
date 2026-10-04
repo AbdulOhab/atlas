@@ -1,6 +1,7 @@
 ---
 title: Heaps
 order: 8
+category: Data structures
 summary: "A tree stored in an array that keeps only one promise: the best element is at the front. Cheaper than sorting, and the right answer whenever a problem says top-k, median, or merge."
 hardPart: "Recognising that the problem needs the extreme repeatedly, not the full order — and getting the heap's direction and size right."
 viz: heap

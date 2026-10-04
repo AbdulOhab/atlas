@@ -11,12 +11,6 @@ bigO:
   average: O(V + E)
   worst: O(V + E)
   space: O(V + E)
-explained:
-  time: O(V+E) for BFS and DFS - you visit each vertex once and examine each edge once. V is the number
-    of nodes, E is the number of connections.
-  space: O(V) for the visited set and the BFS queue or DFS stack (at most V nodes waiting at once).
-  visual: Exploring a building. V = number of rooms. E = number of doorways. BFS explores all rooms on
-    one floor before going to the next. DFS dives as deep as possible before backtracking.
 structures:
 - concept: Hash Map
   python: dict
@@ -108,6 +102,15 @@ math:
     is undirected (two-way).
   analogy: 'Any network you can think of: power grid, airline routes, the internet, your friend group.
     All graphs.'
+  why: Graph algorithms (BFS, DFS) work on any of these structures. Understanding what a graph is makes
+    the traversal algorithms click immediately.
+- id: linear-complexity
+  title: Linear growth - O(n)
+  plain: If you have 10 items to check, you do 10 steps. 1,000 items? 1,000 steps. The work grows at exactly
+    the same rate as the input.
+  visual: A straight diagonal line on a graph. Double the input, double the time. No surprises.
+  analogy: Reading every page of a book. If the book is twice as long, it takes twice as long to read.
+  why: O(n) is usually the target for one-pass algorithms like simple array traversals.
 - id: graph-representation-math
   title: Vertices, edges, and adjacency
   plain: 'Graph complexity uses two variables: V (vertices = nodes) and E (edges = connections). A graph
@@ -117,26 +120,55 @@ math:
     Dense graph: 10 nodes, almost every pair connected, looks like a tangled web.'
   analogy: A road network. V = number of cities. E = number of roads connecting them. Driving from city
     to city, you might visit V cities and travel E roads total.
+  why: BFS and DFS visit every node once and check every edge once, giving O(V+E). The edge count E determines
+    whether this is closer to O(V) or O(V²) in practice.
 challenges:
 - title: Number of Islands
   difficulty: medium
   description: Given a 2D grid of '1's (land) and '0's (water), count the number of islands. An island
     is surrounded by water and is formed by connecting adjacent lands horizontally or vertically.
+  starter: "def num_islands(grid):\n    # DFS flood-fill approach\n    pass\n\ngrid1 = [\n    [\"1\",\"\
+    1\",\"1\",\"1\",\"0\"],\n    [\"1\",\"1\",\"0\",\"1\",\"0\"],\n    [\"1\",\"1\",\"0\",\"0\",\"0\"\
+    ],\n    [\"0\",\"0\",\"0\",\"0\",\"0\"]\n]\nprint(num_islands(grid1))  # 1\n\ngrid2 = [\n    [\"1\"\
+    ,\"1\",\"0\",\"0\",\"0\"],\n    [\"1\",\"1\",\"0\",\"0\",\"0\"],\n    [\"0\",\"0\",\"1\",\"0\",\"\
+    0\"],\n    [\"0\",\"0\",\"0\",\"1\",\"1\"]\n]\nprint(num_islands(grid2))  # 3\n"
+  tests:
+  - input: grid with 1 connected island
+    expected: '1'
+  - input: grid with 3 separate islands
+    expected: '3'
   hints:
   - Iterate through every cell. When you find a '1', start a DFS/BFS.
   - Mark visited cells as '0' (or use a visited set) to avoid re-counting.
   - Each DFS/BFS call from an unvisited '1' counts as one island.
   - The 4 directions are up, down, left, right.
+  tags:
+  - dfs
+  - bfs
+  - grid
+  - google-favorite
   optimal: O(m*n) time, O(m*n) space
 - title: Course Schedule
   difficulty: medium
   description: There are `n` courses labeled 0 to n-1. Given `prerequisites` pairs [a,b] meaning you must
     take b before a, return true if you can finish all courses (i.e., no cycle exists).
+  starter: "from collections import deque\n\ndef can_finish(num_courses, prerequisites):\n    # Topological\
+    \ sort / cycle detection\n    pass\n\nprint(can_finish(2, [[1, 0]]))           # True\nprint(can_finish(2,\
+    \ [[1, 0], [0, 1]]))  # False\nprint(can_finish(4, [[1,0],[2,0],[3,1],[3,2]]))  # True\n"
+  tests:
+  - input: can_finish(2, [[1,0]])
+    expected: 'True'
+  - input: can_finish(2, [[1,0],[0,1]])
+    expected: 'False'
   hints:
   - This is a cycle detection problem in a directed graph.
   - 'Use Kahn''s algorithm: compute in-degrees, BFS from zero-indegree nodes.'
   - If the topological order includes all n nodes, no cycle exists.
   - 'Alternatively, DFS with coloring: white (unvisited), gray (in-progress), black (done).'
+  tags:
+  - topological-sort
+  - cycle-detection
+  - google-favorite
   optimal: O(V + E) time, O(V + E) space
 ---
 

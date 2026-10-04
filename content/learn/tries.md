@@ -1,6 +1,7 @@
 ---
 title: Tries
 order: 9
+viz: trie
 summary: Tries (prefix trees) are the go-to structure for autocomplete, spell checking, and IP routing.
   Google uses them extensively in search. Master insertion, search, and prefix matching.
 category: Data structures
@@ -10,13 +11,6 @@ bigO:
   average: O(m)
   worst: O(m)
   space: O(n * m)
-explained:
-  time: O(L) for insert and search where L is the length of the word - not the number of words stored.
-    A trie with a million words is no slower to search than one with ten words.
-  space: O(A × L × n) where A is alphabet size (26 for English), L is average word length, n is number
-    of words. Each node needs up to 26 child pointers.
-  visual: A phone tree. Press 1 for sales, then press 2 for existing customers, then press 3 for billing.
-    Each keypress is one letter/step. The depth of the menu tree equals the longest phone path.
 structures:
 - concept: Hash Map
   python: dict
@@ -69,6 +63,8 @@ math:
     go.
   analogy: Looking up a word in a dictionary if you already know the exact page number. It does not matter
     how thick the dictionary is.
+  why: 'Accessing array[3] is O(1) because the computer calculates the memory address directly: start
+    + 3 * item_size. One calculation, done.'
 - id: string-as-path
   title: Strings as paths through a tree
   plain: 'In a trie, each letter of a word is one step down the tree. The word "cat" is stored as: root
@@ -79,15 +75,34 @@ math:
   analogy: A filing system where files are sorted one letter at a time. All files starting with "c" are
     in one drawer, within that drawer all "ca" files are in one folder. Finding any file means navigating
     letter by letter.
+  why: Searching for a word of length L takes exactly L steps, regardless of how many words are in the
+    trie. That is O(L) - not O(n) where n is the number of words.
 challenges:
 - title: Implement Trie (Prefix Tree)
   difficulty: medium
   description: Implement a Trie with `insert(word)`, `search(word)` (returns true if word exists), and
     `startsWith(prefix)` (returns true if any word has this prefix) methods.
+  starter: "class TrieNode:\n    def __init__(self):\n        self.children = {}\n        self.is_end\
+    \ = False\n\nclass Trie:\n    def __init__(self):\n        self.root = TrieNode()\n\n    def insert(self,\
+    \ word):\n        pass\n\n    def search(self, word):\n        pass\n\n    def starts_with(self, prefix):\n\
+    \        pass\n\ntrie = Trie()\ntrie.insert(\"apple\")\nprint(trie.search(\"apple\"))    # True\n\
+    print(trie.search(\"app\"))      # False\nprint(trie.starts_with(\"app\")) # True\ntrie.insert(\"\
+    app\")\nprint(trie.search(\"app\"))      # True\n"
+  tests:
+  - input: search after insert("apple")
+    expected: 'True'
+  - input: search("app") before insert("app")
+    expected: 'False'
+  - input: starts_with("app")
+    expected: 'True'
   hints:
   - Each TrieNode needs a children dict mapping char -> TrieNode.
   - Mark the last node of each inserted word with is_end = True.
   - search requires is_end == True at the end; starts_with just needs the path to exist.
+  tags:
+  - trie
+  - design
+  - google-favorite
   optimal: O(m) per op time, O(n * m) space
 ---
 

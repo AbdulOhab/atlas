@@ -1,6 +1,7 @@
 ---
 title: Trees and Traversals
 order: 7
+category: Data structures
 summary: "Recursive structure, recursive solutions. Most tree questions are one traversal with the work moved to the right point in the recursion — and the cost is decided by the height, not the count."
 hardPart: "Choosing the traversal from what the problem needs, and knowing which answers can only be computed on the way back up."
 viz: binary-tree

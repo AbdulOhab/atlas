@@ -1,6 +1,7 @@
 ---
 title: Heaps / Priority Queues
 order: 8
+viz: heap
 summary: Heaps efficiently maintain the max or min element. Python's heapq is a min-heap. The top-K pattern
   and merge-K-sorted-lists are classic Google questions.
 category: Data structures
@@ -10,12 +11,6 @@ bigO:
   average: O(log n)
   worst: O(log n)
   space: O(n)
-explained:
-  time: O(log n) for insert and extract-min/max because the element travels up or down the tree height,
-    which is log(n). O(1) for peek (just look at index 0).
-  space: O(n) to store n elements. The heap is just an array, so space equals exactly the number of elements.
-  visual: A sorting funnel. You pour items in the top and the smallest always floats to the tip. The funnel
-    has log(n) levels, so settling an item into place takes log(n) swaps.
 structures:
 - concept: Heap
   python: heapq
@@ -49,6 +44,8 @@ math:
     size. The number of levels in that tree is log₂(n).
   analogy: A phone book with 1,024 names. Flip to the middle - is your name before or after? Flip to the
     middle of the surviving half. Repeat. You find any name in at most 10 flips, not 1,024.
+  why: Any algorithm that cuts its remaining work in half each step runs in O(log n). Binary search, balanced
+    tree lookups, and heap operations all work this way.
 - id: heap-array-indexing
   title: Array indexing for trees
   plain: 'A heap looks like a tree but is actually stored as a flat array. The math that makes this work:
@@ -58,16 +55,30 @@ math:
     corresponding array index highlights. Move to a child - see the 2i+1 formula compute live.
   analogy: A tournament bracket stored as a list. The champion is position 1. Their two finalists are
     positions 2 and 3. The semi-finalists are positions 4, 5, 6, 7. Each level doubles.
+  why: Because a heap is a complete binary tree, its height is always log(n). Bubble-up and sink-down
+    operations travel at most log(n) steps, giving O(log n) insert and extract.
 challenges:
 - title: Kth Largest Element in Array
   difficulty: medium
   description: Given an integer array `nums` and an integer `k`, return the kth largest element. Note
     that it is the kth largest in sorted order, not the kth distinct element.
+  starter: "import heapq\n\ndef find_kth_largest(nums, k):\n    # Use a min-heap of size k\n    pass\n\
+    \nprint(find_kth_largest([3, 2, 1, 5, 6, 4], 2))  # 5\nprint(find_kth_largest([3, 2, 3, 1, 2, 4, 5,\
+    \ 5, 6], 4))  # 4\n"
+  tests:
+  - input: find_kth_largest([3,2,1,5,6,4], 2)
+    expected: '5'
+  - input: find_kth_largest([3,2,3,1,2,4,5,5,6], 4)
+    expected: '4'
   hints:
   - Sorting is O(n log n). Can you do O(n log k)?
   - Maintain a min-heap of exactly k elements.
   - If a new element is larger than the heap's minimum, replace it.
   - The heap minimum at the end is the kth largest.
+  tags:
+  - heap
+  - top-k
+  - google-favorite
   optimal: O(n log k) time, O(k) space
 ---
 

@@ -1,6 +1,7 @@
 ---
 title: Intervals
 order: 13
+category: Algorithms
 summary: "Ranges with a start and an end. Sort them the right way and almost every question becomes one linear pass — the difficulty is choosing which end to sort by."
 hardPart: "Picking the sort key. Merging wants start times, scheduling wants end times, and the wrong choice turns a five-line solution into a wrong one."
 viz: intervals

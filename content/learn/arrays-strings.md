@@ -10,13 +10,6 @@ bigO:
   average: O(n)
   worst: O(n)
   space: O(1)
-explained:
-  time: O(n) for most traversals - you visit each element once. Two-pointer is also O(n) because even
-    though you have two pointers, they each move at most n total steps together, never backwards.
-  space: O(1) for in-place operations - you are just moving two index variables around, not creating new
-    arrays. No extra data structures needed.
-  visual: Imagine scanning a hallway of n lockers. O(n) = open each locker once. O(1) space = you just
-    use your two hands as pointers, no backpack.
 structures:
 - concept: Array
   python: list
@@ -102,6 +95,13 @@ brute:
   tip: The brute force checks every pair in O(n^2). We can do better by using a hash map to remember what
     we have seen, giving us O(n) time with O(n) space.
 math:
+- id: linear-complexity
+  title: Linear growth - O(n)
+  plain: If you have 10 items to check, you do 10 steps. 1,000 items? 1,000 steps. The work grows at exactly
+    the same rate as the input.
+  visual: A straight diagonal line on a graph. Double the input, double the time. No surprises.
+  analogy: Reading every page of a book. If the book is twice as long, it takes twice as long to read.
+  why: O(n) is usually the target for one-pass algorithms like simple array traversals.
 - id: constant-complexity
   title: Constant time - O(1)
   plain: No matter how large the input is, this operation always takes the same amount of time. The size
@@ -110,6 +110,8 @@ math:
     go.
   analogy: Looking up a word in a dictionary if you already know the exact page number. It does not matter
     how thick the dictionary is.
+  why: 'Accessing array[3] is O(1) because the computer calculates the memory address directly: start
+    + 3 * item_size. One calculation, done.'
 - id: index-arithmetic
   title: Index arithmetic - pointers as numbers
   plain: An array index is just a number pointing to a position. "left + right" divided by 2 gives the
@@ -119,6 +121,8 @@ math:
     They move toward each other as you click through the algorithm.
   analogy: Two people walking toward each other on a straight road. Each person is an index. They meet
     somewhere in the middle.
+  why: The two-pointer pattern avoids the O(n²) brute force by never going backward. Understanding indices
+    as numbers makes this intuitive.
 - id: summation-series
   title: Summation - adding up a series
   plain: 1 + 2 + 3 + ... + n always equals n×(n+1)/2. For n=10 that is 55. For n=100 that is 5,050. This
@@ -127,6 +131,8 @@ math:
     so the total is roughly n²/2.
   analogy: Stacking cannon balls in a triangle. The bottom row has n balls, the next has n-1, the next
     has n-2. Total balls = n(n+1)/2.
+  why: 'When an outer loop runs n times and an inner loop runs 1 time on the first pass, 2 on the second,
+    3 on the third... the total work is this triangle sum: O(n²).'
 walkthrough:
   problem: Two Sum - Hash Map
   tagline: Find two numbers that add up to a target. One pass with a hash map.
@@ -211,29 +217,71 @@ challenges:
   description: Given an array of integers `nums` and an integer `target`, return the indices of the two
     numbers that add up to `target`. Each input has exactly one solution. You may not use the same element
     twice.
+  starter: "def two_sum(nums, target):\n    # Your solution here\n    pass\n\n# Test\nprint(two_sum([2,\
+    \ 7, 11, 15], 9))   # [0, 1]\nprint(two_sum([3, 2, 4], 6))        # [1, 2]\nprint(two_sum([3, 3],\
+    \ 6))           # [0, 1]\n"
+  tests:
+  - input: two_sum([2, 7, 11, 15], 9)
+    expected: '[0, 1]'
+  - input: two_sum([3, 2, 4], 6)
+    expected: '[1, 2]'
+  - input: two_sum([3, 3], 6)
+    expected: '[0, 1]'
   hints:
   - A brute-force O(n^2) solution checks every pair. Can you do better?
   - Store each number's index in a hash map as you iterate.
   - For each element x, check if (target - x) is already in the map.
+  tags:
+  - google-favorite
+  - hash-map
+  - common-pattern
   optimal: O(n) time, O(n) space
 - title: Maximum Subarray
   difficulty: medium
   description: Given an integer array `nums`, find the contiguous subarray (containing at least one element)
     which has the largest sum and return its sum.
+  starter: "def max_subarray(nums):\n    # Implement Kadane's algorithm\n    pass\n\nprint(max_subarray([-2,\
+    \ 1, -3, 4, -1, 2, 1, -5, 4]))  # 6\nprint(max_subarray([1]))                                  # 1\n\
+    print(max_subarray([5, 4, -1, 7, 8]))                     # 23\n"
+  tests:
+  - input: max_subarray([-2,1,-3,4,-1,2,1,-5,4])
+    expected: '6'
+  - input: max_subarray([1])
+    expected: '1'
+  - input: max_subarray([5,4,-1,7,8])
+    expected: '23'
   hints:
   - Track the current running sum and the global maximum.
   - If adding the next element makes the sum smaller than starting fresh, reset.
   - current = max(nums[i], current + nums[i])
+  tags:
+  - kadanes
+  - dynamic-programming
+  - google-favorite
   optimal: O(n) time, O(1) space
 - title: Minimum Window Substring
   difficulty: hard
   description: Given strings `s` and `t`, return the minimum window substring of `s` such that every character
     in `t` (including duplicates) is included. Return empty string if no such window exists.
+  starter: "from collections import Counter\n\ndef min_window(s, t):\n    # Sliding window with character\
+    \ frequency tracking\n    pass\n\nprint(min_window(\"ADOBECODEBANC\", \"ABC\"))  # \"BANC\"\nprint(min_window(\"\
+    a\", \"a\"))                # \"a\"\nprint(min_window(\"a\", \"aa\"))               # \"\"\n"
+  tests:
+  - input: min_window("ADOBECODEBANC", "ABC")
+    expected: '"BANC"'
+  - input: min_window("a", "a")
+    expected: '"a"'
+  - input: min_window("a", "aa")
+    expected: '""'
   hints:
   - Use two pointers (left, right) to expand and contract the window.
   - Keep a frequency count of required characters vs. characters currently in window.
   - Track how many unique characters from t are satisfied in the current window.
   - Shrink from the left once all characters are satisfied to minimize window.
+  tags:
+  - sliding-window
+  - hard-pattern
+  - google-favorite
   optimal: O(|s| + |t|) time, O(|s| + |t|) space
 ---
 

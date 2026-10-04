@@ -1,7 +1,18 @@
 export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn";
 
-/** The three halves of the atlas, each with its own route: /docs, /coding and /learn. */
-export type Track = "sysdesign" | "coding" | "learn";
+/**
+ * The two halves of the atlas the switcher offers. Coding and learn share one
+ * "Algorithms" entry — each keeps its own sidebar section (and its own
+ * /coding and /learn routes), the way sysdesign splits into Concepts, Designs
+ * and Tech sections under a single track.
+ */
+export type Track = "sysdesign" | "algorithms";
+
+/**
+ * Scope for content lookups: finer-grained than `Track` so a slug that exists
+ * in both /coding and /learn can never resolve to the wrong page.
+ */
+export type ContentTrack = "sysdesign" | "coding" | "learn";
 
 /** Facets used by the filter bar. Kept as a union so new facets fail loudly. */
 export type TagKind = "concept" | "tech" | "pattern";
@@ -140,6 +151,8 @@ export interface LearnMathConcept {
   plain: string;
   visual: string;
   analogy: string;
+  /** Why it matters for interviews, when the source says so. */
+  why?: string;
 }
 
 /** One step of a learn doc's code walkthrough. */
@@ -161,12 +174,22 @@ export interface LearnWalkthrough {
   steps: LearnWalkthroughStep[];
 }
 
+/** One input/expected pair of a learn doc's challenge. */
+export interface LearnTestCase {
+  input: string;
+  expected: string;
+}
+
 /** A practice challenge attached to a learn doc. */
 export interface LearnChallenge {
   title: string;
   difficulty: string;
   description: string;
+  /** The starting skeleton the source site opens in its editor. */
+  starter?: string;
+  tests: LearnTestCase[];
   hints: string[];
+  tags: string[];
   optimal?: string;
 }
 

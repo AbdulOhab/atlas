@@ -1,6 +1,7 @@
 ---
 title: Linked Lists
 order: 6
+category: Data structures
 summary: "Nodes connected by references, with no index and no locality. Almost every question is pointer surgery: rewire the links without losing the rest of the list."
 hardPart: "Doing it in place, in one pass, without dropping a reference — and knowing which cases a dummy head quietly removes."
 viz: linked-list

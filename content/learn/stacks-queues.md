@@ -10,12 +10,6 @@ bigO:
   average: O(1)
   worst: O(n)
   space: O(n)
-explained:
-  time: O(1) for push, pop, peek on a stack; O(1) for enqueue and dequeue on a queue. These are constant
-    time because you always operate on one specific end - no searching required.
-  space: O(n) where n is the number of items currently stored. The space grows with what you put in it.
-  visual: A can of Pringles (stack) or a roll of toilet paper dispenser (queue). Adding or removing one
-    chip/sheet is always one action, regardless of how many are in there.
 structures:
 - concept: Queue
   python: collections.deque
@@ -75,6 +69,8 @@ math:
     go.
   analogy: Looking up a word in a dictionary if you already know the exact page number. It does not matter
     how thick the dictionary is.
+  why: 'Accessing array[3] is O(1) because the computer calculates the memory address directly: start
+    + 3 * item_size. One calculation, done.'
 - id: lifo-fifo-ordering
   title: Order matters - LIFO vs FIFO
   plain: 'LIFO: Last In, First Out. The most recently added item is the first to leave. FIFO: First In,
@@ -85,25 +81,55 @@ math:
     exit on the left.'
   analogy: 'Stack: a pile of plates. You put a plate on top, you take a plate from the top. Queue: a line
     at a coffee shop. First person in line gets served first.'
+  why: The choice between stack and queue determines whether you explore deeply first (DFS, uses stack)
+    or broadly first (BFS, uses queue). This one data structure choice changes the entire behavior of
+    the algorithm.
 challenges:
 - title: Valid Parentheses
   difficulty: easy
   description: Given a string containing just the characters `(`, `)`, `{`, `}`, `[`, `]`, determine if
     the input string is valid. Open brackets must be closed by the same type and in the correct order.
+  starter: "def is_valid(s):\n    # Use a stack\n    pass\n\nprint(is_valid(\"()\"))        # True\nprint(is_valid(\"\
+    ()[]{}\"))    # True\nprint(is_valid(\"(]\"))        # False\nprint(is_valid(\"([)]\"))      # False\n\
+    print(is_valid(\"{[]}\"))      # True\n"
+  tests:
+  - input: is_valid("()")
+    expected: 'True'
+  - input: is_valid("()[]{}")
+    expected: 'True'
+  - input: is_valid("(]")
+    expected: 'False'
+  - input: is_valid("([)]")
+    expected: 'False'
   hints:
   - Push opening brackets onto the stack.
   - For closing brackets, check if the top of the stack is the matching opener.
   - At the end, the stack should be empty for a valid string.
+  tags:
+  - stack
+  - string
+  - google-favorite
   optimal: O(n) time, O(n) space
 - title: Daily Temperatures
   difficulty: medium
   description: Given an array `temperatures`, return an array `answer` where `answer[i]` is the number
     of days you have to wait after the ith day to get a warmer temperature. If there is no future day
     with a warmer temperature, set `answer[i] = 0`.
+  starter: "def daily_temperatures(temperatures):\n    # Monotonic decreasing stack stores indices\n \
+    \   pass\n\nprint(daily_temperatures([73,74,75,71,69,72,76,73]))  # [1,1,4,2,1,1,0,0]\nprint(daily_temperatures([30,40,50,60]))\
+    \               # [1,1,1,0]\nprint(daily_temperatures([30,60,90]))                  # [1,1,0]\n"
+  tests:
+  - input: daily_temperatures([73,74,75,71,69,72,76,73])
+    expected: '[1,1,4,2,1,1,0,0]'
+  - input: daily_temperatures([30,40,50,60])
+    expected: '[1,1,1,0]'
   hints:
   - Maintain a stack of indices where temperatures are decreasing.
   - When you find a warmer temp, pop indices from the stack and compute the wait.
   - answer[stack.pop()] = current_index - popped_index
+  tags:
+  - monotonic-stack
+  - common-pattern
   optimal: O(n) time, O(n) space
 ---
 

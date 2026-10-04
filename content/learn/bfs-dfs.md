@@ -1,6 +1,7 @@
 ---
 title: BFS & DFS
 order: 14
+viz: graph-bfs
 summary: The two fundamental graph traversal strategies. BFS explores level by level (shortest path in
   unweighted graphs). DFS dives deep first (connectivity, cycle detection, topological sort).
 category: Algorithms
@@ -10,14 +11,6 @@ bigO:
   average: O(V + E)
   worst: O(V + E)
   space: O(V)
-explained:
-  time: O(V+E) for both BFS and DFS. V vertices are each visited once. E edges are each examined once.
-    The V+E notation captures that sparser graphs are faster.
-  space: O(V) for both - the queue (BFS) or stack (DFS) holds at most V nodes at once. BFS can use more
-    memory in practice because it holds an entire frontier level.
-  visual: 'BFS frontier: imagine all nodes currently "in the queue" lit up at once. For a wide graph,
-    this can be a large layer. DFS stack: only one path from root to current node is active at once -
-    much narrower.'
 structures:
 - concept: Set
   python: set
@@ -116,6 +109,8 @@ math:
     is undirected (two-way).
   analogy: 'Any network you can think of: power grid, airline routes, the internet, your friend group.
     All graphs.'
+  why: Graph algorithms (BFS, DFS) work on any of these structures. Understanding what a graph is makes
+    the traversal algorithms click immediately.
 - id: queue-vs-stack-traversal
   title: Queue vs stack - the one choice that changes everything
   plain: BFS uses a queue (FIFO). It processes nodes in the order they were discovered. This naturally
@@ -127,6 +122,8 @@ math:
   analogy: 'BFS: finding the nearest coffee shop - check your block first, then neighboring blocks, expanding
     outward. DFS: exploring a cave system - go as far down one tunnel as possible, then backtrack and
     try the next tunnel.'
+  why: BFS finds the shortest path in unweighted graphs. DFS is better for detecting cycles, topological
+    sort, and exhaustive exploration. The right choice depends on what you are looking for.
 walkthrough:
   problem: Breadth-First Search (BFS)
   tagline: Explore a graph level by level - like ripples spreading in water.
@@ -215,11 +212,30 @@ challenges:
   description: Given two words `beginWord` and `endWord` and a word list, return the length of the shortest
     transformation sequence from beginWord to endWord where each step changes exactly one letter and all
     intermediate words are in the word list.
+  starter: "from collections import deque\n\ndef ladder_length(beginWord, endWord, wordList):\n    word_set\
+    \ = set(wordList)\n    if endWord not in word_set:\n        return 0\n    queue = deque([(beginWord,\
+    \ 1)])\n    visited = {beginWord}\n    while queue:\n        word, length = queue.popleft()\n    \
+    \    for i in range(len(word)):\n            for c in 'abcdefghijklmnopqrstuvwxyz':\n            \
+    \    new_word = word[:i] + c + word[i+1:]\n                if new_word == endWord:\n             \
+    \       return length + 1\n                if new_word in word_set and new_word not in visited:\n\
+    \                    visited.add(new_word)\n                    queue.append((new_word, length + 1))\n\
+    \    return 0\n\nprint(ladder_length(\"hit\", \"cog\", [\"hot\",\"dot\",\"dog\",\"lot\",\"log\",\"\
+    cog\"]))  # 5\nprint(ladder_length(\"hit\", \"cog\", [\"hot\",\"dot\",\"dog\",\"lot\",\"log\"])) \
+    \        # 0\n"
+  tests:
+  - input: ladder_length("hit","cog",["hot","dot","dog","lot","log","cog"])
+    expected: '5'
+  - input: ladder_length("hit","cog",["hot","dot","dog","lot","log"])
+    expected: '0'
   hints:
   - BFS from beginWord, each level = one transformation.
   - For each word position, try all 26 letters to generate neighbors.
   - Store neighbors in a set for O(1) lookup.
   - Mark words as visited when added to the queue, not when dequeued.
+  tags:
+  - bfs
+  - hard-pattern
+  - google-favorite
   optimal: O(m^2 * n) time, O(m^2 * n) space
 ---
 

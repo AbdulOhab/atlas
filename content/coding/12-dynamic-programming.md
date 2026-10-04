@@ -1,6 +1,7 @@
 ---
 title: Dynamic Programming
 order: 12
+category: Algorithms
 summary: "Recursion that refuses to solve the same sub-problem twice. Exponential becomes polynomial the moment the repeated work is written down and reused."
 hardPart: "Finding the state. Once you can say what dp[i] means in one sentence, the recurrence and the code usually follow in a minute."
 viz: dynamic-programming

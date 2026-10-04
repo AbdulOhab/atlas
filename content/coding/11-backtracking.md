@@ -1,6 +1,7 @@
 ---
 title: Backtracking
 order: 11
+category: Algorithms
 summary: "Depth-first search over decisions, with the decision undone on the way back out. The answer to every \"generate all…\" and \"find an arrangement that works\" question."
 hardPart: "Pruning. The template is three lines; whether the search finishes this century depends on how early invalid branches are cut."
 viz: backtracking
