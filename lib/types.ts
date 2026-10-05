@@ -1,18 +1,19 @@
-export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn";
+export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn" | "devops";
 
 /**
- * The two halves of the atlas the switcher offers. Coding and learn share one
+ * The halves of the atlas the switcher offers. Coding and learn share one
  * "Algorithms" entry — each keeps its own sidebar section (and its own
  * /coding and /learn routes), the way sysdesign splits into Concepts, Designs
- * and Tech sections under a single track.
+ * and Tech sections under a single track. DevOps is its own track with its
+ * own route, /devops.
  */
-export type Track = "sysdesign" | "algorithms";
+export type Track = "sysdesign" | "algorithms" | "devops";
 
 /**
  * Scope for content lookups: finer-grained than `Track` so a slug that exists
- * in both /coding and /learn can never resolve to the wrong page.
+ * in both /coding and /learn (or /devops) can never resolve to the wrong page.
  */
-export type ContentTrack = "sysdesign" | "coding" | "learn";
+export type ContentTrack = "sysdesign" | "coding" | "learn" | "devops";
 
 /** Facets used by the filter bar. Kept as a union so new facets fail loudly. */
 export type TagKind = "concept" | "tech" | "pattern";

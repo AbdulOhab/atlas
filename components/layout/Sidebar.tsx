@@ -16,6 +16,7 @@ interface SidebarProps {
   designs: DocMeta[];
   coding: DocMeta[];
   learn: DocMeta[];
+  devops: DocMeta[];
 }
 
 /** Ids match the `section-collapsed-*` rules in globals.css. */
@@ -54,6 +55,13 @@ const SECTIONS = [
     heading: "Algorithms",
     note: "Techniques, traversals and complexity — from both tracks, sorted by what they are, not where they came from.",
     accent: "var(--learn)",
+  },
+  {
+    id: "devops",
+    track: "devops",
+    heading: "Modules",
+    note: "Linux through Kubernetes to interview prep. Read in order — each module builds on the last.",
+    accent: "var(--devops)",
   },
 ] as const satisfies readonly { id: string; track: Track; heading: string; note: string; accent: string }[];
 
@@ -115,7 +123,7 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
   );
 }
 
-export function Sidebar({ concepts, tech, designs, coding, learn }: SidebarProps) {
+export function Sidebar({ concepts, tech, designs, coding, learn, devops }: SidebarProps) {
   const pathname = usePathname();
   const open = useUiStore((s) => s.sidebarOpen);
   const setOpen = useUiStore((s) => s.setSidebarOpen);
@@ -131,7 +139,9 @@ export function Sidebar({ concepts, tech, designs, coding, learn }: SidebarProps
       ? pathname.slice("/coding/".length)
       : pathname.startsWith("/learn/")
         ? pathname.slice("/learn/".length)
-        : "";
+        : pathname.startsWith("/devops/")
+          ? pathname.slice("/devops/".length)
+          : "";
 
   // Coding and learn no longer get their own sidebar section — they're pooled
   // and re-split by what each item actually is, so e.g. Hash Tables (coding)
@@ -146,6 +156,7 @@ export function Sidebar({ concepts, tech, designs, coding, learn }: SidebarProps
     designs,
     "data-structures": dataStructureDocs,
     algo: algoDocs,
+    devops,
   };
   const close = () => setOpen(false);
 

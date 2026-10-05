@@ -21,6 +21,13 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     href: "/coding",
     accent: "var(--coding)",
   },
+  {
+    id: "devops",
+    label: "devops",
+    blurb: "Linux, networking, containers, CI/CD, cloud and the rest of the production toolchain",
+    href: "/devops",
+    accent: "var(--devops)",
+  },
 ];
 
 /** The sidebar logo doubles as the switch between the two halves of the atlas. */

@@ -32,14 +32,15 @@ const GROUP_DIR: Record<DocGroup, string> = {
   tech: "tech",
   coding: "coding",
   learn: "learn",
+  devops: "devops",
 };
 
 /**
  * Reading order of the groups: the ideas, then the tools, then the problems.
- * Coding and learn sit last because they are separate tracks with their own
- * routes, not steps in the system design sequence.
+ * Coding, learn and devops sit last because they are separate tracks with
+ * their own routes, not steps in the system design sequence.
  */
-const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn"];
+const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops"];
 
 const WORDS_PER_MINUTE = 200;
 
@@ -436,12 +437,15 @@ export function getDocsByGroup(group: DocGroup): Doc[] {
 }
 
 /**
- * The atlas has three tracks with their own routes: system design under /docs,
- * coding under /coding and learn under /learn. Lookups name the track, so a
- * slug that happens to exist in two tracks can never resolve to the wrong page.
+ * The atlas has four tracks with their own routes: system design under /docs,
+ * coding under /coding, learn under /learn and devops under /devops. Lookups
+ * name the track, so a slug that happens to exist in two tracks can never
+ * resolve to the wrong page.
  */
 const inTrack = (doc: DocMeta, track: ContentTrack) =>
-  track === "sysdesign" ? doc.group !== "coding" && doc.group !== "learn" : doc.group === track;
+  track === "sysdesign"
+    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops"
+    : doc.group === track;
 
 export function getDocsInTrack(track: ContentTrack): Doc[] {
   return getAllDocs().filter((doc) => inTrack(doc, track));

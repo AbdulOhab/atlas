@@ -75,10 +75,21 @@ const SHAPES: [open: string, close: string, shape: NodeShape][] = [
 const LABELLED_EDGE = /^(--|==|-\.)\s*"([^"]*)"\s*(-->|---|==>|===|\.->|\.-)/;
 const EDGE = /^(-\.->|-\.-|-->|---|==>|===|~~~)(?:\s*\|([^|]*)\|)?/;
 
+/**
+ * Mermaid node labels sometimes carry inline emphasis tags (`<b>`, `<i>`,
+ * `<strong>`, `<em>`) for GitHub's own renderer. Node cards render lines as
+ * plain text, not HTML, so left in they show up literally as "<b>word</b>";
+ * stripped here, same as `<br/>` is turned into a line break rather than
+ * shown as text.
+ */
+function stripInlineTags(text: string): string {
+  return text.replace(/<\/?(?:b|strong|i|em|u)\s*>/gi, "");
+}
+
 export function splitLabel(text: string): string[] {
   return text
     .split(/<br\s*\/?>/i)
-    .map((line) => line.trim())
+    .map((line) => stripInlineTags(line).trim())
     .filter(Boolean);
 }
 
