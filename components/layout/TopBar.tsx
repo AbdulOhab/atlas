@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Github, Heart, Menu, PanelLeftOpen } from "lucide-react";
+import { Github, Menu, PanelLeftOpen } from "lucide-react";
 import { useUiStore } from "@/store/useUiStore";
 import { ThemeToggle } from "./ThemeToggle";
 
@@ -49,18 +49,7 @@ export function TopBar({ crumb }: TopBarProps) {
       )}
 
       <a
-        href="https://github.com/sponsors/mertkahyaoglu"
-        target="_blank"
-        rel="noreferrer noopener"
-        title="Sponsor this project on GitHub"
-        className="flex h-8 items-center gap-1.5 rounded border border-rule px-2 text-small text-inkMuted transition-colors duration-fast hover:border-ruleStrong hover:text-ink sm:px-2.5"
-      >
-        <Heart className="h-4 w-4 shrink-0 text-[color:var(--tone-pink)]" aria-hidden />
-        <span className="sr-only sm:not-sr-only">Sponsor</span>
-      </a>
-
-      <a
-        href="https://github.com/mertkahyaoglu/atlas"
+        href="https://github.com/AbdulOhab/atlas"
         target="_blank"
         rel="noreferrer noopener"
         title="View the source on GitHub"
