@@ -62,7 +62,7 @@ export function SiteSwitcher({ track, onNavigate }: { track: Track; onNavigate?:
         title="Switch atlas"
         className="-ml-1.5 flex items-center gap-1 rounded px-1.5 py-1 font-mono text-small font-medium tracking-tight text-ink transition-colors duration-fast hover:bg-raised"
       >
-        atlas<span className="text-inkFaint">/</span>
+        atlas-ce<span className="text-inkFaint">/</span>
         <span style={{ color: current.accent }}>{current.label}</span>
         <ChevronDown
           className={cn("h-3.5 w-3.5 shrink-0 text-inkFaint transition-transform", open && "rotate-180")}
@@ -97,7 +97,7 @@ export function SiteSwitcher({ track, onNavigate }: { track: Track; onNavigate?:
                 )}
               >
                 <span className="flex items-center gap-2">
-                  <span className="font-mono text-tiny text-inkFaint">atlas/</span>
+                  <span className="font-mono text-tiny text-inkFaint">atlas-ce/</span>
                   <span className="font-mono text-small text-[color:var(--item-accent)]">{item.label}</span>
                   {isCurrent && (
                     <Check className="ml-auto h-3.5 w-3.5 shrink-0 text-[color:var(--item-accent)]" aria-hidden />

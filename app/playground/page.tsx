@@ -7,8 +7,8 @@ const DESCRIPTION = "Build a system on a canvas, set the scale, and see whether 
 export const metadata: Metadata = {
   title: "Playground",
   description: DESCRIPTION,
-  openGraph: { title: "Playground · System Design Atlas", description: DESCRIPTION, url: "/playground" },
-  twitter: { card: "summary_large_image", title: "Playground · System Design Atlas", description: DESCRIPTION },
+  openGraph: { title: "Playground · Atlas CE", description: DESCRIPTION, url: "/playground" },
+  twitter: { card: "summary_large_image", title: "Playground · Atlas CE", description: DESCRIPTION },
   alternates: { canonical: "/playground" },
 };
 

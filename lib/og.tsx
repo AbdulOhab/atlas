@@ -68,7 +68,7 @@ function fonts() {
 function Wordmark() {
   return (
     <div style={{ display: "flex", fontFamily: "Plex Mono", fontSize: 26 }}>
-      <span style={{ color: COLOR.ink }}>atlas</span>
+      <span style={{ color: COLOR.ink }}>atlas-ce</span>
       <span style={{ color: COLOR.inkFaint }}>/</span>
       <span style={{ color: COLOR.concept }}>sysdesign</span>
     </div>
@@ -212,14 +212,14 @@ export function siteCard() {
     (
       <Card
         accent={COLOR.concept}
-        title="System Design Atlas"
+        title="Atlas CE"
         body="Concept modules, the technologies designs actually name, and worked designs with interactive architecture diagrams."
         chips={[
           { label: "Concepts", color: COLOR.concept },
           { label: "Key technologies", color: COLOR.tech },
           { label: "Designs", color: COLOR.design },
         ]}
-        footer="atlas-sysdes.vercel.app"
+        footer="github.com/AbdulOhab/atlas"
       />
     ),
     { ...OG_SIZE, fonts: fonts() },

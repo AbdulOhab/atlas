@@ -13,11 +13,11 @@ export const metadata: Metadata = {
   // link posted anywhere renders as a bare box.
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "System Design Atlas",
-    template: "%s · System Design Atlas",
+    default: "Atlas CE",
+    template: "%s · Atlas CE",
   },
   description: DESCRIPTION,
-  applicationName: "System Design Atlas",
+  applicationName: "Atlas CE",
   authors: [{ name: "AbdulOhab", url: "https://github.com/AbdulOhab" }],
   keywords: [
     "system design",
@@ -29,15 +29,15 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    siteName: "System Design Atlas",
-    title: "System Design Atlas",
+    siteName: "Atlas CE",
+    title: "Atlas CE",
     description: DESCRIPTION,
     url: SITE_URL,
     locale: "en",
   },
   twitter: {
     card: "summary_large_image",
-    title: "System Design Atlas",
+    title: "Atlas CE",
     description: DESCRIPTION,
   },
   robots: { index: true, follow: true },

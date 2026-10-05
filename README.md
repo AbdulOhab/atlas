@@ -1,4 +1,4 @@
-# System Design Atlas
+# Atlas CE
 
 A reading app for system design interviews: concept modules built from the ground
 up, pages on the technologies those designs name, and worked designs with rendered
