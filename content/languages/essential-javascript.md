@@ -1,14 +1,14 @@
 ---
-title: "Essential JavaScript for Frameworks"
+title: "Essential JavaScript"
 order: 1
-summary: "The 24 JavaScript features React, Next.js and other frameworks assume: modules, destructuring, spread, arrow functions, array methods, immutability, promises, async/await and fetch."
+summary: "The JavaScript features React, Next.js and other frameworks assume: modules, destructuring, spread, this, arrow functions, array methods, immutability, JSON, promises, async/await and fetch."
 category: "JavaScript"
 level: Beginner
 ---
 
-# Essential JavaScript for Frameworks
+# Essential JavaScript
 
-React, Next.js and every other modern framework assume a handful of JavaScript features: modules, destructuring, spread, arrow functions, array methods, promises and async/await. These 24 topics are that list, one page each, in the order you'll meet them.
+React, Next.js and every other modern framework assume a handful of JavaScript features: modules, destructuring, spread, arrow functions, array methods, promises and async/await. These 24 topics are that list, plus JSON and `this`, one page each, in the order you'll meet them.
 
 ## Import and Export
 
@@ -2787,6 +2787,546 @@ const obj = {
 };
 
 obj.doSomethingLater(); // logs 11
+```
+
+## The this Keyword
+
+> **Source:** [this](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/this) · [MDN Web Docs](https://github.com/mdn/content), CC BY-SA 2.5
+>
+> **Further reading:** [javascript.info](https://javascript.info/object-methods)
+
+The **`this`** keyword refers to the context where a piece of code, such as a function's body, is supposed to run. Most typically, it is used in object methods, where `this` refers to the object that the method is attached to, thus allowing the same method to be reused on different objects.
+
+The value of `this` in JavaScript depends on how a function is invoked (runtime binding), not how it is defined. When a regular function is invoked as a method of an object (`obj.method()`), `this` points to that object. When invoked as a standalone function (not attached to an object: `func()`), `this` typically refers to the [global object](https://developer.mozilla.org/en-US/docs/Glossary/Global_object) (in non-strict mode) or `undefined` (in [strict mode](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode)). The `Function.prototype.bind()` method can create a function whose `this` binding doesn't change, and methods `Function.prototype.apply()` and `Function.prototype.call()` can also set the `this` value for a particular call.
+
+[Arrow functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions) differ in their handling of `this`: they inherit `this` from the parent scope at the time they are defined. This behavior makes arrow functions particularly useful for callbacks and preserving context. However, arrow functions do not have their own `this` binding. Therefore, their `this` value cannot be set by `bind()`, `apply()` or `call()` methods, nor does it point to the current object in object methods.
+
+```js
+const test = {
+  prop: 42,
+  func() {
+    return this.prop;
+  },
+};
+
+console.log(test.func());
+// Expected output: 42
+```
+
+### Syntax
+
+```js
+this
+```
+
+#### Value
+
+In non–strict mode, `this` is always a reference to an object. In strict mode, it can be any value. For more information on how the value is determined, see the description below.
+
+### Description
+
+The value of `this` depends on in which context it appears: function, class, or global.
+
+#### Function context
+
+Inside a function, the value of `this` depends on how the function is called. Think about `this` as a hidden parameter of a function — just like the parameters declared in the function definition, `this` is a binding that the language creates for you when the function body is evaluated.
+
+For a regular function (not an arrow function, bound function, etc.), the value of `this` is the object that the function is accessed on. In other words, if the function call is in the form `obj.f()`, then `this` refers to `obj`. For example:
+
+```js
+function getThis() {
+  return this;
+}
+
+const obj1 = { name: "obj1" };
+const obj2 = { name: "obj2" };
+
+obj1.getThis = getThis;
+obj2.getThis = getThis;
+
+console.log(obj1.getThis()); // { name: 'obj1', getThis: [Function: getThis] }
+console.log(obj2.getThis()); // { name: 'obj2', getThis: [Function: getThis] }
+```
+
+Note how the function is the same, but based on how it's invoked, the value of `this` is different. This is analogous to how function parameters work.
+
+The value of `this` is not the object that has the function as an own property, but the object that is used to call the function. You can prove this by calling a method of an object up in the [prototype chain](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Inheritance_and_the_prototype_chain).
+
+```js
+const obj3 = {
+  __proto__: obj1,
+  name: "obj3",
+};
+
+console.log(obj3.getThis()); // { name: 'obj3' }
+```
+
+The value of `this` always changes based on how a function is called, even when the function was defined on an object at creation:
+
+```js
+const obj4 = {
+  name: "obj4",
+  getThis() {
+    return this;
+  },
+};
+
+const obj5 = { name: "obj5" };
+
+obj5.getThis = obj4.getThis;
+console.log(obj5.getThis()); // { name: 'obj5', getThis: [Function: getThis] }
+```
+
+If the value that the method is accessed on is a primitive, `this` will be a primitive value as well — but only if the function is in strict mode.
+
+```js
+function getThisStrict() {
+  "use strict"; // Enter strict mode
+  return this;
+}
+
+// Only for demonstration — you should not mutate built-in prototypes
+Number.prototype.getThisStrict = getThisStrict;
+console.log(typeof (1).getThisStrict()); // "number"
+```
+
+If the function is called without being accessed on anything, `this` will be `undefined` — but only if the function is in strict mode.
+
+```js
+console.log(typeof getThisStrict()); // "undefined"
+```
+
+In non-strict mode, a special process called [`this` substitution](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Strict_mode#no_this_substitution) ensures that the value of `this` is always an object. This means:
+
+- If a function is called with `this` set to `undefined` or `null`, `this` gets substituted with `globalThis`.
+- If the function is called with `this` set to a primitive value, `this` gets substituted with the primitive value's wrapper object.
+
+```js
+function getThis() {
+  return this;
+}
+
+// Only for demonstration — you should not mutate built-in prototypes
+Number.prototype.getThis = getThis;
+console.log(typeof (1).getThis()); // "object"
+console.log(getThis() === globalThis); // true
+```
+
+In typical function calls, `this` is implicitly passed like a parameter through the function's prefix (the part before the dot). You can also explicitly set the value of `this` using the `Function.prototype.call()`, `Function.prototype.apply()`, or `Reflect.apply()` methods. Using `Function.prototype.bind()`, you can create a new function with a specific value of `this` that doesn't change regardless of how the function is called. When using these methods, the `this` substitution rules above still apply if the function is non-strict.
+
+##### Callbacks
+
+When a function is passed as a callback, the value of `this` depends on how the callback is called, which is determined by the implementor of the API. Callbacks are _typically_ called with a `this` value of `undefined` (calling it directly without attaching it to any object), which means if the function is non–strict, the value of `this` is the global object (`globalThis`). This is the case for [iterative array methods](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array#iterative_methods), the [`Promise()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Promise/Promise) constructor, etc.
+
+```js
+function logThis() {
+  "use strict";
+  console.log(this);
+}
+
+[1, 2, 3].forEach(logThis); // undefined, undefined, undefined
+```
+
+Some APIs allow you to set a `this` value for invocations of the callback. For example, all iterative array methods and related ones like `Set.prototype.forEach()` accept an optional `thisArg` parameter.
+
+```js
+[1, 2, 3].forEach(logThis, { name: "obj" });
+// { name: 'obj' }, { name: 'obj' }, { name: 'obj' }
+```
+
+Occasionally, a callback is called with a `this` value other than `undefined`. For example, the `reviver` parameter of `JSON.parse()` and the `replacer` parameter of `JSON.stringify()` are both called with `this` set to the object that the property being parsed/serialized belongs to.
+
+##### Arrow functions
+
+In [arrow functions](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions), `this` retains the value of the enclosing lexical context's `this`. In other words, when evaluating an arrow function's body, the language does not create a new `this` binding.
+
+For example, in global code, `this` is always `globalThis` regardless of strictness, because of the [global context](#global_context) binding:
+
+```js
+const globalObject = this;
+const foo = () => this;
+console.log(foo() === globalObject); // true
+```
+
+Arrow functions create a [closure](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Closures) over the `this` value of its surrounding scope, which means arrow functions behave as if they are "auto-bound" — no matter how it's invoked, `this` is bound to what it was when the function was created (in the example above, the global object). The same applies to arrow functions created inside other functions: their `this` remains that of the enclosing lexical context. [See example below](#this_in_arrow_functions).
+
+Furthermore, when invoking arrow functions using `call()`, `bind()`, or `apply()`, the `thisArg` parameter is ignored. You can still pass other arguments using these methods, though.
+
+```js
+const obj = { name: "obj" };
+
+// Attempt to set this using call
+console.log(foo.call(obj) === globalObject); // true
+
+// Attempt to set this using bind
+const boundFoo = foo.bind(obj);
+console.log(boundFoo() === globalObject); // true
+```
+
+##### Constructors
+
+When a function is used as a constructor (with the `new` keyword), its `this` is bound to the new object being constructed, no matter which object the constructor function is accessed on. The value of `this` becomes the value of the `new` expression unless the constructor returns another non–primitive value.
+
+```js
+function C() {
+  this.a = 37;
+}
+
+let o = new C();
+console.log(o.a); // 37
+
+function C2() {
+  this.a = 37;
+  return { a: 38 };
+}
+
+o = new C2();
+console.log(o.a); // 38
+```
+
+In the second example (`C2`), because an object was returned during construction, the new object that `this` was bound to gets discarded. (This essentially makes the statement `this.a = 37;` dead code. It's not exactly dead because it gets executed, but it can be eliminated with no outside effects.)
+
+##### super
+
+When a function is invoked in the `super.method()` form, the `this` inside the `method` function is the same value as the `this` value around the `super.method()` call, and is generally not equal to the object that `super` refers to. This is because `super.method` is not an object member access like the ones above — it's a special syntax with different binding rules. For examples, see the [`super` reference](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/super#calling_methods_from_super).
+
+#### Class context
+
+A [class](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes) can be split into two contexts: static and instance. [Constructors](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/constructor), methods, and instance field initializers ([public](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Public_class_fields) or [private](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Private_elements)) belong to the instance context. [Static](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/static) methods, static field initializers, and [static initialization blocks](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes/Static_initialization_blocks) belong to the static context. The `this` value is different in each context.
+
+Class constructors are always called with `new`, so their behavior is the same as [function constructors](#constructors): the `this` value is the new instance being created. Class methods behave like methods in object literals — the `this` value is the object that the method was accessed on. If the method is not transferred to another object, `this` is generally an instance of the class.
+
+Static methods are not properties of `this`. They are properties of the class itself. Therefore, they are generally accessed on the class, and `this` is the value of the class (or a subclass). Static initialization blocks are also evaluated with `this` set to the current class.
+
+Field initializers are also evaluated in the context of the class. Instance fields are evaluated with `this` set to the instance being constructed. Static fields are evaluated with `this` set to the current class. This is why arrow functions in field initializers are [bound to the instance for instance fields and to the class for static fields](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions#cannot_be_used_as_methods).
+
+```js
+class C {
+  instanceField = this;
+  static staticField = this;
+}
+
+const c = new C();
+console.log(c.instanceField === c); // true
+console.log(C.staticField === C); // true
+```
+
+##### Derived class constructors
+
+Unlike base class constructors, derived constructors have no initial `this` binding. Calling `super()` creates a `this` binding within the constructor and essentially has the effect of evaluating the following line of code, where `Base` is the base class:
+
+```js
+this = new Base();
+```
+
+> **Warning:**
+> Referring to `this` before calling `super()` will throw an error.
+
+Derived classes must not return before calling `super()`, unless the constructor returns an object (so the `this` value is overridden) or the class has no constructor at all.
+
+```js
+class Base {}
+class Good extends Base {}
+class AlsoGood extends Base {
+  constructor() {
+    return { a: 5 };
+  }
+}
+class Bad extends Base {
+  constructor() {}
+}
+
+new Good();
+new AlsoGood();
+new Bad(); // ReferenceError: Must call super constructor in derived class before accessing 'this' or returning from derived constructor
+```
+
+#### Global context
+
+In the global execution context (outside of any functions or classes; may be inside [blocks](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/block) or [arrow functions](#arrow_functions) defined in the global scope), the `this` value depends on what execution context the script runs in. Like [callbacks](#callbacks), the `this` value is determined by the runtime environment (the caller).
+
+At the top level of a script, `this` refers to `globalThis` whether in strict mode or not. This is generally the same as the global object — for example, if the source is put inside an HTML [`<script>`](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/script) element and executed as a script, `this === window`.
+
+> **Note:**
+> `globalThis` is generally the same concept as the global object (i.e., adding properties to `globalThis` makes them global variables) — this is the case for browsers and Node — but hosts are allowed to provide a different value for `globalThis` that's unrelated to the global object.
+
+```js
+// In web browsers, the window object is also the global object:
+console.log(this === window); // true
+
+this.b = "MDN";
+console.log(window.b); // "MDN"
+console.log(b); // "MDN"
+```
+
+If the source is loaded as a [module](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules) (for HTML, this means adding `type="module"` to the `<script>` tag), `this` is always `undefined` at the top level.
+
+If the source is executed with [`eval()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval), `this` is the same as the enclosing context for [direct eval](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/eval#direct_and_indirect_eval), or `globalThis` (as if it's run in a separate global script) for indirect eval.
+
+```js
+function test() {
+  // Direct eval
+  console.log(eval("this") === this);
+  // Indirect eval, non-strict
+  console.log(eval?.("this") === globalThis);
+  // Indirect eval, strict
+  console.log(eval?.("'use strict'; this") === globalThis);
+}
+
+test.call({ name: "obj" }); // Logs 3 "true"
+```
+
+Note that some source code, while looking like the global scope, is actually wrapped in a function when executed. For example, Node.js CommonJS modules are wrapped in a function and executed with the `this` value set to `module.exports`. [Event handler attributes](#this_in_inline_event_handlers) are executed with `this` set to the element they are attached to.
+
+Object literals don't create a `this` scope — only functions (methods) defined within the object do. Using `this` in an object literal inherits the value from the surrounding scope.
+
+```js
+const obj = {
+  a: this,
+};
+
+console.log(obj.a === window); // true
+```
+
+### Examples
+
+#### this in function contexts
+
+The value of the `this` parameter depends on how the function is called, not on how it's defined.
+
+```js
+// An object can be passed as the first argument to 'call'
+// or 'apply' and 'this' will be bound to it.
+const obj = { a: "Custom" };
+
+// Variables declared with var become properties of 'globalThis'.
+var a = "Global";
+
+function whatsThis() {
+  return this.a; // 'this' depends on how the function is called
+}
+
+whatsThis(); // 'Global'; the 'this' parameter defaults to 'globalThis' in non–strict mode
+obj.whatsThis = whatsThis;
+obj.whatsThis(); // 'Custom'; the 'this' parameter is bound to obj
+```
+
+Using `call()` and `apply()`, you can pass the value of `this` as if it's an explicit parameter.
+
+```js
+function add(c, d) {
+  return this.a + this.b + c + d;
+}
+
+const o = { a: 1, b: 3 };
+
+// The first argument is bound to the implicit 'this' parameter; the remaining
+// arguments are bound to the named parameters.
+add.call(o, 5, 7); // 16
+
+// The first argument is bound to the implicit 'this' parameter; the second
+// argument is an array whose members are bound to the named parameters.
+add.apply(o, [10, 20]); // 34
+```
+
+#### this and object conversion
+
+In non–strict mode, if a function is called with a `this` value that's not an object, the `this` value is substituted with an object. `null` and `undefined` become `globalThis`. Primitives like `7` or `'foo'` are converted to an object using the related constructor, so the primitive number `7` is converted to a `Number` wrapper class and the string `'foo'` to a `String` wrapper class.
+
+```js
+function bar() {
+  console.log(Object.prototype.toString.call(this));
+}
+
+bar.call(7); // [object Number]
+bar.call("foo"); // [object String]
+bar.call(undefined); // [object Window]
+```
+
+#### The bind() method
+
+Calling [`f.bind(someObject)`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/bind) creates a new function with the same body and scope as `f`, but the value of `this` is permanently bound to the first argument of `bind`, regardless of how the function is being called.
+
+```js
+function f() {
+  return this.a;
+}
+
+const g = f.bind({ a: "azerty" });
+console.log(g()); // azerty
+
+const h = g.bind({ a: "yoo" }); // bind only works once!
+console.log(h()); // azerty
+
+const o = { a: 37, f, g, h };
+console.log(o.a, o.f(), o.g(), o.h()); // 37 37 azerty azerty
+```
+
+#### this in arrow functions
+
+Arrow functions create closures over the `this` value of the enclosing execution context. In the following example, we create `obj` with a method `getThisGetter` that returns a function that returns the value of `this`. The returned function is created as an arrow function, so its `this` is permanently bound to the `this` of its enclosing function. The value of `this` inside `getThisGetter` can be set in the call, which in turn sets the return value of the returned function. We will assume that `getThisGetter` is a non-strict function, which means it's contained in a non-strict script and not further nested in a class or strict function.
+
+```js
+const obj = {
+  getThisGetter() {
+    const getter = () => this;
+    return getter;
+  },
+};
+```
+
+We can call `getThisGetter` as a method of `obj`, which binds `this` to `obj` inside its body. The returned function is assigned to a variable `fn`. Now, when calling `fn`, the value of `this` returned is still the one set by the call to `getThisGetter`, which is `obj`. If the returned function was not an arrow function, such calls would cause the `this` value to be `globalThis`, because `getThisGetter` is non-strict.
+
+```js
+const fn = obj.getThisGetter();
+console.log(fn() === obj); // true
+```
+
+But be careful if you unbind the method of `obj` without calling it, because `getThisGetter` is still a method that has a varying `this` value. Calling `fn2()()` in the following example returns `globalThis`, because it follows the `this` from `fn2()`, which is `globalThis` since it's called without being attached to any object.
+
+```js
+const fn2 = obj.getThisGetter;
+console.log(fn2()() === globalThis); // true in non-strict mode
+```
+
+This behavior is very useful when defining callbacks. Usually, each function expression creates its own `this` binding, which shadows the `this` value of the upper scope. Now, you can define functions as arrow functions if you don't care about the `this` value, and only create `this` bindings where you do (e.g., in class methods). See [example with `setTimeout()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions#using_call_bind_and_apply).
+
+#### this with a getter or setter
+
+`this` in getters and setters is based on which object the property is accessed on, not which object the property is defined on. A function used as getter or setter has its `this` bound to the object from which the property is being set or gotten.
+
+```js
+function sum() {
+  return this.a + this.b + this.c;
+}
+
+const o = {
+  a: 1,
+  b: 2,
+  c: 3,
+  get average() {
+    return (this.a + this.b + this.c) / 3;
+  },
+};
+
+Object.defineProperty(o, "sum", {
+  get: sum,
+  enumerable: true,
+  configurable: true,
+});
+
+console.log(o.average, o.sum); // 2 6
+```
+
+#### this in DOM event handlers
+
+When a function is used as an event handler, its `this` parameter is bound to the DOM element on which the listener is placed (some browsers do not follow this convention for listeners added dynamically with methods other than `addEventListener()`).
+
+```js
+// When called as a listener, turns the related element blue
+function bluify(e) {
+  // Always true
+  console.log(this === e.currentTarget);
+  // true when currentTarget and target are the same object
+  console.log(this === e.target);
+  this.style.backgroundColor = "#A5D9F3";
+}
+
+// Get a list of every element in the document
+const elements = document.getElementsByTagName("*");
+
+// Add bluify as a click listener so when the
+// element is clicked on, it turns blue
+for (const element of elements) {
+  element.addEventListener("click", bluify);
+}
+```
+
+#### this in inline event handlers
+
+When the code is called from an inline [event handler attribute](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes#event_handler_attributes), its `this` is bound to the DOM element on which the listener is placed:
+
+```html
+<button onclick="alert(this.tagName.toLowerCase());">Show this</button>
+```
+
+The above alert shows `button`. Note, however, that only the outer scope has its `this` bound this way:
+
+```html
+<button onclick="alert((function () { return this; })());">
+  Show inner this
+</button>
+```
+
+In this case, the `this` parameter of the inner function is bound to `globalThis` (i.e., the default object in non–strict mode where `this` isn't passed in the call).
+
+#### Bound methods in classes
+
+Just like with regular functions, the value of `this` within methods depends on how they are called. Sometimes it is useful to override this behavior so that `this` within classes always refers to the class instance. To achieve this, bind the class methods in the constructor:
+
+```js
+class Car {
+  constructor() {
+    // Bind sayBye but not sayHi to show the difference
+    this.sayBye = this.sayBye.bind(this);
+  }
+
+  sayHi() {
+    console.log(`Hello from ${this.name}`);
+  }
+
+  sayBye() {
+    console.log(`Bye from ${this.name}`);
+  }
+
+  get name() {
+    return "Ferrari";
+  }
+}
+
+class Bird {
+  get name() {
+    return "Tweety";
+  }
+}
+
+const car = new Car();
+const bird = new Bird();
+
+// The value of 'this' in methods depends on their caller
+car.sayHi(); // Hello from Ferrari
+bird.sayHi = car.sayHi;
+bird.sayHi(); // Hello from Tweety
+
+// For bound methods, 'this' doesn't depend on the caller
+bird.sayBye = car.sayBye;
+bird.sayBye(); // Bye from Ferrari
+```
+
+> **Note:**
+> Classes are always in strict mode. Calling methods with an undefined `this` will throw an error if the method tries to access properties on `this`.
+>
+> ```js example-bad
+> const carSayHi = car.sayHi;
+> carSayHi(); // TypeError because the 'sayHi' method tries to access 'this.name', but 'this' is undefined in strict mode.
+> ```
+
+Note, however, that auto-bound methods suffer from the same problem as [using arrow functions for class properties](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Functions/Arrow_functions#cannot_be_used_as_methods): each instance of the class will have its own copy of the method, which increases memory usage. Only use it where absolutely necessary. You can also mimic the implementation of [`Intl.NumberFormat.prototype.format()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat/format#using_format_with_map): define the property as a getter that returns a bound function when accessed and saves it, so that the function is only created once and only created when necessary.
+
+#### this in with statements
+
+Although [`with`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/with) statements are deprecated and not available in strict mode, they still serve as an exception to the normal `this` binding rules. If a function is called within a `with` statement and that function is a property of the scope object, the `this` value is bound to the scope object, as if the `obj.` prefix exists.
+
+```js
+const obj = {
+  foo() {
+    return this;
+  },
+};
+
+with (obj) {
+  console.log(foo() === obj); // true
+}
 ```
 
 ## Short-Circuiting and Logical Operators (&&, ||, ??)
@@ -6078,6 +6618,916 @@ withAwait();
 
 Contrary to some popular belief, `return await promise` is at least as fast as `return promise`, due to how the spec and engines optimize the resolution of native promises. There's a proposal to [make `return promise` faster](https://github.com/tc39/proposal-faster-promise-adoption) and you can also read about [V8's optimization on async functions](https://v8.dev/blog/fast-async). Therefore, except for stylistic reasons, `return await` is almost always preferable.
 
+## JSON: stringify() and parse()
+
+> **Source:** [Working with JSON](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/JSON), [JSON.stringify()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify), [JSON.parse()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse) · [MDN Web Docs](https://github.com/mdn/content), CC BY-SA 2.5
+>
+> **Further reading:** [javascript.info](https://javascript.info/json)
+
+### Working with JSON
+
+JavaScript Object Notation (JSON) is a standard text-based format for representing structured data based on JavaScript object syntax. It is commonly used for transmitting data in web applications (e.g., sending some data from the server to the client, so it can be displayed on a web page, or vice versa). You'll come across it quite often, so in this article, we give you all you need to work with JSON using JavaScript, including parsing JSON so you can access data within it, and creating JSON.
+
+<table>
+  <tbody>
+    <tr>
+      <th scope="row">Prerequisites:</th>
+      <td>An understanding of <a href="/en-US/docs/Learn_web_development/Core/Structuring_content">HTML</a> and the <a href="/en-US/docs/Learn_web_development/Core/Styling_basics">fundamentals of CSS</a>, familiarity with JavaScript basics as covered in previous lessons.</td>
+    </tr>
+    <tr>
+      <th scope="row">Learning outcomes:</th>
+      <td>
+        <ul>
+          <li>What JSON is — a very commonly used data format based on JavaScript object syntax.</li>
+          <li>That JSON can also contain arrays.</li>
+          <li>Retrieve JSON as a JavaScript object using mechanisms available in Web APIs (for example, <code>Response.json()</code> in the Fetch API).</li>
+          <li>Access values inside JSON data using bracket and dot syntax.</li>
+          <li>Converting between objects and text using <code>JSON.parse()</code> and <code>JSON.stringify()</code>.</li>
+        </ul>
+      </td>
+    </tr>
+  </tbody>
+</table>
+
+#### No, really, what is JSON?
+
+JSON is a text-based data format following JavaScript object syntax.
+It represents structured data as a string, which is useful when you want to transmit data across a network.
+Even though it closely resembles JavaScript object literal syntax, it can be used independently from JavaScript. Many programming environments feature the ability to read (parse) and generate JSON.
+In JavaScript, the methods for parsing and generating JSON are provided by the [`JSON`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON) object.
+
+> **Note:**
+> Converting a string to a native object is called _deserialization_, while converting a native object to a string so it can be transmitted across the network is called _serialization_.
+
+A JSON string can be stored in its own file, which is basically just a text file with an extension of `.json`, and a MIME type of `application/json`.
+
+##### JSON structure
+
+As described above, JSON is a string whose format very much resembles JavaScript object literal format.
+The following is a valid JSON string representing an object.
+Note that it is also a valid JavaScript object literal — just with some more [syntax restrictions](#json_syntax_restrictions).
+
+<!-- cSpell:ignore tonne -->
+
+```json
+{
+  "squadName": "Super hero squad",
+  "homeTown": "Metro City",
+  "formed": 2016,
+  "secretBase": "Super tower",
+  "active": true,
+  "members": [
+    {
+      "name": "Molecule Man",
+      "age": 29,
+      "secretIdentity": "Dan Jukes",
+      "powers": ["Radiation resistance", "Turning tiny", "Radiation blast"]
+    },
+    {
+      "name": "Madame Uppercut",
+      "age": 39,
+      "secretIdentity": "Jane Wilson",
+      "powers": [
+        "Million tonne punch",
+        "Damage resistance",
+        "Superhuman reflexes"
+      ]
+    },
+    {
+      "name": "Eternal Flame",
+      "age": 1000000,
+      "secretIdentity": "Unknown",
+      "powers": [
+        "Immortality",
+        "Heat Immunity",
+        "Inferno",
+        "Teleportation",
+        "Interdimensional travel"
+      ]
+    }
+  ]
+}
+```
+
+If you load this JSON in your JavaScript program as a string, you can parse it into a normal object and then access the data inside it using the same dot/bracket notation we looked at in the [JavaScript object basics](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Object_basics) article.
+For example:
+
+```js
+superHeroes.homeTown;
+superHeroes.members[1].powers[2];
+```
+
+1. First, we have the variable name — `superHeroes`.
+2. Inside that, we want to access the `members` property, so we use `.members`.
+3. `members` contains an array populated by objects. We want to access the second object inside the array, so we use `[1]`.
+4. Inside this object, we want to access the `powers` property, so we use `.powers`.
+5. Inside the `powers` property is an array containing the selected hero's superpowers. We want the third one, so we use `[2]`.
+
+The key takeaway is that there's really nothing special about working with JSON; after you've parsed it into a JavaScript object, you work with it just like you would with an object declared using the same object literal syntax.
+
+> **Note:**
+> We've made the JSON seen above available inside a variable in our [JSONTest.html](https://mdn.github.io/learning-area/javascript/oojs/json/JSONTest.html) example (see the [source code](https://github.com/mdn/learning-area/blob/main/javascript/oojs/json/JSONTest.html)).
+> Try loading this up and then accessing data inside the variable via your browser's JavaScript console.
+
+##### Arrays as JSON
+
+Above we mentioned that JSON text basically looks like a JavaScript object inside a string.
+We can also convert arrays to/from JSON. The below example is perfectly valid JSON:
+
+```json
+[
+  {
+    "name": "Molecule Man",
+    "age": 29,
+    "secretIdentity": "Dan Jukes",
+    "powers": ["Radiation resistance", "Turning tiny", "Radiation blast"]
+  },
+  {
+    "name": "Madame Uppercut",
+    "age": 39,
+    "secretIdentity": "Jane Wilson",
+    "powers": [
+      "Million tonne punch",
+      "Damage resistance",
+      "Superhuman reflexes"
+    ]
+  }
+]
+```
+
+You have to access array items (in its parsed version) by starting with an array index, for example `superHeroes[0].powers[0]`.
+
+The JSON can also contain a single primitive. For example, `29`, `"Dan Jukes"`, or `true` are all valid JSON.
+
+##### JSON syntax restrictions
+
+As mentioned earlier, any JSON is a valid JavaScript literal (object, array, number, etc.). The converse is not true, though—not all JavaScript object literals are valid JSON.
+
+- JSON can only contain _serializable_ data types. This means:
+  - For primitives, JSON can contain string literals, number literals, `true`, `false`, and `null`. Notably, it cannot contain `undefined`, `NaN`, or `Infinity`.
+  - For non-primitives, JSON can contain object literals and arrays, but not functions or any other object types, such as `Date`, `Set`, and `Map`. The objects and arrays inside JSON need to further contain valid JSON data types.
+- Strings must be enclosed in double quotes, not single quotes.
+- Numbers must be written in decimal notation.
+- Each property of an object must be in the form of `"key": value`. Property names must be string literals enclosed in double quotes. Special JavaScript syntax, such as methods, is not allowed because methods are functions, and functions are not valid JSON data types.
+- Objects and arrays cannot contain [trailing commas](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Trailing_commas).
+- Comments are not allowed in JSON.
+
+Even a single misplaced comma or colon can make a JSON file invalid and cause it to fail.
+You should be careful to validate any data you are attempting to use (although computer-generated JSON is less likely to include errors, as long as the generator program is working correctly).
+You can validate JSON using an application like [JSONLint](https://jsonlint.com/) or [JSON-validate](https://www.json-validate.com/)
+
+> **Note:**
+> Now you've read through this section, you might also want to supplement your learning with Scrimba's [JSON review](https://scrimba.com/frontend-path-c0j/~0lt?via=mdn) <sup>[_MDN learning partner_](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Learning_content#partner_links_and_embeds)</sup> interactive tutorial, which provides some useful guidance around basic JSON syntax and how to view JSON request data inside your browser's devtools.
+
+#### Working through a JSON example
+
+So, let's work through an example to show how we could make use of some JSON formatted data on a website.
+
+##### Getting started
+
+To begin with, make local copies of our [heroes.html](https://github.com/mdn/learning-area/blob/main/javascript/oojs/json/heroes.html) and [style.css](https://github.com/mdn/learning-area/blob/main/javascript/oojs/json/style.css) files.
+The latter contains some simple CSS to style our page, while the former contains some very simple body HTML, plus a `script` element to contain the JavaScript code we will be writing in this exercise:
+
+```html
+<header>
+...
+</header>
+
+<section>
+...
+</section>
+
+<script>
+// JavaScript goes here
+</script>
+```
+
+We have made our JSON data available on our GitHub, at <https://mdn.github.io/learning-area/javascript/oojs/json/superheroes.json>.
+
+We are going to load the JSON into our script, and use some nifty DOM manipulation to display it, like this:
+
+![Image of a document titled "Super hero squad" (in a fancy font) and subtitled "Hometown: Metro City // Formed: 2016". Three columns below the heading are titled "Molecule Man", "Madame Uppercut", and "Eternal Flame", respectively. Each column lists the hero's secret identity name, age, and superpowers.](https://raw.githubusercontent.com/mdn/content/main/files/en-us/learn_web_development/core/scripting/json/json-superheroes.png)
+
+##### Top-level function
+
+The top-level function looks like this:
+
+```js
+async function populate() {
+  const requestURL =
+    "https://mdn.github.io/learning-area/javascript/oojs/json/superheroes.json";
+  const request = new Request(requestURL);
+
+  const response = await fetch(request);
+  const superHeroes = await response.json();
+
+  populateHeader(superHeroes);
+  populateHeroes(superHeroes);
+}
+```
+
+To obtain the JSON, we use an API called [Fetch](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
+This API allows us to make network requests to retrieve resources from a server via JavaScript (e.g., images, text, JSON, even HTML snippets), meaning that we can update small sections of content without having to reload the entire page.
+
+In our function, the first four lines use the Fetch API to fetch the JSON from the server:
+
+- we declare the `requestURL` variable to store the GitHub URL
+- we use the URL to initialize a new `Request` object.
+- we make the network request using the `fetch()` function, and this returns a `Response` object
+- we retrieve the response as JSON using the `json()` function of the `Response` object.
+
+> **Note:**
+> The `fetch()` API is **asynchronous**. You can learn about asynchronous functions in detail in our [Asynchronous JavaScript module](https://developer.mozilla.org/en-US/docs/Learn_web_development/Extensions/Async_JS), but for now, we'll just say that we need to add the keyword `async` before the name of the function that uses the fetch API, and add the keyword `await` before the calls to any asynchronous functions.
+
+After all that, the `superHeroes` variable will contain the JavaScript object based on the JSON. We are then passing that object to two function calls — the first one fills the `<header>` with the correct data, while the second one creates an information card for each hero on the team, and inserts it into the `<section>`.
+
+##### Populating the header
+
+Now that we've retrieved the JSON data and converted it into a JavaScript object, let's make use of it by writing the two functions we referenced above. First of all, add the following function definition below the previous code:
+
+```js
+function populateHeader(obj) {
+  const header = document.querySelector("header");
+  const myH1 = document.createElement("h1");
+  myH1.textContent = obj.squadName;
+  header.appendChild(myH1);
+
+  const myPara = document.createElement("p");
+  myPara.textContent = `Hometown: ${obj.homeTown} // Formed: ${obj.formed}`;
+  header.appendChild(myPara);
+}
+```
+
+Here we first create an `h1` element with [`createElement()`](https://developer.mozilla.org/en-US/docs/Web/API/Document/createElement), set its [`textContent`](https://developer.mozilla.org/en-US/docs/Web/API/Node/textContent) to equal the `squadName` property of the object, then append it to the header using [`appendChild()`](https://developer.mozilla.org/en-US/docs/Web/API/Node/appendChild). We then do a very similar operation with a paragraph: create it, set its text content and append it to the header. The only difference is that its text is set to a [template literal](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals) containing both the `homeTown` and `formed` properties of the object.
+
+##### Creating the hero information cards
+
+Next, add the following function at the bottom of the code, which creates and displays the superhero cards:
+
+```js
+function populateHeroes(obj) {
+  const section = document.querySelector("section");
+  const heroes = obj.members;
+
+  for (const hero of heroes) {
+    const myArticle = document.createElement("article");
+    const myH2 = document.createElement("h2");
+    const myPara1 = document.createElement("p");
+    const myPara2 = document.createElement("p");
+    const myPara3 = document.createElement("p");
+    const myList = document.createElement("ul");
+
+    myH2.textContent = hero.name;
+    myPara1.textContent = `Secret identity: ${hero.secretIdentity}`;
+    myPara2.textContent = `Age: ${hero.age}`;
+    myPara3.textContent = "Superpowers:";
+
+    const superPowers = hero.powers;
+    for (const power of superPowers) {
+      const listItem = document.createElement("li");
+      listItem.textContent = power;
+      myList.appendChild(listItem);
+    }
+
+    myArticle.appendChild(myH2);
+    myArticle.appendChild(myPara1);
+    myArticle.appendChild(myPara2);
+    myArticle.appendChild(myPara3);
+    myArticle.appendChild(myList);
+
+    section.appendChild(myArticle);
+  }
+}
+```
+
+To start with, we store the `members` property of the JavaScript object in a new variable. This array contains multiple objects that contain the information for each hero.
+
+Next, we use a [`for...of` loop](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Loops#the_for...of_loop) to iterate through each object in the array. For each one, we:
+
+1. Create several new elements: an `<article>`, an `<h2>`, three `<p>`s, and a `<ul>`.
+2. Set the `<h2>` to contain the current hero's `name`.
+3. Fill the three paragraphs with their `secretIdentity`, `age`, and a line saying "Superpowers:" to introduce the information in the list.
+4. Store the `powers` property in another new constant called `superPowers` — this contains an array that lists the current hero's superpowers.
+5. Use another `for...of` loop to loop through the current hero's superpowers — for each one we create an `<li>` element, put the superpower inside it, then put the `listItem` inside the `<ul>` element (`myList`) using `appendChild()`.
+6. The very last thing we do is to append the `<h2>`, `<p>`s, and `<ul>` inside the `<article>` (`myArticle`), then append the `<article>` inside the `<section>`. The order in which things are appended is important, as this is the order they will be displayed inside the HTML.
+
+> **Note:**
+> If you are having trouble getting the example to work, try referring to our [heroes-finished.html](https://github.com/mdn/learning-area/blob/main/javascript/oojs/json/heroes-finished.html) source code (see it [running live](https://mdn.github.io/learning-area/javascript/oojs/json/heroes-finished.html) also.)
+
+> **Note:**
+> If you are having trouble following the dot/bracket notation we are using to access the JavaScript object, it can help to have the [superheroes.json](https://mdn.github.io/learning-area/javascript/oojs/json/superheroes.json) file open in another tab or your text editor, and refer to it as you look at our JavaScript.
+> You should also refer back to our [JavaScript object basics](https://developer.mozilla.org/en-US/docs/Learn_web_development/Core/Scripting/Object_basics) article for more information on dot and bracket notation.
+
+##### Calling the top-level function
+
+Finally, we need to call our top-level `populate()` function:
+
+```js
+populate();
+```
+
+#### Converting between objects and text
+
+The above example was simple in terms of accessing the JavaScript object, because we converted the network response directly into a JavaScript object using `response.json()`.
+
+But sometimes we aren't so lucky — sometimes we receive a raw JSON string, and we need to convert it to an object ourselves. And when we want to send a JavaScript object across the network, we need to convert it to JSON (a string) before sending it. Luckily, these two problems are so common in web development that a built-in [JSON](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON) object is available in browsers, which contains the following two methods:
+
+- [`parse()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse): Accepts a JSON string as a parameter, and returns the corresponding JavaScript object.
+- [`stringify()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/stringify): Accepts an object as a parameter, and returns the equivalent JSON string.
+
+You can see the first one in action in our [heroes-finished-json-parse.html](https://mdn.github.io/learning-area/javascript/oojs/json/heroes-finished-json-parse.html) example (see the [source code](https://github.com/mdn/learning-area/blob/main/javascript/oojs/json/heroes-finished-json-parse.html)) — this does exactly the same thing as the example we built up earlier, except that:
+
+- we retrieve the response as text rather than JSON, by calling the `text()` method of the response
+- we then use `parse()` to convert the text to a JavaScript object.
+
+The key snippet of code is here:
+
+```js
+async function populate() {
+  const requestURL =
+    "https://mdn.github.io/learning-area/javascript/oojs/json/superheroes.json";
+  const request = new Request(requestURL);
+
+  const response = await fetch(request);
+  const superHeroesText = await response.text();
+
+  const superHeroes = JSON.parse(superHeroesText);
+  populateHeader(superHeroes);
+  populateHeroes(superHeroes);
+}
+```
+
+As you might guess, `stringify()` works the opposite way. Try entering the following lines into your browser's JavaScript console one by one to see it in action:
+
+```js
+let myObj = { name: "Chris", age: 38 };
+myObj;
+let myString = JSON.stringify(myObj);
+myString;
+```
+
+Here we're creating a JavaScript object, checking what it contains, converting it to a JSON string using `stringify()` — saving the return value in a new variable — then checking it again.
+
+#### Summary
+
+In this lesson, we've introduced you to using JSON in your programs, including how to create and parse JSON, and how to access data locked inside it. In the next article, we'll give you some tests that you can use to check how well you've understood and retained all this information.
+
+### JSON.stringify()
+
+The **`JSON.stringify()`** static method converts a JavaScript value to a JSON string, optionally replacing values if a replacer function is specified or optionally including only the specified properties if a replacer array is specified.
+
+```js
+console.log(JSON.stringify({ x: 5, y: 6 }));
+// Expected output: '{"x":5,"y":6}'
+
+console.log(
+  JSON.stringify([new Number(3), new String("false"), new Boolean(false)]),
+);
+// Expected output: '[3,"false",false]'
+
+console.log(JSON.stringify({ x: [10, undefined, function () {}, Symbol("")] }));
+// Expected output: '{"x":[10,null,null,null]}'
+
+console.log(JSON.stringify(new Date(2006, 0, 2, 15, 4, 5)));
+// Expected output: '"2006-01-02T15:04:05.000Z"'
+```
+
+#### Syntax
+
+```js
+JSON.stringify(value)
+JSON.stringify(value, replacer)
+JSON.stringify(value, replacer, space)
+```
+
+##### Parameters
+
+- `value`
+  - : The value to convert to a JSON string.
+- `replacer`
+  - : A function that alters the behavior of the stringification process, or an array of strings and numbers that specifies properties of `value` to be included in the output. If `replacer` is an array, all elements in this array that are not strings or numbers (either primitives or wrapper objects), including `Symbol` values, are completely ignored. If `replacer` is anything other than a function or an array (e.g., [`null`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/null) or not provided), all string-keyed properties of the object are included in the resulting JSON string.
+- `space`
+  - : A string or number that's used to insert white space (including indentation, line break characters, etc.) into the output JSON string for readability purposes.
+
+    If this is a number, it indicates the number of space characters to be used as indentation, clamped to 10 (that is, any number greater than `10` is treated as if it were `10`). Values less than 1 indicate that no space should be used.
+
+    If this is a string, the string (or the first 10 characters of the string, if it's longer than that) is inserted before every nested object or array.
+
+    If `space` is anything other than a string or number (can be either a primitive or a wrapper object) — for example, is [`null`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/null) or not provided — no white space is used.
+
+##### Return value
+
+A JSON string representing the given value, or undefined.
+
+##### Exceptions
+
+- `TypeError`
+  - : Thrown in one of the following cases:
+    - `value` contains a circular reference.
+    - A `BigInt` value is encountered.
+
+#### Description
+
+`JSON.stringify()` converts a value to the JSON notation that the value represents. Values are stringified in the following manner:
+
+- `Boolean`, `Number`, `String`, and `BigInt` (obtainable via [`Object()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/Object)) objects are converted to the corresponding primitive values during stringification, in accordance with the traditional conversion semantics. `Symbol` objects (obtainable via [`Object()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/Object)) are treated as plain objects.
+- Attempting to serialize `BigInt` values will throw. However, if the BigInt has a `toJSON()` method (through monkey patching: `BigInt.prototype.toJSON = ...`), that method can provide the serialization result. This constraint ensures that a proper serialization (and, very likely, its accompanying deserialization) behavior is always explicitly provided by the user.
+- `undefined`, `Function`, and `Symbol` values are not valid JSON values. If any such values are encountered during conversion, they are either omitted (when found in an object) or changed to [`null`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/null) (when found in an array). `JSON.stringify()` can return `undefined` when passing in "pure" values like `JSON.stringify(() => {})` or `JSON.stringify(undefined)`.
+- The numbers `Infinity` and `NaN`, as well as the value [`null`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/null), are all considered `null`. (But unlike the values in the previous point, they would never be omitted.)
+- Arrays are serialized as arrays (enclosed by square brackets). Only array indices between 0 and `length - 1` (inclusive) are serialized; other properties are ignored.
+- The special raw JSON object created with `JSON.rawJSON()` is serialized as the raw JSON text it contains (by accessing its `rawJSON` property).
+- For other objects:
+  - All `Symbol`-keyed properties will be completely ignored, even when using the [`replacer`](#the_replacer_parameter) parameter.
+
+  - If the value has a `toJSON()` method, it's responsible for defining what data will be serialized. Instead of the object being serialized, the value returned by the `toJSON()` method when called will be serialized. `JSON.stringify()` calls `toJSON` with one parameter, the `key`, which has the same semantic as the `key` parameter of the [`replacer`](#the_replacer_parameter) function:
+    - if this object is a property value, the property name
+    - if it is in an array, the index in the array, as a string
+    - if `JSON.stringify()` was directly called on this object, an empty string
+
+    All `Temporal` objects implement the `toJSON()` method, which returns a string (the same as calling `toString()`). Thus, they will be serialized as strings. Similarly, `Date` objects implement `toJSON()`, which returns the same as [`toISOString()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/toISOString).
+
+  - Only [enumerable own properties](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Enumerability_and_ownership_of_properties) are visited. This means `Map`, `Set`, etc. will become `"{}"`. You can use the [`replacer`](#the_replacer_parameter) parameter to serialize them to something more useful.
+
+    Properties are visited using the same algorithm as [`Object.keys()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys), which has a well-defined order and is stable across implementations. For example, `JSON.stringify` on the same object will always produce the same string, and `JSON.parse(JSON.stringify(obj))` would produce an object with the same key ordering as the original (assuming the object is completely JSON-serializable).
+
+##### The replacer parameter
+
+The `replacer` parameter can be either a function or an array.
+
+As an array, its elements indicate the names of the properties in the object that should be included in the resulting JSON string. Only string and number values are taken into account; symbol keys are ignored.
+
+As a function, it takes two parameters: the `key` and the `value` being stringified. The object in which the key was found is provided as the `replacer`'s `this` context.
+
+The `replacer` function is called for the initial object being stringified as well, in which case the `key` is an empty string (`""`). It is then called for each property on the object or array being stringified. Array indices will be provided in its string form as `key`. The current property value will be replaced with the `replacer`'s return value for stringification. This means:
+
+- If you return a number, string, boolean, or `null`, that value is directly serialized and used as the property's value. (Returning a BigInt will throw as well.)
+- If you return a `Function`, `Symbol`, or `undefined`, the property is not included in the output.
+- If you return any other object, the object is recursively stringified, calling the `replacer` function on each property.
+
+> **Note:**
+> When parsing JSON generated with `replacer` functions, you would likely want to use the [`reviver`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#using_the_reviver_parameter) parameter to perform the reverse operation.
+
+Typically, array elements' index would never shift (even when the element is an invalid value like a function, it will become `null` instead of omitted). Using the `replacer` function allows you to control the order of the array elements by returning a different array.
+
+##### The space parameter
+
+The `space` parameter may be used to control spacing in the final string.
+
+- If it is a number, successive levels in the stringification will each be indented by this many space characters.
+- If it is a string, successive levels will be indented by this string.
+
+Each level of indentation will never be longer than 10. Number values of `space` are clamped to 10, and string values are truncated to 10 characters.
+
+#### Examples
+
+##### Using JSON.stringify
+
+```js
+JSON.stringify({}); // '{}'
+JSON.stringify(true); // 'true'
+JSON.stringify("foo"); // '"foo"'
+JSON.stringify([1, "false", false]); // '[1,"false",false]'
+JSON.stringify([NaN, null, Infinity]); // '[null,null,null]'
+JSON.stringify({ x: 5 }); // '{"x":5}'
+
+JSON.stringify(new Date(1906, 0, 2, 15, 4, 5));
+// '"1906-01-02T15:04:05.000Z"'
+
+JSON.stringify({ x: 5, y: 6 });
+// '{"x":5,"y":6}'
+JSON.stringify([new Number(3), new String("false"), new Boolean(false)]);
+// '[3,"false",false]'
+
+// String-keyed array elements are not enumerable and make no sense in JSON
+const a = ["foo", "bar"];
+a["baz"] = "quux"; // a: [ 0: 'foo', 1: 'bar', baz: 'quux' ]
+JSON.stringify(a);
+// '["foo","bar"]'
+
+JSON.stringify({ x: [10, undefined, function () {}, Symbol("")] });
+// '{"x":[10,null,null,null]}'
+
+// Standard data structures
+JSON.stringify([
+  new Set([1]),
+  new Map([[1, 2]]),
+  new WeakSet([{ a: 1 }]),
+  new WeakMap([[{ a: 1 }, 2]]),
+]);
+// '[{},{},{},{}]'
+
+// TypedArray
+JSON.stringify([new Int8Array([1]), new Int16Array([1]), new Int32Array([1])]);
+// '[{"0":1},{"0":1},{"0":1}]'
+JSON.stringify([
+  new Uint8Array([1]),
+  new Uint8ClampedArray([1]),
+  new Uint16Array([1]),
+  new Uint32Array([1]),
+]);
+// '[{"0":1},{"0":1},{"0":1},{"0":1}]'
+JSON.stringify([new Float32Array([1]), new Float64Array([1])]);
+// '[{"0":1},{"0":1}]'
+
+// toJSON()
+JSON.stringify({
+  x: 5,
+  y: 6,
+  toJSON() {
+    return this.x + this.y;
+  },
+});
+// '11'
+
+// Symbols:
+JSON.stringify({ x: undefined, y: Object, z: Symbol("") });
+// '{}'
+JSON.stringify({ [Symbol("foo")]: "foo" });
+// '{}'
+JSON.stringify({ [Symbol.for("foo")]: "foo" }, [Symbol.for("foo")]);
+// '{}'
+JSON.stringify({ [Symbol.for("foo")]: "foo" }, (k, v) => {
+  if (typeof k === "symbol") {
+    return "a symbol";
+  }
+});
+// undefined
+
+// Non-enumerable properties:
+JSON.stringify(
+  Object.create(null, {
+    x: { value: "x", enumerable: false },
+    y: { value: "y", enumerable: true },
+  }),
+);
+// '{"y":"y"}'
+
+// BigInt values throw
+JSON.stringify({ x: 2n });
+// TypeError: BigInt value can't be serialized in JSON
+```
+
+##### Using a function as replacer
+
+```js
+function replacer(key, value) {
+  // Filtering out properties
+  if (typeof value === "string") {
+    return undefined;
+  }
+  return value;
+}
+
+const foo = {
+  foundation: "Mozilla",
+  model: "box",
+  week: 45,
+  transport: "car",
+  month: 7,
+};
+JSON.stringify(foo, replacer);
+// '{"week":45,"month":7}'
+```
+
+If you wish the `replacer` to distinguish an initial object from a key with an empty string property (since both would give the empty string as key and potentially an object as value), you will have to keep track of the iteration count (if it is beyond the first iteration, it is a genuine empty string key).
+
+```js
+function makeReplacer() {
+  let isInitial = true;
+
+  return (key, value) => {
+    if (isInitial) {
+      isInitial = false;
+      return value;
+    }
+    if (key === "") {
+      // Omit all properties with name "" (except the initial object)
+      return undefined;
+    }
+    return value;
+  };
+}
+
+const replacer = makeReplacer();
+console.log(JSON.stringify({ "": 1, b: 2 }, replacer)); // "{"b":2}"
+```
+
+##### Using an array as replacer
+
+```js
+const foo = {
+  foundation: "Mozilla",
+  model: "box",
+  week: 45,
+  transport: "car",
+  month: 7,
+};
+
+JSON.stringify(foo, ["week", "month"]);
+// '{"week":45,"month":7}', only keep "week" and "month" properties
+```
+
+##### Using the space parameter
+
+Indent the output with one space:
+
+```js
+console.log(JSON.stringify({ a: 2 }, null, " "));
+/*
+{
+ "a": 2
+}
+*/
+```
+
+Using a tab character mimics standard pretty-print appearance:
+
+<!-- markdownlint-disable MD010 -->
+
+```js
+console.log(JSON.stringify({ uno: 1, dos: 2 }, null, "\t"));
+/*
+{
+	"uno": 1,
+	"dos": 2
+}
+*/
+```
+
+<!-- markdownlint-enable MD010 -->
+
+##### toJSON() behavior
+
+Defining `toJSON()` for an object allows overriding its serialization behavior.
+
+```js
+const obj = {
+  data: "data",
+
+  toJSON(key) {
+    return key ? `Now I am a nested object under key '${key}'` : this;
+  },
+};
+
+JSON.stringify(obj);
+// '{"data":"data"}'
+
+JSON.stringify({ obj });
+// '{"obj":"Now I am a nested object under key 'obj'"}'
+
+JSON.stringify([obj]);
+// '["Now I am a nested object under key '0'"]'
+```
+
+##### Issue with serializing circular references
+
+Since the [JSON format](https://www.json.org/) doesn't support object references (although an [IETF draft exists](https://datatracker.ietf.org/doc/html/draft-pbryan-zyp-json-ref-03)), a `TypeError` will be thrown if one attempts to encode an object with circular references.
+
+```js
+const circularReference = {};
+circularReference.myself = circularReference;
+
+// Serializing circular references throws "TypeError: cyclic object value"
+JSON.stringify(circularReference);
+```
+
+To serialize circular references, you can use a library that supports them (e.g., [cycle.js](https://github.com/douglascrockford/JSON-js/blob/master/cycle.js) by Douglas Crockford) or implement a solution yourself, which will require finding and replacing (or removing) the cyclic references by serializable values.
+
+If you are using `JSON.stringify()` to deep-copy an object, you may instead want to use `structuredClone()`, which supports circular references. JavaScript engine APIs for binary serialization, such as [`v8.serialize()`](https://nodejs.org/api/v8.html#v8serializevalue), also support circular references.
+
+##### Using JSON.stringify() with localStorage
+
+In a case where you want to store an object created by your user and allow it to be restored even after the browser has been closed, the following example is a model for the applicability of `JSON.stringify()`:
+
+```js
+// Creating an example of JSON
+const session = {
+  screens: [],
+  state: true,
+};
+session.screens.push({ name: "screenA", width: 450, height: 250 });
+session.screens.push({ name: "screenB", width: 650, height: 350 });
+session.screens.push({ name: "screenC", width: 750, height: 120 });
+session.screens.push({ name: "screenD", width: 250, height: 60 });
+session.screens.push({ name: "screenE", width: 390, height: 120 });
+session.screens.push({ name: "screenF", width: 1240, height: 650 });
+
+// Converting the JSON string with JSON.stringify()
+// then saving with localStorage in the name of session
+localStorage.setItem("session", JSON.stringify(session));
+
+// Example of how to transform the String generated through
+// JSON.stringify() and saved in localStorage in JSON object again
+const restoredSession = JSON.parse(localStorage.getItem("session"));
+
+// Now restoredSession variable contains the object that was saved
+// in localStorage
+console.log(restoredSession);
+```
+
+##### Well-formed JSON.stringify()
+
+Engines implementing the [well-formed JSON.stringify specification](https://github.com/tc39/proposal-well-formed-stringify) will stringify lone surrogates (any code point from U+D800 to U+DFFF) using Unicode escape sequences rather than literally (outputting lone surrogates). Before this change, such strings could not be encoded in valid UTF-8 or UTF-16:
+
+```js
+JSON.stringify("\uD800"); // '"�"'
+```
+
+But with this change `JSON.stringify()` represents lone surrogates using JSON escape sequences that _can_ be encoded in valid UTF-8 or UTF-16:
+
+```js
+JSON.stringify("\uD800"); // '"\\ud800"'
+```
+
+This change should be backwards-compatible as long as you pass the result of `JSON.stringify()` to APIs such as `JSON.parse()` that will accept any valid JSON text, because they will treat Unicode escapes of lone surrogates as identical to the lone surrogates themselves. _Only_ if you are directly interpreting the result of `JSON.stringify()` do you need to carefully handle `JSON.stringify()`'s two possible encodings of these code points.
+
+### JSON.parse()
+
+The **`JSON.parse()`** static method parses a JSON string, constructing the JavaScript value or object described by the string. An optional _reviver_ function can be provided to perform a transformation on the resulting object before it is returned.
+
+```js
+const json = '{"result":true, "count":42}';
+const obj = JSON.parse(json);
+
+console.log(obj.count);
+// Expected output: 42
+
+console.log(obj.result);
+// Expected output: true
+```
+
+#### Syntax
+
+```js
+JSON.parse(text)
+JSON.parse(text, reviver)
+```
+
+##### Parameters
+
+- `text`
+  - : The string to parse as JSON. See the `JSON` object for a description of JSON syntax.
+- `reviver`
+  - : If a function, this prescribes how each value originally produced by parsing is transformed before being returned. Non-callable values are ignored. The function is called with the following arguments:
+    - `key`
+      - : The key associated with the value.
+    - `value`
+      - : The value produced by parsing.
+    - `context`
+      - : A context object that holds state relevant to the current expression being revived. It is a new object for each invocation of the reviver function. It is only passed when reviving primitive values, but not when `value` is an object or array. It contains the following property:
+        - `source`
+          - : The original JSON string representing this value.
+
+##### Return value
+
+The `Object`, `Array`, string, number, boolean, or `null` value corresponding to the given JSON `text`.
+
+##### Exceptions
+
+- `SyntaxError`
+  - : Thrown if the string to parse is not valid JSON.
+
+#### Description
+
+`JSON.parse()` parses a JSON string according to the [JSON grammar](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON#full_json_grammar), then evaluates the string as if it's a JavaScript expression. The only instance where a piece of JSON text represents a different value from the same JavaScript expression is when dealing with the `"__proto__"` key — see [Object literal syntax vs. JSON](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Object_initializer#object_literal_syntax_vs._json).
+
+##### The reviver parameter
+
+If a `reviver` is specified, the value computed by parsing is _transformed_ before being returned. Specifically, the computed value and all its properties (in a [depth-first](https://en.wikipedia.org/wiki/Depth-first_search) fashion, beginning with the most nested properties and proceeding to the original value itself) are individually run through the `reviver`.
+
+The `reviver` is called with the object containing the property being processed as `this` (unless you define the `reviver` as an arrow function, in which case there's no separate `this` binding) and two arguments: `key` and `value`, representing the property name as a string (even for arrays) and the property value. For primitive values, an additional `context` parameter is passed, which contains the source text of this value. If the `reviver` function returns `undefined` (or returns no value — for example, if execution falls off the end of the function), the property is deleted from the object. Otherwise, the property is redefined to be the return value. If the `reviver` only transforms some values and not others, be certain to return all untransformed values as-is — otherwise, they will be deleted from the resulting object.
+
+Similar to the `replacer` parameter of `JSON.stringify()`, for arrays and objects, `reviver` will be last called on the root value with an empty string as the `key` and the root object as the `value`. For other valid JSON values, `reviver` works similarly and is called once with an empty string as the `key` and the value itself as the `value`.
+
+If you return another value from `reviver`, that value will completely replace the originally parsed value. This even applies to the root value. For example:
+
+```js
+const transformedObj = JSON.parse('[1,5,{"s":1}]', (key, value) =>
+  typeof value === "object" ? undefined : value,
+);
+
+console.log(transformedObj); // undefined
+```
+
+There is no way to work around this generically. You cannot specially handle the case where `key` is an empty string, because JSON objects can also contain keys that are empty strings. You need to know very precisely what kind of transformation is needed for each key when implementing the reviver.
+
+Note that `reviver` is run after the value is parsed. So, for example, numbers in JSON text will have already been converted to JavaScript numbers, and may lose precision in the process. One way to transfer large numbers without loss of precision is to serialize them as strings, and revive them to [BigInts](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt), or other appropriate arbitrary precision formats.
+
+You can also use the `context.source` property to access the original JSON source text representing the value, as shown below:
+
+```js
+const bigJSON = '{"gross_gdp": 12345678901234567890}';
+const bigObj = JSON.parse(bigJSON, (key, value, context) => {
+  if (key === "gross_gdp") {
+    // Ignore the value because it has already lost precision
+    return BigInt(context.source);
+  }
+  return value;
+});
+```
+
+#### Examples
+
+##### Using JSON.parse()
+
+```js
+JSON.parse("{}"); // {}
+JSON.parse("true"); // true
+JSON.parse('"foo"'); // "foo"
+JSON.parse('[1, 5, "false"]'); // [1, 5, "false"]
+JSON.parse("null"); // null
+```
+
+##### Using the reviver parameter
+
+```js
+JSON.parse(
+  '{"p": 5}',
+  (key, value) =>
+    typeof value === "number"
+      ? value * 2 // return value * 2 for numbers
+      : value, // return everything else unchanged
+);
+// { p: 10 }
+
+JSON.parse('{"1": 1, "2": 2, "3": {"4": 4, "5": {"6": 6}}}', (key, value) => {
+  console.log(key);
+  return value;
+});
+// 1
+// 2
+// 4
+// 6
+// 5
+// 3
+// ""
+```
+
+##### Using reviver when paired with the replacer of JSON.stringify()
+
+In order for a value to properly round-trip (that is, it gets deserialized to the same original object), the serialization process must preserve the type information. For example, you can use the `replacer` parameter of `JSON.stringify()` for this purpose:
+
+```js
+// Maps are normally serialized as objects with no properties.
+// We can use the replacer to specify the entries to be serialized.
+const map = new Map([
+  [1, "one"],
+  [2, "two"],
+  [3, "three"],
+]);
+
+const jsonText = JSON.stringify(map, (key, value) =>
+  value instanceof Map ? Array.from(value.entries()) : value,
+);
+
+console.log(jsonText);
+// [[1,"one"],[2,"two"],[3,"three"]]
+
+const map2 = JSON.parse(jsonText, (key, value) =>
+  Array.isArray(value) && value.every(Array.isArray) ? new Map(value) : value,
+);
+
+console.log(map2);
+// Map { 1 => "one", 2 => "two", 3 => "three" }
+```
+
+Because JSON has no syntax space for annotating type metadata, in order to revive values that are not plain objects, you have to consider one of the following:
+
+- Serialize the entire object to a string and prefix it with a type tag.
+- "Guess" based on the structure of the data (for example, an array of two-member arrays)
+- If the shape of the payload is fixed, based on the property name (for example, all properties called `registry` hold `Map` objects).
+
+##### Illegal JSON
+
+When `JSON.parse` receives a string that does not conform to the JSON grammar, it throws a `SyntaxError`.
+
+Arrays and objects cannot have [trailing commas](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Trailing_commas) in JSON:
+
+```js
+JSON.parse("[1, 2, 3, 4, ]");
+// SyntaxError: Unexpected token ] in JSON at position 13
+
+JSON.parse('{"foo": 1, }');
+// SyntaxError: Unexpected token } in JSON at position 12
+```
+
+JSON strings must be delimited by double (not single) quotes:
+
+```js
+JSON.parse("{'foo': 1}");
+// SyntaxError: Unexpected token ' in JSON at position 1
+
+JSON.parse("'string'");
+// SyntaxError: Unexpected token ' in JSON at position 0
+```
+
+If you are writing JSON inside a JavaScript string literal, you should either use single quotes to delimit the JavaScript string literal, or escape the double quotes that delimit the JSON string:
+
+```js example-good
+JSON.parse('{"foo": 1}'); // OK
+JSON.parse("{\"foo\": 1}"); // OK
+```
+
 ## fetch()
 
 > **Source:** [Using the Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch) · [MDN Web Docs](https://github.com/mdn/content), CC BY-SA 2.5
@@ -7347,9 +8797,151 @@ The [Using promises](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Gui
 
 ## Immutability
 
-> **Source:** [Immutable](https://developer.mozilla.org/en-US/docs/Glossary/Immutable), [Object.freeze()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze), [Window: structuredClone() method](https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone) · [MDN Web Docs](https://github.com/mdn/content), CC BY-SA 2.5
+> **Source:** [const](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/const), [Immutable](https://developer.mozilla.org/en-US/docs/Glossary/Immutable), [Object.freeze()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze), [Window: structuredClone() method](https://developer.mozilla.org/en-US/docs/Web/API/Window/structuredClone) · [MDN Web Docs](https://github.com/mdn/content), CC BY-SA 2.5
 >
 > **Further reading:** [javascript.info](https://javascript.info/object-copy)
+
+### const
+
+The **`const`** declaration declares block-scoped local variables. The value of a constant can't be changed through reassignment using the [assignment operator](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Assignment), but if a constant is an [object](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Data_structures#objects), its properties can be added, updated, or removed.
+
+```js
+const number = 42;
+
+try {
+  number = 99;
+} catch (err) {
+  console.log(err);
+  // Expected output: TypeError: invalid assignment to const 'number'
+  // (Note: the exact output may be browser-dependent)
+}
+
+console.log(number);
+// Expected output: 42
+```
+
+#### Syntax
+
+```js
+const name1 = value1;
+const name1 = value1, name2 = value2;
+const name1 = value1, name2 = value2, /* …, */ nameN = valueN;
+```
+
+- `nameN`
+  - : The name of the variable to declare. Each must be a legal JavaScript [identifier](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar#identifiers) or a [destructuring binding pattern](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring).
+- `valueN`
+  - : Initial value of the variable. It can be any legal expression.
+
+#### Description
+
+The `const` declaration is very similar to `let`:
+
+- `const` declarations are scoped to blocks as well as functions.
+- `const` declarations can only be accessed after the place of declaration is reached (see [temporal dead zone](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let#temporal_dead_zone_tdz)). For this reason, `const` declarations are commonly regarded as [non-hoisted](https://developer.mozilla.org/en-US/docs/Glossary/Hoisting).
+- `const` declarations do not create properties on `globalThis` when declared at the top level of a script.
+- `const` declarations cannot be [redeclared](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/let#redeclarations) by any other declaration in the same scope.
+- `const` begins [_declarations_, not _statements_](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements#what_are_statements_declarations_and_expressions). That means you cannot use a lone `const` declaration as the body of a block (which makes sense, since there's no way to access the variable).
+
+  ```js example-bad
+  if (true) const a = 1; // SyntaxError: Lexical declaration cannot appear in a single-statement context
+  ```
+
+An initializer for a constant is required. You must specify its value in the same declaration. (This makes sense, given that it can't be changed later.)
+
+```js example-bad
+const FOO; // SyntaxError: Missing initializer in const declaration
+```
+
+The `const` declaration creates an immutable reference to a value. It does _not_ mean the value it holds is immutable — just that the variable identifier cannot be reassigned. For instance, in the case where the content is an object, this means the object's contents (e.g., its properties) can be altered. You should understand `const` declarations as "create a variable whose _identity_ remains constant", not "whose _value_ remains constant" — or, "create immutable bindings", not "immutable values".
+
+Many style guides (including [MDN's](https://developer.mozilla.org/en-US/docs/MDN/Writing_guidelines/Code_style_guide/JavaScript#variable_declarations)) recommend using `const` over `let` whenever a variable is not reassigned in its scope. This makes the intent clear that a variable's type (or value, in the case of a primitive) can never change. Others may prefer `let` for non-primitives that are mutated.
+
+The list that follows the `const` keyword is called a _binding list_ and is separated by commas, where the commas are _not_ [comma operators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Comma_operator) and the `=` signs are _not_ [assignment operators](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Assignment). Initializers of later variables can refer to earlier variables in the list.
+
+#### Examples
+
+##### Basic const usage
+
+Constants can be declared with uppercase or lowercase, but a common convention is to use all-uppercase letters, especially for primitives because they are truly immutable.
+
+```js
+// define MY_FAV as a constant and give it the value 7
+const MY_FAV = 7;
+
+console.log(`my favorite number is: ${MY_FAV}`);
+```
+
+```js example-bad
+// Re-assigning to a constant variable throws an error
+MY_FAV = 20; // TypeError: Assignment to constant variable
+
+// Redeclaring a constant throws an error
+const MY_FAV = 20; // SyntaxError: Identifier 'MY_FAV' has already been declared
+var MY_FAV = 20; // SyntaxError: Identifier 'MY_FAV' has already been declared
+let MY_FAV = 20; // SyntaxError: Identifier 'MY_FAV' has already been declared
+```
+
+##### Block scoping
+
+It's important to note the nature of block scoping.
+
+```js
+const MY_FAV = 7;
+
+if (MY_FAV === 7) {
+  // This is fine because it's in a new block scope
+  const MY_FAV = 20;
+  console.log(MY_FAV); // 20
+
+  // var declarations are not scoped to blocks so this throws an error
+  var MY_FAV = 20; // SyntaxError: Identifier 'MY_FAV' has already been declared
+}
+
+console.log(MY_FAV); // 7
+```
+
+##### const in objects and arrays
+
+`const` also works on objects and arrays. Attempting to overwrite the object throws an error "Assignment to constant variable".
+
+```js
+const MY_OBJECT = { key: "value" };
+MY_OBJECT = { OTHER_KEY: "value" };
+```
+
+However, object keys are not protected, so the following statement is executed without problem.
+
+```js
+MY_OBJECT.key = "otherValue";
+```
+
+You would need to use `Object.freeze()` to make an object immutable.
+
+The same applies to arrays. Assigning a new array to the variable throws an error "Assignment to constant variable".
+
+```js
+const MY_ARRAY = [];
+MY_ARRAY = ["B"];
+```
+
+Still, it's possible to push items into the array and thus mutate it.
+
+```js
+MY_ARRAY.push("A"); // ["A"]
+```
+
+##### Declaration with destructuring
+
+The left-hand side of each `=` can also be a binding pattern. This allows creating multiple variables at once.
+
+```js
+const result = /(a+)(b+)(c+)/.exec("aaabcc");
+const [, a, b, c] = result;
+console.log(a, b, c); // "aaa" "b" "cc"
+```
+
+For more information, see [Destructuring](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring).
 
 ### Immutable
 
