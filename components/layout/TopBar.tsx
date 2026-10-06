@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Github, Home, Menu, PanelLeftOpen } from "lucide-react";
 import { useUiStore } from "@/store/useUiStore";
 import { ThemeToggle } from "./ThemeToggle";
+import { SearchDialog } from "./SearchDialog";
 
 interface TopBarProps {
   /** Rendered beside the controls on document pages; blank on the home page. */
@@ -47,6 +48,8 @@ export function TopBar({ crumb }: TopBarProps) {
       ) : (
         <div className="flex-1" />
       )}
+
+      <SearchDialog />
 
       <Link
         href="/"
