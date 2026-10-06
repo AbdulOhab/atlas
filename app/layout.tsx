@@ -4,7 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { ThemeScript } from "@/components/layout/ThemeScript";
 import "./globals.css";
 
-const SITE_URL = "https://github.com/AbdulOhab/atlas";
+const SITE_URL = "https://github.com/AbdulOhab/atlas-ce";
 const DESCRIPTION =
   "Concept modules and worked system design problems, with architecture diagrams and trade-offs.";
 

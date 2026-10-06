@@ -219,7 +219,7 @@ export function siteCard() {
           { label: "Key technologies", color: COLOR.tech },
           { label: "Designs", color: COLOR.design },
         ]}
-        footer="github.com/AbdulOhab/atlas"
+        footer="github.com/AbdulOhab/atlas-ce"
       />
     ),
     { ...OG_SIZE, fonts: fonts() },

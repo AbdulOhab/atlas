@@ -49,7 +49,7 @@ export function TopBar({ crumb }: TopBarProps) {
       )}
 
       <a
-        href="https://github.com/AbdulOhab/atlas"
+        href="https://github.com/AbdulOhab/atlas-ce"
         target="_blank"
         rel="noreferrer noopener"
         title="View the source on GitHub"

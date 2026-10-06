@@ -3,13 +3,13 @@
   "version": "1.0.0",
   "private": true,
   "description": "A reading app for system design interviews: concept modules, technology pages and worked designs with interactive architecture diagrams.",
-  "homepage": "https://github.com/AbdulOhab/atlas#readme",
+  "homepage": "https://github.com/AbdulOhab/atlas-ce#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/AbdulOhab/atlas.git"
+    "url": "git+https://github.com/AbdulOhab/atlas-ce.git"
   },
   "bugs": {
-    "url": "https://github.com/AbdulOhab/atlas/issues"
+    "url": "https://github.com/AbdulOhab/atlas-ce/issues"
   },
   "author": "AbdulOhab",
   "license": "MIT",
