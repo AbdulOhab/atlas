@@ -8,7 +8,7 @@ import { TopBar } from "@/components/layout/TopBar";
 export const metadata: Metadata = {
   title: "Languages",
   description:
-    "Languages and frameworks, one module each: essential JavaScript for frameworks first, then React, Next.js, Laravel and HTMX.",
+    "Languages and frameworks, one module each: JavaScript, React, Next.js, Laravel, HTMX, TypeScript, Python, FastAPI, Vue, Tailwind CSS, Qt and Spring Boot.",
   alternates: { canonical: "/languages" },
 };
 
@@ -29,11 +29,11 @@ export default function LanguagesIndex() {
             Languages and frameworks
           </p>
           <h1 className="mt-3 text-h1 font-semibold text-ink sm:text-display">
-            The JavaScript you need, then the frameworks built on it.
+            The languages and frameworks real projects are built with.
           </h1>
           <p className="mt-4 text-lead text-inkMuted">
-            Start with the JavaScript every modern framework assumes, one topic per page. React, Next.js, Laravel and
-            HTMX follow in that order.
+            Start with the JavaScript every modern framework assumes, then pick a stack: React and Next.js, Laravel and
+            HTMX, TypeScript, Python and FastAPI, Vue, Tailwind CSS, Qt or Spring Boot. One topic per page.
           </p>
         </header>
 

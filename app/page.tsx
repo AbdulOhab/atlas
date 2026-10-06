@@ -90,8 +90,8 @@ export default function HomePage() {
     {
       id: "languages",
       kicker: "Languages",
-      title: "The JavaScript you need, then the frameworks built on it.",
-      body: "Essential JavaScript for frameworks, one topic per page, then React, Next.js, Laravel and HTMX.",
+      title: "The languages and frameworks real projects are built with.",
+      body: "JavaScript, TypeScript and Python, then React, Next.js, Vue, Tailwind, Laravel, HTMX, FastAPI, Qt and Spring Boot.",
       href: "/languages",
       accent: "var(--languages)",
       icon: Braces,

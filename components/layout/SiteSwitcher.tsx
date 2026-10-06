@@ -46,7 +46,7 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
   {
     id: "languages",
     label: "languages",
-    blurb: "Languages and frameworks: essential JavaScript, then React, Next.js, Laravel and HTMX",
+    blurb: "Languages and frameworks: JavaScript, TypeScript, Python, React, Next.js, Vue, Tailwind, Laravel, HTMX, FastAPI, Qt, Spring Boot",
     href: "/languages",
     accent: "var(--languages)",
   },

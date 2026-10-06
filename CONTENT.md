@@ -114,7 +114,7 @@ adapted from an open source project and says so in a "Source" line at the top.
 
 ## Languages
 
-Five modules, each split into one child page per topic.
+Twelve modules, each split into one child page per topic.
 
 | Module | Source | License |
 | --- | --- | --- |
@@ -123,12 +123,23 @@ Five modules, each split into one child page per topic.
 | Next.js | [vercel/next.js](https://github.com/vercel/next.js/tree/canary/docs) (App Router, Getting Started) | MIT |
 | Laravel | [laravel/docs](https://github.com/laravel/docs) | MIT |
 | HTMX | [bigskysoftware/htmx](https://github.com/bigskysoftware/htmx) (`www/content/docs.md`) | 0BSD |
+| TypeScript | [microsoft/TypeScript-Website](https://github.com/microsoft/TypeScript-Website) (Handbook) | CC BY 4.0 |
+| Python | [python/cpython](https://github.com/python/cpython/tree/main/Doc/tutorial) (`Doc/tutorial`) | PSF License |
+| FastAPI | [fastapi/fastapi](https://github.com/fastapi/fastapi) (tutorial) | MIT |
+| Vue | [vuejs/docs](https://github.com/vuejs/docs) (guide, Composition API; images excluded) | CC BY 4.0 |
+| Tailwind CSS | Written for Atlas CE; links to [tailwindcss.com/docs](https://tailwindcss.com/docs) | this repository's license |
+| Qt | Written for Atlas CE; links to [doc.qt.io](https://doc.qt.io/qt-6/) | this repository's license |
+| Spring Boot | Written for Atlas CE; links to [docs.spring.io](https://docs.spring.io/spring-boot/) | this repository's license |
 
 The JavaScript module follows the 24 topics of the "Essential JavaScript for
 frameworks" list. That list links to [javascript.info](https://javascript.info),
 whose text is CC BY-NC-SA 4.0 and so can't be mixed into this repository's
 CC BY-SA content; each topic is adapted from the matching MDN pages instead,
 with the javascript.info chapter linked as further reading.
+
+Tailwind CSS, Qt and Spring Boot are written from scratch: Tailwind's docs
+aren't openly licensed, Qt's are GNU FDL (incompatible with CC BY-SA), and
+the Spring guides are CC BY-ND, which forbids adapted versions.
 
 ## Waiting
 

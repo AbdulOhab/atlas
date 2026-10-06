@@ -1,5 +1,7 @@
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
+import cmake from "highlight.js/lib/languages/cmake";
+import cpp from "highlight.js/lib/languages/cpp";
 import css from "highlight.js/lib/languages/css";
 import diff from "highlight.js/lib/languages/diff";
 import dockerfile from "highlight.js/lib/languages/dockerfile";
@@ -31,7 +33,7 @@ import yaml from "highlight.js/lib/languages/yaml";
  * (cjs, hcl, conf, …) are mapped to the closest grammar.
  */
 const LANGUAGES = {
-  bash, css, diff, dockerfile, go, graphql, groovy, http, ini, java, javascript, json, markdown, nginx, php,
+  bash, cmake, cpp, css, diff, dockerfile, go, graphql, groovy, http, ini, java, javascript, json, markdown, nginx, php,
   "php-template": phpTemplate, powershell, python, ruby, rust, shell, sql, typescript, xml, yaml,
 };
 for (const [name, grammar] of Object.entries(LANGUAGES)) hljs.registerLanguage(name, grammar);
@@ -53,6 +55,10 @@ const ALIASES: Record<string, string> = {
   gitignore: "bash",
   html: "xml",
   vue: "xml",
+  "c++": "cpp",
+  // QML is declarative, but its expressions are JavaScript.
+  qml: "javascript",
+  properties: "ini",
   // Blade is HTML with {{ }} and @directives; the PHP template grammar reads it best.
   blade: "php-template",
 };
