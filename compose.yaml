@@ -1,0 +1,10 @@
+# podman-compose up -d   (or: docker compose up -d)
+services:
+  atlas-ce:
+    build: .
+    image: localhost/atlas-ce:latest
+    container_name: atlas-ce
+    # Only nginx on the host reaches it; Cloudflare terminates TLS in front of nginx.
+    ports:
+      - "127.0.0.1:24030:3000"
+    restart: unless-stopped

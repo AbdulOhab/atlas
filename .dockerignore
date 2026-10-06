@@ -1,0 +1,9 @@
+.git
+.next
+node_modules
+xNote
+*.png
+!assets/**
+*.tsbuildinfo
+npm-debug.log*
+.env*
