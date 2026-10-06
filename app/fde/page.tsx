@@ -44,7 +44,7 @@ export default function FdeIndex() {
           <p className="mt-4 text-lead text-inkMuted">
             Four milestones: agentic software engineering, building a Claude Code-style agent from scratch, agentic
             system design, and platform engineering. Each module is assembled from open source courses and docs,
-            credited at the top of every section. Modules marked "from devops" or "from sysdesign" are shared with another track.
+            credited at the top of every section. Modules marked “from devops” or “from sysdesign” are shared with another track.
           </p>
         </header>
 

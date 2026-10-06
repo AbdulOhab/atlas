@@ -38,7 +38,7 @@ export default function BackendIndex() {
           </h1>
           <p className="mt-4 text-lead text-inkMuted">
             How the web works and Node.js first, then APIs, auth and databases, then the frameworks (NestJS, FastAPI,
-            Gin) and the practices that keep a service healthy in production. Modules marked "from devops" or "from sysdesign" are shared with another track.
+            Gin) and the practices that keep a service healthy in production. Modules marked “from devops” or “from sysdesign” are shared with another track.
           </p>
         </header>
 
