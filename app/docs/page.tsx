@@ -1,0 +1,28 @@
+import type { Metadata } from "next";
+import { getDocsByGroup, toMeta } from "@/lib/content";
+import { TopBar } from "@/components/layout/TopBar";
+import { Hero } from "@/components/home/Hero";
+import { HomeView } from "@/components/home/HomeView";
+
+export const metadata: Metadata = {
+  title: "System Design",
+  alternates: { canonical: "/docs" },
+};
+
+export default function SystemDesignIndex() {
+  const concepts = getDocsByGroup("concept").map(toMeta);
+  const tech = getDocsByGroup("tech").map(toMeta);
+  const designs = getDocsByGroup("design").map(toMeta);
+
+  return (
+    <>
+      <TopBar />
+      <main className="mx-auto max-w-shell px-4 pb-24 pt-10 sm:px-8">
+        <Hero />
+        <div id="library" className="mt-10">
+          <HomeView concepts={concepts} tech={tech} designs={designs} />
+        </div>
+      </main>
+    </>
+  );
+}

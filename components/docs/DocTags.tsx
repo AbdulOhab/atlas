@@ -11,7 +11,7 @@ export function DocTags({ tags }: { tags: string[] }) {
 
   function openTag(id: string) {
     showOnlyTag(id);
-    router.push("/#library");
+    router.push("/docs#library");
   }
 
   return (

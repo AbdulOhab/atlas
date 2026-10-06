@@ -5,13 +5,14 @@ import Link from "next/link";
 import { Check, ChevronDown } from "lucide-react";
 import type { Track } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { LogoMark } from "@/components/ui/LogoMark";
 
 const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: string }[] = [
   {
     id: "sysdesign",
     label: "sysdesign",
     blurb: "Concepts, technologies and worked designs",
-    href: "/",
+    href: "/docs",
     accent: "var(--concept)",
   },
   {
@@ -62,6 +63,7 @@ export function SiteSwitcher({ track, onNavigate }: { track: Track; onNavigate?:
         title="Switch atlas"
         className="-ml-1.5 flex items-center gap-1 rounded px-1.5 py-1 font-mono text-small font-medium tracking-tight text-ink transition-colors duration-fast hover:bg-raised"
       >
+        <LogoMark className="mr-1 h-5 w-5 shrink-0" />
         atlas-ce<span className="text-inkFaint">/</span>
         <span style={{ color: current.accent }}>{current.label}</span>
         <ChevronDown
