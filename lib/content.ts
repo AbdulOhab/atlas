@@ -367,49 +367,67 @@ function readGroup(group: DocGroup): Doc[] {
   return fs
     .readdirSync(dir)
     .filter((file) => file.endsWith(".md"))
-    .flatMap((file) => {
-      const raw = fs.readFileSync(path.join(dir, file), "utf8");
-      const { data, content: body } = matter(raw);
-      const slug = file.replace(/\.md$/, "");
-      // `hidden: true` parks a finished doc: it stays on disk but leaves the
-      // sidebar, the home page, search and the routes until the flag is removed.
-      if (data.hidden === true) return [];
-      // DocHeader renders the title, so drop the body's leading H1.
-      const content = body.replace(/^\s*#\s+.*\n+/, "");
-      const design = group === "design" ? readDesign(slug, data) : undefined;
-      const tech = group === "tech" ? readTech(slug, data) : undefined;
-      const coding = group === "coding" ? readCoding(slug, data) : undefined;
-      const learn = group === "learn" ? readLearn(slug, data) : undefined;
-      const words =
-        content.split(/\s+/).length +
-        designWordCount(design) +
-        techWordCount(tech) +
-        codingWordCount(coding) +
-        learnWordCount(learn);
-
-      const doc = {
-        slug,
-        group,
-        order: Number(data.order ?? 0),
-        title: String(data.title ?? slug),
-        summary: String(data.summary ?? ""),
-        hardPart: data.hardPart ? String(data.hardPart) : undefined,
-        role: data.role ? String(data.role) : undefined,
-        category: data.category ? String(data.category) : undefined,
-        level: data.level ? String(data.level) : undefined,
-        tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
-        viz: data.viz ? String(data.viz) : undefined,
-        readingMinutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)),
-        content,
-        design,
-        tech,
-        coding,
-        learn,
-      } satisfies Doc;
-
-      return [doc];
-    })
+    .flatMap((file) => readFileCached(group, path.join(dir, file), file))
     .sort((a, b) => a.order - b.order);
+}
+
+/**
+ * Parsed docs keyed by path, reused while the file's mtime is unchanged. In
+ * dev every request re-reads the content tree; without this each sidebar
+ * click re-parsed every markdown file (~5 MB) even though none had changed.
+ */
+const fileCache = new Map<string, { mtimeMs: number; docs: Doc[] }>();
+
+function readFileCached(group: DocGroup, fullPath: string, file: string): Doc[] {
+  const { mtimeMs } = fs.statSync(fullPath);
+  const hit = fileCache.get(fullPath);
+  if (hit && hit.mtimeMs === mtimeMs) return hit.docs;
+  const docs = readFile(group, fullPath, file);
+  fileCache.set(fullPath, { mtimeMs, docs });
+  return docs;
+}
+
+function readFile(group: DocGroup, fullPath: string, file: string): Doc[] {
+  const raw = fs.readFileSync(fullPath, "utf8");
+  const { data, content: body } = matter(raw);
+  const slug = file.replace(/\.md$/, "");
+  // `hidden: true` parks a finished doc: it stays on disk but leaves the
+  // sidebar, the home page, search and the routes until the flag is removed.
+  if (data.hidden === true) return [];
+  // DocHeader renders the title, so drop the body's leading H1.
+  const content = body.replace(/^\s*#\s+.*\n+/, "");
+  const design = group === "design" ? readDesign(slug, data) : undefined;
+  const tech = group === "tech" ? readTech(slug, data) : undefined;
+  const coding = group === "coding" ? readCoding(slug, data) : undefined;
+  const learn = group === "learn" ? readLearn(slug, data) : undefined;
+  const words =
+    content.split(/\s+/).length +
+    designWordCount(design) +
+    techWordCount(tech) +
+    codingWordCount(coding) +
+    learnWordCount(learn);
+
+  const doc = {
+    slug,
+    group,
+    order: Number(data.order ?? 0),
+    title: String(data.title ?? slug),
+    summary: String(data.summary ?? ""),
+    hardPart: data.hardPart ? String(data.hardPart) : undefined,
+    role: data.role ? String(data.role) : undefined,
+    category: data.category ? String(data.category) : undefined,
+    level: data.level ? String(data.level) : undefined,
+    tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
+    viz: data.viz ? String(data.viz) : undefined,
+    readingMinutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)),
+    content,
+    design,
+    tech,
+    coding,
+    learn,
+  } satisfies Doc;
+
+  return [doc];
 }
 
 /**
