@@ -42,24 +42,42 @@ function boundary(group: DocGroup, line: string): string | null {
 
 /** Lift a part's headings so its first level renders as `##`, the page's top level. */
 function promote(text: string): string {
-  let inCode = false;
+  const fence = fenceTracker();
   const levels: number[] = [];
   for (const line of text.split("\n")) {
-    if (/^\s*(```|~~~)/.test(line)) inCode = !inCode;
-    const m = !inCode && /^(#{1,6}) /.exec(line);
+    const m = !fence(line) && /^(#{1,6}) /.exec(line);
     if (m) levels.push(m[1].length);
   }
   if (levels.length === 0) return text;
   const shift = Math.min(...levels) - 2;
   if (shift <= 0) return text;
-  inCode = false;
+  const fence2 = fenceTracker();
   return text
     .split("\n")
-    .map((line) => {
-      if (/^\s*(```|~~~)/.test(line)) inCode = !inCode;
-      return inCode ? line : line.replace(/^(#{1,6}) /, (_, h: string) => "#".repeat(h.length - shift) + " ");
-    })
+    .map((line) =>
+      fence2(line) ? line : line.replace(/^(#{1,6}) /, (_, h: string) => "#".repeat(h.length - shift) + " "),
+    )
     .join("\n");
+}
+
+/**
+ * Feed lines in order; returns true while inside a fenced code block. A fence
+ * closes only on the marker it opened with, so a `~~~^~~` caret line inside a
+ * backtick block (Python tracebacks print these) isn't taken for a fence.
+ */
+function fenceTracker() {
+  let open: string | null = null;
+  return (line: string): boolean => {
+    if (open === null) {
+      const start = /^\s*(`{3,}|~{3,})/.exec(line);
+      if (start) open = start[1][0];
+      return start !== null;
+    }
+    // Only a bare run of the same marker closes the block.
+    const end = /^\s*(`{3,}|~{3,})\s*$/.exec(line);
+    if (end && end[1][0] === open) open = null;
+    return true;
+  };
 }
 
 const partSlug = (title: string) =>
@@ -72,10 +90,9 @@ export function splitDoc(group: DocGroup, slug: string, content: string): SplitD
   if (group !== "languages" && minutes(content) < MIN_MINUTES) return null;
 
   const chunks: { title: string | null; lines: string[] }[] = [{ title: null, lines: [] }];
-  let inCode = false;
+  const fence = fenceTracker();
   for (const line of content.split("\n")) {
-    if (/^\s*(```|~~~)/.test(line)) inCode = !inCode;
-    const title = inCode ? null : boundary(group, line);
+    const title = fence(line) ? null : boundary(group, line);
     if (title) chunks.push({ title, lines: [] });
     else chunks[chunks.length - 1].lines.push(line);
   }
