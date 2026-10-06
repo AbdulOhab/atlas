@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { highlight } from "@/lib/highlight";
 
 interface CodeBlockProps {
   code: string;
@@ -9,12 +10,13 @@ interface CodeBlockProps {
 }
 
 /**
- * Fenced blocks in this content are mostly schemas, API shapes and small
- * ASCII illustrations rather than runnable code, so there's no syntax
- * highlighter — just a legible mono block with the language noted.
+ * A mono block with the language noted. Real code (bash, python, ts, go, sql,
+ * yaml, …) is syntax-highlighted; schemas, plain text and ASCII illustrations
+ * in an unknown or unmarked fence stay as plain text.
  */
 export function CodeBlock({ code, language }: CodeBlockProps) {
   const [copied, setCopied] = useState(false);
+  const html = useMemo(() => highlight(code, language), [code, language]);
 
   async function copy() {
     await navigator.clipboard.writeText(code);
@@ -36,7 +38,15 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
         </button>
       </div>
       <pre className="overflow-x-auto px-4 py-3.5">
-        <code className="font-mono text-tiny leading-relaxed text-ink">{code}</code>
+        {html ? (
+          <code
+            className="hljs font-mono text-tiny leading-relaxed text-ink"
+            // highlight.js escapes the source; the only markup is its own token spans.
+            dangerouslySetInnerHTML={{ __html: html }}
+          />
+        ) : (
+          <code className="font-mono text-tiny leading-relaxed text-ink">{code}</code>
+        )}
       </pre>
     </div>
   );

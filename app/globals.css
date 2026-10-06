@@ -379,6 +379,65 @@ html.section-collapsed-fde [data-section="fde"] [data-section-body] {
   display: none;
 }
 
+/* Syntax highlighting for code blocks (highlight.js token classes), drawn
+   from the theme's tone colours so it follows light and dark mode. */
+.hljs-comment,
+.hljs-quote {
+  color: var(--ink-faint);
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-literal,
+.hljs-doctag {
+  color: var(--tone-violet);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition,
+.hljs-template-tag {
+  color: var(--tone-green);
+}
+.hljs-number,
+.hljs-symbol,
+.hljs-bullet {
+  color: var(--tone-amber);
+}
+.hljs-title,
+.hljs-title.function_,
+.hljs-section {
+  color: var(--tone-blue);
+}
+.hljs-built_in,
+.hljs-type,
+.hljs-title.class_,
+.hljs-class .hljs-title {
+  color: var(--tone-teal);
+}
+.hljs-attr,
+.hljs-attribute,
+.hljs-variable,
+.hljs-template-variable,
+.hljs-property,
+.hljs-params {
+  color: var(--tone-pink);
+}
+.hljs-meta,
+.hljs-meta .hljs-keyword,
+.hljs-tag,
+.hljs-name {
+  color: var(--tone-red);
+}
+.hljs-deletion {
+  color: var(--tone-red);
+}
+.hljs-emphasis {
+  font-style: italic;
+}
+.hljs-strong {
+  font-weight: 600;
+}
+
 /* Mermaid (sequence and ER diagrams) injects its own <svg>; keep its type in
    the app's mono face. Centred with margins rather than flex, so a zoomed chart
    overflows to the right and stays scrollable instead of being clipped on the left. */
