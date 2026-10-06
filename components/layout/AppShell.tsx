@@ -14,11 +14,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const learn = getDocsByGroup("learn").map(toMeta);
   const devops = getDocsByGroup("devops").map(toMeta);
   const backend = getDocsByGroup("backend").map(toMeta);
+  const fde = getDocsByGroup("fde").map(toMeta);
 
   return (
     // clip, not hidden: hidden tooltips can't widen the page, and sticky still works.
     <div className="min-h-screen overflow-x-clip">
-      <Sidebar concepts={concepts} tech={tech} designs={designs} coding={coding} learn={learn} devops={devops} backend={backend} />
+      <Sidebar concepts={concepts} tech={tech} designs={designs} coding={coding} learn={learn} devops={devops} backend={backend} fde={fde} />
       <div data-content className="transition-[padding] duration-200 lg:pl-sidebar">
         {children}
       </div>

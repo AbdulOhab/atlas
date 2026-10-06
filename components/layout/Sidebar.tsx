@@ -3,11 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ArrowUpRight, ChevronRight, FlaskConical, PanelLeftClose, X } from "lucide-react";
-import type { DocMeta, Track } from "@/lib/types";
+import { ChevronRight, FlaskConical, PanelLeftClose, X } from "lucide-react";
+import type { DocGroup, DocMeta, Track } from "@/lib/types";
 import { useUiStore } from "@/store/useUiStore";
 import { cn, trackOf } from "@/lib/utils";
-import { withRelated } from "@/lib/related";
+import { RELATED, withRelated, type RelatedLink } from "@/lib/related";
 import { SidebarLink } from "./SidebarLink";
 import { SiteSwitcher } from "./SiteSwitcher";
 
@@ -19,6 +19,7 @@ interface SidebarProps {
   learn: DocMeta[];
   devops: DocMeta[];
   backend: DocMeta[];
+  fde: DocMeta[];
 }
 
 /** Ids match the `section-collapsed-*` rules in globals.css. */
@@ -72,6 +73,13 @@ const SECTIONS = [
     note: "",
     accent: "var(--backend)",
   },
+  {
+    id: "fde",
+    track: "fde",
+    heading: "Modules",
+    note: "",
+    accent: "var(--fde)",
+  },
 ] as const satisfies readonly { id: string; track: Track; heading: string; note: string; accent: string }[];
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -86,8 +94,8 @@ interface SectionProps {
   onToggle: () => void;
   activeSlug: string;
   onNavigate: () => void;
-  /** Also list the modules that live in other tracks, in course order. */
-  withLinks?: boolean;
+  /** Modules that live in other tracks, listed in course order. */
+  links?: RelatedLink[];
 }
 
 /**
@@ -95,9 +103,9 @@ interface SectionProps {
  * state can be applied before React runs (see ThemeScript) and nothing flashes
  * open on load.
  */
-function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSlug, onNavigate, withLinks }: SectionProps) {
+function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSlug, onNavigate, links }: SectionProps) {
   const bodyId = `sidebar-section-${id}`;
-  const items = withLinks ? withRelated(docs) : docs.map((doc) => ({ kind: "doc" as const, doc }));
+  const items = links ? withRelated(docs, links) : docs.map((doc) => ({ kind: "doc" as const, doc }));
 
   return (
     <div data-section={id}>
@@ -137,23 +145,23 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
                 onNavigate={onNavigate}
               />
             ) : (
-              <Link
-                key={item.link.href}
-                href={item.link.href}
-                onClick={onNavigate}
-                title={`${item.link.covers} — opens in ${item.link.track}`}
-                className="group flex items-baseline gap-2.5 border-l-2 border-transparent py-1.5 pl-3 pr-2 text-small text-inkMuted transition-colors duration-fast hover:border-rule hover:text-ink"
-              >
-                <span className="w-4 shrink-0 font-mono text-micro tabular-nums text-inkFaint">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <span className="leading-snug">{item.link.title}</span>
-                <ArrowUpRight
-                  className="ml-auto h-3.5 w-3.5 shrink-0 self-center"
-                  style={{ color: item.link.accent }}
-                  aria-hidden
-                />
-              </Link>
+              // A module shared from another track opens under this track's route, so the sidebar stays put.
+              <SidebarLink
+                key={`shared/${item.link.slug}`}
+                doc={{
+                  slug: item.link.slug,
+                  group: id as DocGroup,
+                  order: 0,
+                  title: item.link.title,
+                  summary: item.link.covers,
+                  tags: [],
+                  readingMinutes: 0,
+                }}
+                number={i + 1}
+                tag={item.link.track}
+                active={item.link.slug === activeSlug}
+                onNavigate={onNavigate}
+              />
             ),
           )}
         </nav>
@@ -162,7 +170,7 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
   );
 }
 
-export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend }: SidebarProps) {
+export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend, fde }: SidebarProps) {
   const pathname = usePathname();
   const open = useUiStore((s) => s.sidebarOpen);
   const setOpen = useUiStore((s) => s.setSidebarOpen);
@@ -182,7 +190,9 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
           ? pathname.slice("/devops/".length)
           : pathname.startsWith("/backend/")
             ? pathname.slice("/backend/".length)
-            : "";
+            : pathname.startsWith("/fde/")
+              ? pathname.slice("/fde/".length)
+              : "";
 
   // Coding and learn no longer get their own sidebar section — they're pooled
   // and re-split by what each item actually is, so e.g. Hash Tables (coding)
@@ -199,6 +209,7 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
     algo: algoDocs,
     devops,
     backend,
+    fde,
   };
   const close = () => setOpen(false);
 
@@ -300,7 +311,7 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
               onToggle={() => toggleSection(section.id)}
               activeSlug={activeSlug}
               onNavigate={close}
-              withLinks={section.id === "backend"}
+              links={section.id === "backend" || section.id === "fde" ? RELATED[section.id] : undefined}
             />
           ))}
           {track === "sysdesign" && (

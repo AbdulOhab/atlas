@@ -15,6 +15,7 @@ license; credit the original authors when you reuse their material.
 | `content/devops/` | DevOps | [crypticani/the-devops-handbook](https://github.com/crypticani/the-devops-handbook) | MIT |
 | `content/devops/interview-questions.md` | DevOps | [rohitg00/devops-interview-questions](https://github.com/rohitg00/devops-interview-questions) | none (all rights reserved) |
 | `content/backend/` | Backend | Assembled from 14 open documentation projects, see [Backend](#backend) | per section, all allow reuse |
+| `content/fde/` | Forward Deployed Engineering | Assembled from 10 open source courses and docs, see [Forward Deployed Engineering](#forward-deployed-engineering) | per section, all allow reuse |
 
 ## System Design Atlas
 
@@ -87,6 +88,28 @@ the top, linking the original page.
 Outline modules not covered here: 1 (course welcome), 22-23 (course
 projects), 24 (Git, see the DevOps track's Git module), 31-33 (third-party
 integrations and AI), 34-36 (business and marketing) and 39-42 (project ideas).
+
+## Forward Deployed Engineering
+
+`content/fde/` is 25 modules plus one link (Infrastructure Provisioning, which
+opens the DevOps track's Terraform module). They follow the 4 milestones and
+26 module titles of the
+[Poridhi Forward Deployed Engineering career track](https://poridhi.io/course-details/69ce8e68e5afa2cf59082d88)
+(module titles only; the course's own material isn't used). Each section is
+adapted from an open source project and says so in a "Source" line at the top.
+
+| Source | Used for | License |
+| --- | --- | --- |
+| [microsoft/ai-agents-for-beginners](https://github.com/microsoft/ai-agents-for-beginners) | Agents, planning, context engineering, tool use, multi-agent, MCP, deployment, production, memory, design patterns, metacognition, agentic RAG, trust and security | MIT |
+| [shareAI-lab/learn-claude-code](https://github.com/shareAI-lab/learn-claude-code) | Building a Claude Code-style agent step by step: loop, tools, permissions, hooks, todos, subagents, skills, compaction, memory, tasks, background jobs, cron, teams, MCP, harness, workflows, goal loop | MIT |
+| [humanlayer/12-factor-agents](https://github.com/humanlayer/12-factor-agents) | Context window, tool calls, control flow, state, pause/resume, human contact, small agents, triggers, compact errors, stateless reducer | CC BY-SA 4.0 (content) |
+| [open-telemetry/opentelemetry.io](https://github.com/open-telemetry/opentelemetry.io) | Observability primer, logs, traces, context propagation, semantic conventions | CC BY 4.0 |
+| [OWASP Top 10 for LLM Applications](https://github.com/OWASP/www-project-top-10-for-large-language-model-applications) | Prompt injection, sensitive data, output handling, excessive agency, prompt leakage, unbounded consumption | CC BY-SA 4.0 |
+| [backstage/backstage](https://github.com/backstage/backstage) | Internal developer platform, software catalog, templates | Apache 2.0 |
+| [spf13/cobra](https://github.com/spf13/cobra) | Building ops CLIs in Go | Apache 2.0 |
+| [k8sgpt-ai/k8sgpt](https://github.com/k8sgpt-ai/k8sgpt) | Production SRE agent for Kubernetes | Apache 2.0 |
+| [robusta-dev/holmesgpt](https://github.com/robusta-dev/holmesgpt) | Agentic SRE platform capstone | Apache 2.0 |
+| [vadimdemedes/ink](https://github.com/vadimdemedes/ink) | Terminal UIs | MIT |
 
 ## Waiting
 

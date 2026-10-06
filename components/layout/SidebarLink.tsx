@@ -12,9 +12,11 @@ interface SidebarLinkProps {
   onNavigate: () => void;
   /** Position in the sidebar section; falls back to the doc's own order. */
   number?: number;
+  /** Small label for a module shared from another track, e.g. "devops". */
+  tag?: string;
 }
 
-export function SidebarLink({ doc, active, onNavigate, number }: SidebarLinkProps) {
+export function SidebarLink({ doc, active, onNavigate, number, tag }: SidebarLinkProps) {
   const completed = useIsCompleted(doc.slug);
 
   return (
@@ -39,6 +41,7 @@ export function SidebarLink({ doc, active, onNavigate, number }: SidebarLinkProp
         {String(number ?? doc.order).padStart(2, "0")}
       </span>
       <span className="leading-snug">{doc.title}</span>
+      {tag && !completed && <span className="ml-auto self-center font-mono text-micro text-inkFaint">{tag}</span>}
       {completed && (
         <>
           <CircleCheck

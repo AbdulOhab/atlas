@@ -36,6 +36,13 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     href: "/backend",
     accent: "var(--backend)",
   },
+  {
+    id: "fde",
+    label: "fde",
+    blurb: "Forward Deployed Engineering: agentic engineering, building Claude Code, agentic system design, platform engineering",
+    href: "/fde",
+    accent: "var(--fde)",
+  },
 ];
 
 /** The sidebar logo doubles as the switch between the two halves of the atlas. */

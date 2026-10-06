@@ -34,14 +34,15 @@ const GROUP_DIR: Record<DocGroup, string> = {
   learn: "learn",
   devops: "devops",
   backend: "backend",
+  fde: "fde",
 };
 
 /**
  * Reading order of the groups: the ideas, then the tools, then the problems.
- * Coding, learn, devops and backend sit last because they are separate tracks with
+ * Coding, learn, devops, backend and fde sit last because they are separate tracks with
  * their own routes, not steps in the system design sequence.
  */
-const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops", "backend"];
+const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops", "backend", "fde"];
 
 const WORDS_PER_MINUTE = 200;
 
@@ -440,14 +441,14 @@ export function getDocsByGroup(group: DocGroup): Doc[] {
 
 /**
  * The atlas has four tracks with their own routes: system design under /docs,
- * coding under /coding, learn under /learn, devops under /devops and backend
- * under /backend. Lookups
+ * coding under /coding, learn under /learn, devops under /devops, backend
+ * under /backend and fde under /fde. Lookups
  * name the track, so a slug that happens to exist in two tracks can never
  * resolve to the wrong page.
  */
 const inTrack = (doc: DocMeta, track: ContentTrack) =>
   track === "sysdesign"
-    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops" && doc.group !== "backend"
+    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops" && doc.group !== "backend" && doc.group !== "fde"
     : doc.group === track;
 
 export function getDocsInTrack(track: ContentTrack): Doc[] {

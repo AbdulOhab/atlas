@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Boxes, Network, Server, Terminal, type LucideIcon } from "lucide-react";
+import { ArrowRight, Bot, Boxes, Network, Server, Terminal, type LucideIcon } from "lucide-react";
 import { getDocsByGroup, toMeta } from "@/lib/content";
 import { docHref } from "@/lib/utils";
 import type { DocMeta } from "@/lib/types";
@@ -28,6 +28,7 @@ export default function HomePage() {
   const algorithms = [...coding, ...getDocsByGroup("learn").map(toMeta)];
   const devops = getDocsByGroup("devops").map(toMeta);
   const backend = getDocsByGroup("backend").map(toMeta);
+  const fde = getDocsByGroup("fde").map(toMeta);
 
   const sections: Section[] = [
     {
@@ -74,6 +75,17 @@ export default function HomePage() {
       docs: backend,
       start: [...backend].sort(byOrder).slice(0, 4),
     },
+    {
+      id: "fde",
+      kicker: "Forward Deployed Engineering",
+      title: "Agents, the harness behind them, and the platform they run on.",
+      body: "Agentic engineering, building a Claude Code-style agent from scratch, agentic system design and platform engineering.",
+      href: "/fde",
+      accent: "var(--fde)",
+      icon: Bot,
+      docs: fde,
+      start: [...fde].sort(byOrder).slice(0, 4),
+    },
   ];
 
   return (
@@ -83,14 +95,14 @@ export default function HomePage() {
         <header className="max-w-reading">
           <p className="font-mono text-micro uppercase tracking-wider text-inkFaint">Atlas CE</p>
           <h1 className="mt-3 text-h1 font-semibold text-ink sm:text-display">
-            System design, algorithms, DevOps and backend in one place.
+            System design, algorithms, DevOps, backend and forward deployed engineering in one place.
           </h1>
           <p className="mt-4 text-lead text-inkMuted">
-            Four tracks, each readable on its own. Pick one to start.
+            Five tracks, each readable on its own. Pick one to start.
           </p>
         </header>
 
-        <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {sections.map((section) => {
             const Icon = section.icon;
             const minutes = section.docs.reduce((sum, doc) => sum + doc.readingMinutes, 0);

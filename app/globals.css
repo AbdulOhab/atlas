@@ -43,6 +43,8 @@
   --devops-soft: rgba(31, 138, 76, 0.1);
   --backend: #c2410c;
   --backend-soft: rgba(194, 65, 12, 0.1);
+  --fde: #be123c;
+  --fde-soft: rgba(190, 18, 60, 0.1);
 
   /* Status tones for HTTP method and status badges. */
   --tone-green: #1a7f4e;
@@ -100,6 +102,8 @@
   --devops-soft: rgba(78, 217, 138, 0.12);
   --backend: #fb8f5e;
   --backend-soft: rgba(251, 143, 94, 0.12);
+  --fde: #fb7185;
+  --fde-soft: rgba(251, 113, 133, 0.12);
 
   --tone-green: #5cc98f;
   --tone-green-soft: rgba(92, 201, 143, 0.1);
@@ -370,7 +374,8 @@ html.section-collapsed-designs [data-section="designs"] [data-section-body],
 html.section-collapsed-data-structures [data-section="data-structures"] [data-section-body],
 html.section-collapsed-algo [data-section="algo"] [data-section-body],
 html.section-collapsed-devops [data-section="devops"] [data-section-body],
-html.section-collapsed-backend [data-section="backend"] [data-section-body] {
+html.section-collapsed-backend [data-section="backend"] [data-section-body],
+html.section-collapsed-fde [data-section="fde"] [data-section-body] {
   display: none;
 }
 

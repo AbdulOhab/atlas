@@ -29,6 +29,7 @@ const config: Config = {
         learn: "var(--learn)",
         devops: "var(--devops)",
         backend: "var(--backend)",
+        fde: "var(--fde)",
         conceptSoft: "var(--concept-soft)",
         designSoft: "var(--design-soft)",
         techSoft: "var(--tech-soft)",
@@ -36,6 +37,7 @@ const config: Config = {
         learnSoft: "var(--learn-soft)",
         devopsSoft: "var(--devops-soft)",
         backendSoft: "var(--backend-soft)",
+        fdeSoft: "var(--fde-soft)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

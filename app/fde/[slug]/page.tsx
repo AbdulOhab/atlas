@@ -9,25 +9,25 @@ interface PageProps {
 }
 
 export function generateStaticParams() {
-  return trackSlugs("backend");
+  return trackSlugs("fde");
 }
 
 export function generateMetadata({ params }: PageProps): Metadata {
-  const found = resolveTrackDoc("backend", params.slug);
+  const found = resolveTrackDoc("fde", params.slug);
   if (!found) return { title: "Not found" };
   const { doc, link } = found;
   const title = link ? link.title : doc.title;
   return {
     title,
     description: doc.summary,
-    openGraph: { type: "article", title, description: doc.summary, url: `/backend/${params.slug}` },
+    openGraph: { type: "article", title, description: doc.summary, url: `/fde/${params.slug}` },
     twitter: { card: "summary_large_image", title, description: doc.summary },
     // A borrowed module's canonical page is the original one.
-    alternates: { canonical: link ? originalHref(link) : `/backend/${params.slug}` },
+    alternates: { canonical: link ? originalHref(link) : `/fde/${params.slug}` },
   };
 }
 
 export default function Page({ params }: PageProps) {
-  if (!resolveTrackDoc("backend", params.slug)) notFound();
-  return <TrackDocPage host="backend" slug={params.slug} />;
+  if (!resolveTrackDoc("fde", params.slug)) notFound();
+  return <TrackDocPage host="fde" slug={params.slug} />;
 }
