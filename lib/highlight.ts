@@ -1,5 +1,6 @@
 import hljs from "highlight.js/lib/core";
 import bash from "highlight.js/lib/languages/bash";
+import css from "highlight.js/lib/languages/css";
 import diff from "highlight.js/lib/languages/diff";
 import dockerfile from "highlight.js/lib/languages/dockerfile";
 import go from "highlight.js/lib/languages/go";
@@ -12,6 +13,8 @@ import javascript from "highlight.js/lib/languages/javascript";
 import json from "highlight.js/lib/languages/json";
 import markdown from "highlight.js/lib/languages/markdown";
 import nginx from "highlight.js/lib/languages/nginx";
+import php from "highlight.js/lib/languages/php";
+import phpTemplate from "highlight.js/lib/languages/php-template";
 import powershell from "highlight.js/lib/languages/powershell";
 import python from "highlight.js/lib/languages/python";
 import ruby from "highlight.js/lib/languages/ruby";
@@ -28,8 +31,8 @@ import yaml from "highlight.js/lib/languages/yaml";
  * (cjs, hcl, conf, …) are mapped to the closest grammar.
  */
 const LANGUAGES = {
-  bash, diff, dockerfile, go, graphql, groovy, http, ini, java, javascript, json, markdown, nginx, powershell,
-  python, ruby, rust, shell, sql, typescript, xml, yaml,
+  bash, css, diff, dockerfile, go, graphql, groovy, http, ini, java, javascript, json, markdown, nginx, php,
+  "php-template": phpTemplate, powershell, python, ruby, rust, shell, sql, typescript, xml, yaml,
 };
 for (const [name, grammar] of Object.entries(LANGUAGES)) hljs.registerLanguage(name, grammar);
 
@@ -49,6 +52,9 @@ const ALIASES: Record<string, string> = {
   conf: "ini",
   gitignore: "bash",
   html: "xml",
+  vue: "xml",
+  // Blade is HTML with {{ }} and @directives; the PHP template grammar reads it best.
+  blade: "php-template",
 };
 
 /** Highlighted HTML for a fenced block, or null when the language isn't one we highlight. */

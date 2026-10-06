@@ -17,11 +17,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const devops = trackSequence("devops");
   const backend = trackSequence("backend");
   const fde = trackSequence("fde");
+  const languages = trackSequence("languages");
 
   return (
     // clip, not hidden: hidden tooltips can't widen the page, and sticky still works.
     <div className="min-h-screen overflow-x-clip">
-      <Sidebar concepts={concepts} tech={tech} designs={designs} coding={coding} learn={learn} devops={devops} backend={backend} fde={fde} />
+      <Sidebar concepts={concepts} tech={tech} designs={designs} coding={coding} learn={learn} devops={devops} backend={backend} fde={fde} languages={languages} />
       <div data-content className="transition-[padding] duration-200 lg:pl-sidebar">
         {children}
       </div>

@@ -16,6 +16,7 @@ license; credit the original authors when you reuse their material.
 | `content/devops/interview-questions.md` | DevOps | [rohitg00/devops-interview-questions](https://github.com/rohitg00/devops-interview-questions) | none (all rights reserved) |
 | `content/backend/` | Backend | Assembled from 14 open documentation projects, see [Backend](#backend) | per section, all allow reuse |
 | `content/fde/` | Forward Deployed Engineering | Assembled from 10 open source courses and docs, see [Forward Deployed Engineering](#forward-deployed-engineering) | per section, all allow reuse |
+| `content/languages/` | Languages | MDN, react.dev, Next.js, Laravel and htmx docs, see [Languages](#languages) | per module, all allow reuse |
 
 ## System Design Atlas
 
@@ -110,6 +111,24 @@ adapted from an open source project and says so in a "Source" line at the top.
 | [k8sgpt-ai/k8sgpt](https://github.com/k8sgpt-ai/k8sgpt) | Production SRE agent for Kubernetes | Apache 2.0 |
 | [robusta-dev/holmesgpt](https://github.com/robusta-dev/holmesgpt) | Agentic SRE platform capstone | Apache 2.0 |
 | [vadimdemedes/ink](https://github.com/vadimdemedes/ink) | Terminal UIs | MIT |
+
+## Languages
+
+Five modules, each split into one child page per topic.
+
+| Module | Source | License |
+| --- | --- | --- |
+| Essential JavaScript for Frameworks | [mdn/content](https://github.com/mdn/content) | CC BY-SA 2.5 |
+| React | [reactjs/react.dev](https://github.com/reactjs/react.dev) (Learn section) | CC BY 4.0 |
+| Next.js | [vercel/next.js](https://github.com/vercel/next.js/tree/canary/docs) (App Router, Getting Started) | MIT |
+| Laravel | [laravel/docs](https://github.com/laravel/docs) | MIT |
+| HTMX | [bigskysoftware/htmx](https://github.com/bigskysoftware/htmx) (`www/content/docs.md`) | 0BSD |
+
+The JavaScript module follows the 24 topics of the "Essential JavaScript for
+frameworks" list. That list links to [javascript.info](https://javascript.info),
+whose text is CC BY-NC-SA 4.0 and so can't be mixed into this repository's
+CC BY-SA content; each topic is adapted from the matching MDN pages instead,
+with the javascript.info chapter linked as further reading.
 
 ## Waiting
 

@@ -43,6 +43,13 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     href: "/fde",
     accent: "var(--fde)",
   },
+  {
+    id: "languages",
+    label: "languages",
+    blurb: "Languages and frameworks: essential JavaScript, then React, Next.js, Laravel and HTMX",
+    href: "/languages",
+    accent: "var(--languages)",
+  },
 ];
 
 /** The sidebar logo doubles as the switch between the two halves of the atlas. */

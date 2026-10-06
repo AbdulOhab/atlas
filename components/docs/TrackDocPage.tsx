@@ -19,7 +19,7 @@ import { ReadingProgress } from "./ReadingProgress";
 const TRACK_NAME: Record<string, string> = { devops: "DevOps", sysdesign: "System Design" };
 
 /**
- * A page of a course-ordered track (devops, backend, fde). Shared modules
+ * A page of a course-ordered track (devops, backend, fde, languages). Shared modules
  * render their original content under the host route, and long docs render
  * as a parent page (main text plus a list of child pages) and child pages
  * at /host/slug/part, so the sidebar and prev/next never leave the track.

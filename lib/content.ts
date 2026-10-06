@@ -36,14 +36,15 @@ const GROUP_DIR: Record<DocGroup, string> = {
   devops: "devops",
   backend: "backend",
   fde: "fde",
+  languages: "languages",
 };
 
 /**
  * Reading order of the groups: the ideas, then the tools, then the problems.
- * Coding, learn, devops, backend and fde sit last because they are separate tracks with
+ * Coding, learn, devops, backend, fde and languages sit last because they are separate tracks with
  * their own routes, not steps in the system design sequence.
  */
-const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops", "backend", "fde"];
+const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops", "backend", "fde", "languages"];
 
 const WORDS_PER_MINUTE = 200;
 
@@ -468,7 +469,7 @@ export function getDocsByGroup(group: DocGroup): Doc[] {
  */
 const inTrack = (doc: DocMeta, track: ContentTrack) =>
   track === "sysdesign"
-    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops" && doc.group !== "backend" && doc.group !== "fde"
+    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops" && doc.group !== "backend" && doc.group !== "fde" && doc.group !== "languages"
     : doc.group === track;
 
 export function getDocsInTrack(track: ContentTrack): Doc[] {

@@ -19,6 +19,7 @@ interface SidebarProps {
   devops: DocMeta[];
   backend: DocMeta[];
   fde: DocMeta[];
+  languages: DocMeta[];
 }
 
 /** Ids match the `section-collapsed-*` rules in globals.css. */
@@ -78,6 +79,13 @@ const SECTIONS = [
     heading: "Modules",
     note: "",
     accent: "var(--fde)",
+  },
+  {
+    id: "languages",
+    track: "languages",
+    heading: "Modules",
+    note: "",
+    accent: "var(--languages)",
   },
 ] as const satisfies readonly { id: string; track: Track; heading: string; note: string; accent: string }[];
 
@@ -207,7 +215,7 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
   );
 }
 
-export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend, fde }: SidebarProps) {
+export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend, fde, languages }: SidebarProps) {
   const pathname = usePathname();
   const open = useUiStore((s) => s.sidebarOpen);
   const setOpen = useUiStore((s) => s.setSidebarOpen);
@@ -229,7 +237,9 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
             ? pathname.slice("/backend/".length)
             : pathname.startsWith("/fde/")
               ? pathname.slice("/fde/".length)
-              : "";
+              : pathname.startsWith("/languages/")
+                ? pathname.slice("/languages/".length)
+                : "";
 
   // Coding and learn no longer get their own sidebar section — they're pooled
   // and re-split by what each item actually is, so e.g. Hash Tables (coding)
@@ -247,6 +257,7 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
     devops,
     backend,
     fde,
+    languages,
   };
   const close = () => setOpen(false);
 

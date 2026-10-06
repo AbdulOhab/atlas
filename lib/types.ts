@@ -1,4 +1,4 @@
-export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn" | "devops" | "backend" | "fde";
+export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn" | "devops" | "backend" | "fde" | "languages";
 
 /**
  * The halves of the atlas the switcher offers. Coding and learn share one
@@ -6,15 +6,15 @@ export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn" | "dev
  * /coding and /learn routes), the way sysdesign splits into Concepts, Designs
  * and Tech sections under a single track. DevOps is its own track with its
  * own route, /devops, so is Backend, /backend, and Forward
- * Deployed Engineering, /fde.
+ * Deployed Engineering, /fde, and Languages, /languages.
  */
-export type Track = "sysdesign" | "algorithms" | "devops" | "backend" | "fde";
+export type Track = "sysdesign" | "algorithms" | "devops" | "backend" | "fde" | "languages";
 
 /**
  * Scope for content lookups: finer-grained than `Track` so a slug that exists
  * in both /coding and /learn (or /devops) can never resolve to the wrong page.
  */
-export type ContentTrack = "sysdesign" | "coding" | "learn" | "devops" | "backend" | "fde";
+export type ContentTrack = "sysdesign" | "coding" | "learn" | "devops" | "backend" | "fde" | "languages";
 
 /** Facets used by the filter bar. Kept as a union so new facets fail loudly. */
 export type TagKind = "concept" | "tech" | "pattern";

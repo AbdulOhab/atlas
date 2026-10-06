@@ -9,7 +9,7 @@ import { slugifyHeading } from "./headings";
  *   the parent, then the Reference cheat sheet, each Lab and the Project
  *   become children. The question bank stays whole: its topics are tiny.
  * - Backend and FDE modules split at their `##` sections, each of which is
- *   adapted from one source.
+ *   adapted from one source. Language modules split per topic, always.
  *
  * Only docs long enough to need it are split.
  */
@@ -66,9 +66,10 @@ const partSlug = (title: string) =>
   slugifyHeading(title).replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "part";
 
 export function splitDoc(group: DocGroup, slug: string, content: string): SplitDoc | null {
-  if (group !== "devops" && group !== "backend" && group !== "fde") return null;
+  if (group !== "devops" && group !== "backend" && group !== "fde" && group !== "languages") return null;
   if (slug === "interview-questions") return null;
-  if (minutes(content) < MIN_MINUTES) return null;
+  // Language modules are a list of topics: every topic gets its page, whatever the length.
+  if (group !== "languages" && minutes(content) < MIN_MINUTES) return null;
 
   const chunks: { title: string | null; lines: string[] }[] = [{ title: null, lines: [] }];
   let inCode = false;
@@ -94,7 +95,7 @@ export function splitDoc(group: DocGroup, slug: string, content: string): SplitD
     const prev = parts[parts.length - 1];
     // A stub section (a short link list, say) isn't worth its own page: it
     // joins the part before it, or the parent if it comes first.
-    if (words(body) < MERGE_BELOW_WORDS) {
+    if (group !== "languages" && words(body) < MERGE_BELOW_WORDS) {
       if (prev) {
         prev.content = `${prev.content}\n\n## ${chunk.title}\n\n${body}`;
         prev.readingMinutes = minutes(prev.content);

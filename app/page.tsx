@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bot, Boxes, Network, Server, Terminal, type LucideIcon } from "lucide-react";
+import { ArrowRight, Bot, Boxes, Braces, Network, Server, Terminal, type LucideIcon } from "lucide-react";
 import { getDocsByGroup, toMeta } from "@/lib/content";
 import { docHref } from "@/lib/utils";
 import type { DocMeta } from "@/lib/types";
@@ -29,6 +29,7 @@ export default function HomePage() {
   const devops = getDocsByGroup("devops").map(toMeta);
   const backend = getDocsByGroup("backend").map(toMeta);
   const fde = getDocsByGroup("fde").map(toMeta);
+  const languages = getDocsByGroup("languages").map(toMeta);
 
   const sections: Section[] = [
     {
@@ -86,6 +87,17 @@ export default function HomePage() {
       docs: fde,
       start: [...fde].sort(byOrder).slice(0, 4),
     },
+    {
+      id: "languages",
+      kicker: "Languages",
+      title: "The JavaScript you need, then the frameworks built on it.",
+      body: "Essential JavaScript for frameworks, one topic per page, then React, Next.js, Laravel and HTMX.",
+      href: "/languages",
+      accent: "var(--languages)",
+      icon: Braces,
+      docs: languages,
+      start: [...languages].sort(byOrder).slice(0, 4),
+    },
   ];
 
   return (
@@ -95,10 +107,10 @@ export default function HomePage() {
         <header className="max-w-reading">
           <p className="font-mono text-micro uppercase tracking-wider text-inkFaint">Atlas CE</p>
           <h1 className="mt-3 text-h1 font-semibold text-ink sm:text-display">
-            System design, algorithms, DevOps, backend and forward deployed engineering in one place.
+            System design, algorithms, DevOps, backend, forward deployed engineering and languages in one place.
           </h1>
           <p className="mt-4 text-lead text-inkMuted">
-            Five tracks, each readable on its own. Pick one to start.
+            Six tracks, each readable on its own. Pick one to start.
           </p>
         </header>
 
