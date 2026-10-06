@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronRight, FlaskConical, PanelLeftClose, X } from "lucide-react";
+import { ArrowUpRight, ChevronRight, FlaskConical, PanelLeftClose, X } from "lucide-react";
 import type { DocMeta, Track } from "@/lib/types";
 import { useUiStore } from "@/store/useUiStore";
 import { cn, trackOf } from "@/lib/utils";
+import { withRelated } from "@/lib/related";
 import { SidebarLink } from "./SidebarLink";
 import { SiteSwitcher } from "./SiteSwitcher";
 
@@ -17,6 +18,7 @@ interface SidebarProps {
   coding: DocMeta[];
   learn: DocMeta[];
   devops: DocMeta[];
+  backend: DocMeta[];
 }
 
 /** Ids match the `section-collapsed-*` rules in globals.css. */
@@ -63,6 +65,13 @@ const SECTIONS = [
     note: "",
     accent: "var(--devops)",
   },
+  {
+    id: "backend",
+    track: "backend",
+    heading: "Modules",
+    note: "",
+    accent: "var(--backend)",
+  },
 ] as const satisfies readonly { id: string; track: Track; heading: string; note: string; accent: string }[];
 
 type SectionId = (typeof SECTIONS)[number]["id"];
@@ -77,6 +86,8 @@ interface SectionProps {
   onToggle: () => void;
   activeSlug: string;
   onNavigate: () => void;
+  /** Also list the modules that live in other tracks, in course order. */
+  withLinks?: boolean;
 }
 
 /**
@@ -84,8 +95,9 @@ interface SectionProps {
  * state can be applied before React runs (see ThemeScript) and nothing flashes
  * open on load.
  */
-function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSlug, onNavigate }: SectionProps) {
+function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSlug, onNavigate, withLinks }: SectionProps) {
   const bodyId = `sidebar-section-${id}`;
+  const items = withLinks ? withRelated(docs) : docs.map((doc) => ({ kind: "doc" as const, doc }));
 
   return (
     <div data-section={id}>
@@ -106,7 +118,7 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
           />
           <span className="text-small font-semibold text-ink">{heading}</span>
           <span className="ml-auto font-mono text-micro" style={{ color: accent }}>
-            {docs.length}
+            {items.length}
           </span>
         </button>
       </h2>
@@ -115,22 +127,42 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
         <p className="mb-3 mt-2 px-3 text-tiny leading-snug text-inkFaint">{note}</p>
         <nav className="flex flex-col">
           {/* Numbered by position: pooled sections mix docs from tracks with their own orders. */}
-          {docs.map((doc, i) => (
-            <SidebarLink
-              key={`${doc.group}/${doc.slug}`}
-              doc={doc}
-              number={i + 1}
-              active={doc.slug === activeSlug}
-              onNavigate={onNavigate}
-            />
-          ))}
+          {items.map((item, i) =>
+            item.kind === "doc" ? (
+              <SidebarLink
+                key={`${item.doc.group}/${item.doc.slug}`}
+                doc={item.doc}
+                number={i + 1}
+                active={item.doc.slug === activeSlug}
+                onNavigate={onNavigate}
+              />
+            ) : (
+              <Link
+                key={item.link.href}
+                href={item.link.href}
+                onClick={onNavigate}
+                title={`${item.link.covers} — opens in ${item.link.track}`}
+                className="group flex items-baseline gap-2.5 border-l-2 border-transparent py-1.5 pl-3 pr-2 text-small text-inkMuted transition-colors duration-fast hover:border-rule hover:text-ink"
+              >
+                <span className="w-4 shrink-0 font-mono text-micro tabular-nums text-inkFaint">
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <span className="leading-snug">{item.link.title}</span>
+                <ArrowUpRight
+                  className="ml-auto h-3.5 w-3.5 shrink-0 self-center"
+                  style={{ color: item.link.accent }}
+                  aria-hidden
+                />
+              </Link>
+            ),
+          )}
         </nav>
       </div>
     </div>
   );
 }
 
-export function Sidebar({ concepts, tech, designs, coding, learn, devops }: SidebarProps) {
+export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend }: SidebarProps) {
   const pathname = usePathname();
   const open = useUiStore((s) => s.sidebarOpen);
   const setOpen = useUiStore((s) => s.setSidebarOpen);
@@ -148,7 +180,9 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops }: Side
         ? pathname.slice("/learn/".length)
         : pathname.startsWith("/devops/")
           ? pathname.slice("/devops/".length)
-          : "";
+          : pathname.startsWith("/backend/")
+            ? pathname.slice("/backend/".length)
+            : "";
 
   // Coding and learn no longer get their own sidebar section — they're pooled
   // and re-split by what each item actually is, so e.g. Hash Tables (coding)
@@ -164,6 +198,7 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops }: Side
     "data-structures": dataStructureDocs,
     algo: algoDocs,
     devops,
+    backend,
   };
   const close = () => setOpen(false);
 
@@ -265,6 +300,7 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops }: Side
               onToggle={() => toggleSection(section.id)}
               activeSlug={activeSlug}
               onNavigate={close}
+              withLinks={section.id === "backend"}
             />
           ))}
           {track === "sysdesign" && (

@@ -27,6 +27,7 @@ const COLOR = {
   coding: "#6cb2ee",
   learn: "#ef8fc0",
   devops: "#4ed98a",
+  backend: "#fb8f5e",
 } as const;
 
 const ACCENT: Record<DocGroup, string> = {
@@ -36,6 +37,7 @@ const ACCENT: Record<DocGroup, string> = {
   coding: COLOR.coding,
   learn: COLOR.learn,
   devops: COLOR.devops,
+  backend: COLOR.backend,
 };
 
 const GROUP_LABEL: Record<DocGroup, string> = {
@@ -45,6 +47,7 @@ const GROUP_LABEL: Record<DocGroup, string> = {
   coding: "Coding",
   learn: "Learn",
   devops: "DevOps",
+  backend: "Backend",
 };
 
 /**

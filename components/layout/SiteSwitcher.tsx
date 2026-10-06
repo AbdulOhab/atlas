@@ -29,6 +29,13 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     href: "/devops",
     accent: "var(--devops)",
   },
+  {
+    id: "backend",
+    label: "backend",
+    blurb: "HTTP, Node.js, Express, APIs, auth, databases, NestJS, FastAPI and Go",
+    href: "/backend",
+    accent: "var(--backend)",
+  },
 ];
 
 /** The sidebar logo doubles as the switch between the two halves of the atlas. */

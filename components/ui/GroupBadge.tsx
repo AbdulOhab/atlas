@@ -8,6 +8,7 @@ const LABEL: Record<DocGroup, string> = {
   coding: "Coding",
   learn: "Learn",
   devops: "DevOps",
+  backend: "Backend",
 };
 
 /** Small coloured marker that tells the reader which half of the atlas they're in. */

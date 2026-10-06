@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Boxes, Network, Terminal, type LucideIcon } from "lucide-react";
+import { ArrowRight, Boxes, Network, Server, Terminal, type LucideIcon } from "lucide-react";
 import { getDocsByGroup, toMeta } from "@/lib/content";
 import { docHref } from "@/lib/utils";
 import type { DocMeta } from "@/lib/types";
@@ -20,13 +20,14 @@ interface Section {
 
 const byOrder = (a: DocMeta, b: DocMeta) => a.order - b.order;
 
-/** The landing page: the three tracks side by side, each with a way in. */
+/** The landing page: the tracks side by side, each with a way in. */
 export default function HomePage() {
   const concepts = getDocsByGroup("concept").map(toMeta);
   const sysdesign = [...concepts, ...getDocsByGroup("tech").map(toMeta), ...getDocsByGroup("design").map(toMeta)];
   const coding = getDocsByGroup("coding").map(toMeta);
   const algorithms = [...coding, ...getDocsByGroup("learn").map(toMeta)];
   const devops = getDocsByGroup("devops").map(toMeta);
+  const backend = getDocsByGroup("backend").map(toMeta);
 
   const sections: Section[] = [
     {
@@ -62,6 +63,17 @@ export default function HomePage() {
       docs: devops,
       start: [...devops].sort(byOrder).slice(0, 4),
     },
+    {
+      id: "backend",
+      kicker: "Backend",
+      title: "From the first HTTP request to a production API.",
+      body: "HTTP, Node.js, Express, auth, SQL and databases, then NestJS, FastAPI and Go with Gin.",
+      href: "/backend",
+      accent: "var(--backend)",
+      icon: Server,
+      docs: backend,
+      start: [...backend].sort(byOrder).slice(0, 4),
+    },
   ];
 
   return (
@@ -71,14 +83,14 @@ export default function HomePage() {
         <header className="max-w-reading">
           <p className="font-mono text-micro uppercase tracking-wider text-inkFaint">Atlas CE</p>
           <h1 className="mt-3 text-h1 font-semibold text-ink sm:text-display">
-            System design, algorithms and DevOps in one place.
+            System design, algorithms, DevOps and backend in one place.
           </h1>
           <p className="mt-4 text-lead text-inkMuted">
-            Three tracks, each readable on its own. Pick one to start.
+            Four tracks, each readable on its own. Pick one to start.
           </p>
         </header>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-3">
+        <div className="mt-12 grid gap-6 md:grid-cols-2 xl:grid-cols-4">
           {sections.map((section) => {
             const Icon = section.icon;
             const minutes = section.docs.reduce((sum, doc) => sum + doc.readingMinutes, 0);

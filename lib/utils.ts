@@ -25,11 +25,12 @@ export function accentVar(group: DocGroup) {
   return { "--accent": `var(--${group})` } as React.CSSProperties;
 }
 
-/** Where a document lives: coding, learn and devops have their own routes, everything else is under /docs. */
+/** Where a document lives: coding, learn, devops and backend have their own routes, everything else is under /docs. */
 export function docHref(doc: Pick<DocMeta, "group" | "slug">) {
   if (doc.group === "coding") return `/coding/${doc.slug}`;
   if (doc.group === "learn") return `/learn/${doc.slug}`;
   if (doc.group === "devops") return `/devops/${doc.slug}`;
+  if (doc.group === "backend") return `/backend/${doc.slug}`;
   return `/docs/${doc.slug}`;
 }
 
@@ -38,5 +39,6 @@ export function trackOf(pathname: string): Track {
   if (pathname === "/coding" || pathname.startsWith("/coding/")) return "algorithms";
   if (pathname === "/learn" || pathname.startsWith("/learn/")) return "algorithms";
   if (pathname === "/devops" || pathname.startsWith("/devops/")) return "devops";
+  if (pathname === "/backend" || pathname.startsWith("/backend/")) return "backend";
   return "sysdesign";
 }
