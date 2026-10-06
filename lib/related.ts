@@ -127,4 +127,8 @@ export const FDE_ELSEWHERE: RelatedLink[] = [
 ];
 
 /** Linked-out modules per track that lists them. */
-export const RELATED = { backend: BACKEND_ELSEWHERE, fde: FDE_ELSEWHERE };
+export const RELATED: Record<"devops" | "backend" | "fde", RelatedLink[]> = {
+  devops: [],
+  backend: BACKEND_ELSEWHERE,
+  fde: FDE_ELSEWHERE,
+};

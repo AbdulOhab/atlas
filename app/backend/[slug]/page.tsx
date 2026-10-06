@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { originalHref } from "@/lib/related";
-import { resolveTrackDoc, trackSlugs } from "@/lib/trackDocs";
+import { resolveTrackPage, trackSlugs } from "@/lib/trackDocs";
 import { TrackDocPage } from "@/components/docs/TrackDocPage";
 
 interface PageProps {
@@ -13,7 +13,7 @@ export function generateStaticParams() {
 }
 
 export function generateMetadata({ params }: PageProps): Metadata {
-  const found = resolveTrackDoc("backend", params.slug);
+  const found = resolveTrackPage("backend", params.slug);
   if (!found) return { title: "Not found" };
   const { doc, link } = found;
   const title = link ? link.title : doc.title;
@@ -22,12 +22,12 @@ export function generateMetadata({ params }: PageProps): Metadata {
     description: doc.summary,
     openGraph: { type: "article", title, description: doc.summary, url: `/backend/${params.slug}` },
     twitter: { card: "summary_large_image", title, description: doc.summary },
-    // A borrowed module's canonical page is the original one.
+    // A shared module's canonical page is the original one.
     alternates: { canonical: link ? originalHref(link) : `/backend/${params.slug}` },
   };
 }
 
 export default function Page({ params }: PageProps) {
-  if (!resolveTrackDoc("backend", params.slug)) notFound();
+  if (!resolveTrackPage("backend", params.slug)) notFound();
   return <TrackDocPage host="backend" slug={params.slug} />;
 }

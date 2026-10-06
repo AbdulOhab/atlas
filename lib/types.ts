@@ -51,6 +51,17 @@ export interface DocMeta {
   /** Coding docs only: id of the animated visualisation above the body. */
   viz?: string;
   readingMinutes: number;
+  /** Long docs split into child pages (labs, reference, sections), in order. */
+  parts?: DocPartMeta[];
+  /** Set when a track lists a module that lives in another track: that track's name. */
+  sharedFrom?: string;
+}
+
+/** A child page of a long doc, served at /<track>/<slug>/<part>. */
+export interface DocPartMeta {
+  slug: string;
+  title: string;
+  readingMinutes: number;
 }
 
 export interface DesignTradeoff {

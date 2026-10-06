@@ -14,9 +14,12 @@ interface SidebarLinkProps {
   number?: number;
   /** Small label for a module shared from another track, e.g. "devops". */
   tag?: string;
+  /** A child page under a parent module: indented, with a dot instead of a number. */
+  nested?: boolean;
+  className?: string;
 }
 
-export function SidebarLink({ doc, active, onNavigate, number, tag }: SidebarLinkProps) {
+export function SidebarLink({ doc, active, onNavigate, number, tag, nested, className }: SidebarLinkProps) {
   const completed = useIsCompleted(doc.slug);
 
   return (
@@ -26,10 +29,12 @@ export function SidebarLink({ doc, active, onNavigate, number, tag }: SidebarLin
       aria-current={active ? "page" : undefined}
       style={accentVar(doc.group)}
       className={cn(
-        "group flex items-baseline gap-2.5 border-l-2 py-1.5 pl-3 pr-2 text-small transition-colors duration-fast",
+        "group flex items-baseline gap-2.5 border-l-2 pr-2 transition-colors duration-fast",
+        nested ? "py-1 pl-9 text-tiny" : "py-1.5 pl-3 text-small",
         active
           ? "border-[color:var(--accent)] bg-[color:var(--accent-soft,transparent)] text-ink"
           : "border-transparent text-inkMuted hover:border-rule hover:text-ink",
+        className,
       )}
     >
       <span
@@ -38,7 +43,7 @@ export function SidebarLink({ doc, active, onNavigate, number, tag }: SidebarLin
           active ? "text-[color:var(--accent)]" : "text-inkFaint",
         )}
       >
-        {String(number ?? doc.order).padStart(2, "0")}
+        {nested ? "·" : String(number ?? doc.order).padStart(2, "0")}
       </span>
       <span className="leading-snug">{doc.title}</span>
       {tag && !completed && <span className="ml-auto self-center font-mono text-micro text-inkFaint">{tag}</span>}

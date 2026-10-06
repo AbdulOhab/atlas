@@ -3,6 +3,7 @@ import path from "node:path";
 import { cache } from "react";
 import matter from "gray-matter";
 import { LEARN_TITLES, slugifyHeading } from "./headings";
+import { splitDoc } from "./parts";
 import { parseScript } from "./script";
 import type {
   CodingDetails,
@@ -420,6 +421,7 @@ function readFile(group: DocGroup, fullPath: string, file: string): Doc[] {
     tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
     viz: data.viz ? String(data.viz) : undefined,
     readingMinutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)),
+    parts: splitDoc(group, slug, content)?.parts.map((p) => ({ slug: p.slug, title: p.title, readingMinutes: p.readingMinutes })),
     content,
     design,
     tech,
@@ -497,6 +499,11 @@ export function getScript(slug: string): InterviewScript | undefined {
 export function toMeta(doc: Doc): DocMeta {
   const { content: _content, design: _design, tech: _tech, coding: _coding, learn: _learn, ...meta } = doc;
   return meta;
+}
+
+/** The parent body and child pages of a long doc, or null when it isn't split. */
+export function getDocSplit(doc: Doc) {
+  return splitDoc(doc.group, doc.slug, doc.content);
 }
 
 export function getAllMeta(): DocMeta[] {

@@ -1,4 +1,5 @@
 import { getDocsByGroup, toMeta } from "@/lib/content";
+import { trackSequence } from "@/lib/trackDocs";
 import { AbbrTooltip } from "@/components/docs/AbbrTooltip";
 import { Sidebar } from "./Sidebar";
 
@@ -12,9 +13,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const designs = getDocsByGroup("design").map(toMeta);
   const coding = getDocsByGroup("coding").map(toMeta);
   const learn = getDocsByGroup("learn").map(toMeta);
-  const devops = getDocsByGroup("devops").map(toMeta);
-  const backend = getDocsByGroup("backend").map(toMeta);
-  const fde = getDocsByGroup("fde").map(toMeta);
+  // Course-ordered tracks list shared modules in place and carry each doc's child pages.
+  const devops = trackSequence("devops");
+  const backend = trackSequence("backend");
+  const fde = trackSequence("fde");
 
   return (
     // clip, not hidden: hidden tooltips can't widen the page, and sticky still works.

@@ -4,10 +4,9 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, FlaskConical, PanelLeftClose, X } from "lucide-react";
-import type { DocGroup, DocMeta, Track } from "@/lib/types";
+import type { DocMeta, Track } from "@/lib/types";
 import { useUiStore } from "@/store/useUiStore";
 import { cn, trackOf } from "@/lib/utils";
-import { RELATED, withRelated, type RelatedLink } from "@/lib/related";
 import { SidebarLink } from "./SidebarLink";
 import { SiteSwitcher } from "./SiteSwitcher";
 
@@ -94,8 +93,67 @@ interface SectionProps {
   onToggle: () => void;
   activeSlug: string;
   onNavigate: () => void;
-  /** Modules that live in other tracks, listed in course order. */
-  links?: RelatedLink[];
+}
+
+/**
+ * One module in a section. A long module's child pages nest under it: they
+ * open while you're reading the module, and the arrow opens or closes them
+ * without leaving the page you're on.
+ */
+function SidebarItem({
+  doc,
+  number,
+  activeSlug,
+  onNavigate,
+}: {
+  doc: DocMeta;
+  number: number;
+  activeSlug: string;
+  onNavigate: () => void;
+}) {
+  const inside = activeSlug === doc.slug || activeSlug.startsWith(`${doc.slug}/`);
+  const [toggled, setToggled] = useState<boolean | null>(null);
+  // Reset to "follow the page" whenever you move into or out of this module.
+  useEffect(() => setToggled(null), [inside]);
+  const hasParts = !!doc.parts?.length;
+  const open = hasParts && (toggled ?? inside);
+
+  return (
+    <div className="relative">
+      <SidebarLink
+        doc={doc}
+        number={number}
+        tag={doc.sharedFrom}
+        active={activeSlug === doc.slug}
+        onNavigate={onNavigate}
+        className={hasParts ? "pr-7" : undefined}
+      />
+      {hasParts && (
+        <button
+          type="button"
+          onClick={() => setToggled(!open)}
+          aria-expanded={open}
+          aria-label={`${open ? "Hide" : "Show"} pages in ${doc.title}`}
+          className="absolute right-1 top-1.5 flex h-5 w-5 items-center justify-center rounded-sm text-inkFaint transition-colors duration-fast hover:bg-raised hover:text-ink"
+        >
+          <ChevronRight
+            aria-hidden
+            className={cn("h-3.5 w-3.5 transition-transform duration-fast", open && "rotate-90")}
+          />
+        </button>
+      )}
+      {open &&
+        doc.parts!.map((part) => (
+          <SidebarLink
+            key={part.slug}
+            doc={{ ...doc, slug: `${doc.slug}/${part.slug}`, title: part.title, parts: undefined, sharedFrom: undefined }}
+            nested
+            active={activeSlug === `${doc.slug}/${part.slug}`}
+            onNavigate={onNavigate}
+          />
+        ))}
+    </div>
+  );
 }
 
 /**
@@ -103,9 +161,8 @@ interface SectionProps {
  * state can be applied before React runs (see ThemeScript) and nothing flashes
  * open on load.
  */
-function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSlug, onNavigate, links }: SectionProps) {
+function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSlug, onNavigate }: SectionProps) {
   const bodyId = `sidebar-section-${id}`;
-  const items = links ? withRelated(docs, links) : docs.map((doc) => ({ kind: "doc" as const, doc }));
 
   return (
     <div data-section={id}>
@@ -126,7 +183,7 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
           />
           <span className="text-small font-semibold text-ink">{heading}</span>
           <span className="ml-auto font-mono text-micro" style={{ color: accent }}>
-            {items.length}
+            {docs.length}
           </span>
         </button>
       </h2>
@@ -135,35 +192,15 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
         <p className="mb-3 mt-2 px-3 text-tiny leading-snug text-inkFaint">{note}</p>
         <nav className="flex flex-col">
           {/* Numbered by position: pooled sections mix docs from tracks with their own orders. */}
-          {items.map((item, i) =>
-            item.kind === "doc" ? (
-              <SidebarLink
-                key={`${item.doc.group}/${item.doc.slug}`}
-                doc={item.doc}
-                number={i + 1}
-                active={item.doc.slug === activeSlug}
-                onNavigate={onNavigate}
-              />
-            ) : (
-              // A module shared from another track opens under this track's route, so the sidebar stays put.
-              <SidebarLink
-                key={`shared/${item.link.slug}`}
-                doc={{
-                  slug: item.link.slug,
-                  group: id as DocGroup,
-                  order: 0,
-                  title: item.link.title,
-                  summary: item.link.covers,
-                  tags: [],
-                  readingMinutes: 0,
-                }}
-                number={i + 1}
-                tag={item.link.track}
-                active={item.link.slug === activeSlug}
-                onNavigate={onNavigate}
-              />
-            ),
-          )}
+          {docs.map((doc, i) => (
+            <SidebarItem
+              key={`${doc.group}/${doc.slug}`}
+              doc={doc}
+              number={i + 1}
+              activeSlug={activeSlug}
+              onNavigate={onNavigate}
+            />
+          ))}
         </nav>
       </div>
     </div>
@@ -241,7 +278,8 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
   useEffect(() => {
     if (activeSlug === lastSlug.current) return;
     lastSlug.current = activeSlug;
-    const section = SECTIONS.find((s) => docsById[s.id].some((doc) => doc.slug === activeSlug));
+    const base = activeSlug.split("/")[0];
+    const section = SECTIONS.find((s) => docsById[s.id].some((doc) => doc.slug === base));
     if (section) expandSection(section.id);
     // docsById is rebuilt each render; the slug is what decides this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -311,7 +349,6 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
               onToggle={() => toggleSection(section.id)}
               activeSlug={activeSlug}
               onNavigate={close}
-              links={section.id === "backend" || section.id === "fde" ? RELATED[section.id] : undefined}
             />
           ))}
           {track === "sysdesign" && (
