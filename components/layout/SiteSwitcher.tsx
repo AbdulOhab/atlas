@@ -50,6 +50,20 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     href: "/languages",
     accent: "var(--languages)",
   },
+  {
+    id: "security",
+    label: "security",
+    blurb: "Web, API, auth, cryptography, cloud and AI security from the OWASP Cheat Sheet Series",
+    href: "/security",
+    accent: "var(--security)",
+  },
+  {
+    id: "ai",
+    label: "ai",
+    blurb: "LLM fundamentals, training and fine-tuning, RAG, agents, inference and deployment",
+    href: "/ai",
+    accent: "var(--ai)",
+  },
 ];
 
 /** The sidebar logo doubles as the switch between the two halves of the atlas. */

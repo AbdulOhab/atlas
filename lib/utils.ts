@@ -33,6 +33,9 @@ export function docHref(doc: Pick<DocMeta, "group" | "slug">) {
   if (doc.group === "backend") return `/backend/${doc.slug}`;
   if (doc.group === "fde") return `/fde/${doc.slug}`;
   if (doc.group === "languages") return `/languages/${doc.slug}`;
+  if (doc.group === "ai") return `/ai/${doc.slug}`;
+  if (doc.group === "interview") return `/interview/${doc.slug}`;
+  if (doc.group === "security") return `/security/${doc.slug}`;
   return `/docs/${doc.slug}`;
 }
 
@@ -44,5 +47,8 @@ export function trackOf(pathname: string): Track {
   if (pathname === "/backend" || pathname.startsWith("/backend/")) return "backend";
   if (pathname === "/fde" || pathname.startsWith("/fde/")) return "fde";
   if (pathname === "/languages" || pathname.startsWith("/languages/")) return "languages";
+  if (pathname === "/ai" || pathname.startsWith("/ai/")) return "ai";
+  if (pathname === "/interview" || pathname.startsWith("/interview/")) return "algorithms";
+  if (pathname === "/security" || pathname.startsWith("/security/")) return "security";
   return "sysdesign";
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bot, Boxes, Braces, Network, Server, Terminal, type LucideIcon } from "lucide-react";
+import { ArrowRight, Bot, Boxes, Braces, Network, Server, ShieldCheck, Sparkles, Terminal, type LucideIcon } from "lucide-react";
 import { getDocsByGroup, toMeta } from "@/lib/content";
 import { docHref } from "@/lib/utils";
 import type { DocMeta } from "@/lib/types";
@@ -30,6 +30,8 @@ export default function HomePage() {
   const backend = getDocsByGroup("backend").map(toMeta);
   const fde = getDocsByGroup("fde").map(toMeta);
   const languages = getDocsByGroup("languages").map(toMeta);
+  const security = getDocsByGroup("security").map(toMeta);
+  const ai = getDocsByGroup("ai").map(toMeta);
 
   const sections: Section[] = [
     {
@@ -98,6 +100,28 @@ export default function HomePage() {
       docs: languages,
       start: [...languages].sort(byOrder).slice(0, 4),
     },
+    {
+      id: "security",
+      kicker: "Security",
+      title: "Build it secure from the first line.",
+      body: "Injection, XSS, auth, access control, API and cloud security, cryptography and AI risks, from OWASP.",
+      href: "/security",
+      accent: "var(--security)",
+      icon: ShieldCheck,
+      docs: security,
+      start: [...security].sort(byOrder).slice(0, 4),
+    },
+    {
+      id: "ai",
+      kicker: "AI & LLMs",
+      title: "How large language models are built, tuned and shipped.",
+      body: "The math and neural networks behind LLMs, pre-training, fine-tuning, alignment, then RAG, agents, inference and deployment.",
+      href: "/ai",
+      accent: "var(--ai)",
+      icon: Sparkles,
+      docs: ai,
+      start: [...ai].sort(byOrder).slice(0, 4),
+    },
   ];
 
   return (
@@ -107,10 +131,10 @@ export default function HomePage() {
         <header className="max-w-reading">
           <p className="font-mono text-micro uppercase tracking-wider text-inkFaint">Atlas CE</p>
           <h1 className="mt-3 text-h1 font-semibold text-ink sm:text-display">
-            System design, algorithms, DevOps, backend, forward deployed engineering and languages in one place.
+            Everything a software engineer studies, in one place.
           </h1>
           <p className="mt-4 text-lead text-inkMuted">
-            Six tracks, each readable on its own. Pick one to start.
+            System design, algorithms, DevOps, backend, forward deployed engineering, languages, security and AI: eight tracks, each readable on its own. Pick one to start.
           </p>
         </header>
 

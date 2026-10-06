@@ -37,6 +37,9 @@ const GROUP_DIR: Record<DocGroup, string> = {
   backend: "backend",
   fde: "fde",
   languages: "languages",
+  ai: "ai",
+  interview: "interview",
+  security: "security",
 };
 
 /**
@@ -44,7 +47,7 @@ const GROUP_DIR: Record<DocGroup, string> = {
  * Coding, learn, devops, backend, fde and languages sit last because they are separate tracks with
  * their own routes, not steps in the system design sequence.
  */
-const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops", "backend", "fde", "languages"];
+const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops", "backend", "fde", "languages", "security", "interview", "ai"];
 
 const WORDS_PER_MINUTE = 200;
 
@@ -422,7 +425,8 @@ function readFile(group: DocGroup, fullPath: string, file: string): Doc[] {
     tags: Array.isArray(data.tags) ? data.tags.map(String) : [],
     viz: data.viz ? String(data.viz) : undefined,
     readingMinutes: Math.max(1, Math.round(words / WORDS_PER_MINUTE)),
-    parts: splitDoc(group, slug, content)?.parts.map((p) => ({ slug: p.slug, title: p.title, readingMinutes: p.readingMinutes })),
+    split: data.split === "topics" ? "topics" : undefined,
+    parts: splitDoc(group, slug, content, data.split === "topics" ? "topics" : undefined)?.parts.map((p) => ({ slug: p.slug, title: p.title, readingMinutes: p.readingMinutes })),
     content,
     design,
     tech,
@@ -469,7 +473,7 @@ export function getDocsByGroup(group: DocGroup): Doc[] {
  */
 const inTrack = (doc: DocMeta, track: ContentTrack) =>
   track === "sysdesign"
-    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops" && doc.group !== "backend" && doc.group !== "fde" && doc.group !== "languages"
+    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops" && doc.group !== "backend" && doc.group !== "fde" && doc.group !== "languages" && doc.group !== "ai" && doc.group !== "interview" && doc.group !== "security"
     : doc.group === track;
 
 export function getDocsInTrack(track: ContentTrack): Doc[] {
@@ -498,13 +502,13 @@ export function getScript(slug: string): InterviewScript | undefined {
 
 /** Strip content so client components receive only what they render. */
 export function toMeta(doc: Doc): DocMeta {
-  const { content: _content, design: _design, tech: _tech, coding: _coding, learn: _learn, ...meta } = doc;
+  const { content: _content, design: _design, tech: _tech, coding: _coding, learn: _learn, split: _split, ...meta } = doc;
   return meta;
 }
 
 /** The parent body and child pages of a long doc, or null when it isn't split. */
 export function getDocSplit(doc: Doc) {
-  return splitDoc(doc.group, doc.slug, doc.content);
+  return splitDoc(doc.group, doc.slug, doc.content, doc.split);
 }
 
 export function getAllMeta(): DocMeta[] {

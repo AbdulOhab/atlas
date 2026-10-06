@@ -14,6 +14,8 @@ const ACCENT: Record<string, string> = {
   backend: "var(--backend)",
   fde: "var(--fde)",
   languages: "var(--languages)",
+  security: "var(--security)",
+  ai: "var(--ai)",
 };
 
 interface Hit {

@@ -30,6 +30,9 @@ const COLOR = {
   backend: "#fb8f5e",
   fde: "#fb7185",
   languages: "#a3e635",
+  ai: "#e879f9",
+  interview: "#38bdf8",
+  security: "#818cf8",
 } as const;
 
 const ACCENT: Record<DocGroup, string> = {
@@ -42,6 +45,9 @@ const ACCENT: Record<DocGroup, string> = {
   backend: COLOR.backend,
   fde: COLOR.fde,
   languages: COLOR.languages,
+  ai: COLOR.ai,
+  interview: COLOR.interview,
+  security: COLOR.security,
 };
 
 const GROUP_LABEL: Record<DocGroup, string> = {
@@ -54,6 +60,9 @@ const GROUP_LABEL: Record<DocGroup, string> = {
   backend: "Backend",
   fde: "Forward Deployed Engineering",
   languages: "Languages",
+  ai: "AI & LLMs",
+  interview: "Interview Prep",
+  security: "Security",
 };
 
 /**

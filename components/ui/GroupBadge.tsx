@@ -11,6 +11,9 @@ const LABEL: Record<DocGroup, string> = {
   backend: "Backend",
   fde: "FDE",
   languages: "Languages",
+  ai: "AI & LLMs",
+  interview: "Interview Prep",
+  security: "Security",
 };
 
 /** Small coloured marker that tells the reader which half of the atlas they're in. */

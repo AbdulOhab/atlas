@@ -9,13 +9,18 @@ import { slugifyHeading } from "./headings";
  *   the parent, then the Reference cheat sheet, each Lab and the Project
  *   become children. The question bank stays whole: its topics are tiny.
  * - Backend and FDE modules split at their `##` sections, each of which is
- *   adapted from one source. Language modules split per topic, always.
+ *   adapted from one source. Topic tracks (languages, security, interview,
+ *   ai) split per topic, always, as does any module with `split: topics`
+ *   in its frontmatter.
  *
  * Only docs long enough to need it are split.
  */
 const MIN_MINUTES = 25;
 const WORDS_PER_MINUTE = 200;
 const MERGE_BELOW_WORDS = 250;
+
+/** Tracks whose modules are lists of topics, one page per `##` topic. */
+const TOPIC_TRACKS = new Set<DocGroup>(["languages", "security", "interview", "ai"]);
 
 export interface DocPart extends DocPartMeta {
   content: string;
@@ -29,8 +34,8 @@ export interface SplitDoc {
 const words = (text: string) => text.split(/\s+/).filter(Boolean).length;
 const minutes = (text: string) => Math.max(1, Math.round(words(text) / WORDS_PER_MINUTE));
 
-function boundary(group: DocGroup, line: string): string | null {
-  if (group === "devops") {
+function boundary(group: DocGroup, topics: boolean, line: string): string | null {
+  if (group === "devops" && !topics) {
     const h1 = /^# (.+)$/.exec(line);
     if (h1) return h1[1].trim();
     const ref = /^## ((?:Reference|Cheat ?sheet)\b.*)$/i.exec(line);
@@ -83,16 +88,17 @@ function fenceTracker() {
 const partSlug = (title: string) =>
   slugifyHeading(title).replace(/-+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "part";
 
-export function splitDoc(group: DocGroup, slug: string, content: string): SplitDoc | null {
-  if (group !== "devops" && group !== "backend" && group !== "fde" && group !== "languages") return null;
+export function splitDoc(group: DocGroup, slug: string, content: string, mode?: "topics"): SplitDoc | null {
+  const topics = TOPIC_TRACKS.has(group) || mode === "topics";
+  if (group !== "devops" && group !== "backend" && group !== "fde" && !TOPIC_TRACKS.has(group)) return null;
   if (slug === "interview-questions") return null;
-  // Language modules are a list of topics: every topic gets its page, whatever the length.
-  if (group !== "languages" && minutes(content) < MIN_MINUTES) return null;
+  // Topic tracks are lists of topics: every topic gets its page, whatever the length.
+  if (!topics && minutes(content) < MIN_MINUTES) return null;
 
   const chunks: { title: string | null; lines: string[] }[] = [{ title: null, lines: [] }];
   const fence = fenceTracker();
   for (const line of content.split("\n")) {
-    const title = fence(line) ? null : boundary(group, line);
+    const title = fence(line) ? null : boundary(group, topics, line);
     if (title) chunks.push({ title, lines: [] });
     else chunks[chunks.length - 1].lines.push(line);
   }
@@ -100,7 +106,7 @@ export function splitDoc(group: DocGroup, slug: string, content: string): SplitD
   let lead = chunks[0].lines.join("\n").trim();
   let rest = chunks.slice(1);
   // DevOps modules open with their own "# Module NN" heading: that part is the parent's body.
-  if (group === "devops" && rest.length > 0 && words(lead) < 60 && /^Module\b/i.test(rest[0].title ?? "")) {
+  if (group === "devops" && !topics && rest.length > 0 && words(lead) < 60 && /^Module\b/i.test(rest[0].title ?? "")) {
     lead = `${lead}\n\n${rest[0].lines.join("\n")}`.trim();
     rest = rest.slice(1);
   }
@@ -112,7 +118,7 @@ export function splitDoc(group: DocGroup, slug: string, content: string): SplitD
     const prev = parts[parts.length - 1];
     // A stub section (a short link list, say) isn't worth its own page: it
     // joins the part before it, or the parent if it comes first.
-    if (group !== "languages" && words(body) < MERGE_BELOW_WORDS) {
+    if (!topics && words(body) < MERGE_BELOW_WORDS) {
       if (prev) {
         prev.content = `${prev.content}\n\n## ${chunk.title}\n\n${body}`;
         prev.readingMinutes = minutes(prev.content);

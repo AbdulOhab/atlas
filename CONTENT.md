@@ -17,6 +17,11 @@ license; credit the original authors when you reuse their material.
 | `content/backend/` | Backend | Assembled from 14 open documentation projects, see [Backend](#backend) | per section, all allow reuse |
 | `content/fde/` | Forward Deployed Engineering | Assembled from 10 open source courses and docs, see [Forward Deployed Engineering](#forward-deployed-engineering) | per section, all allow reuse |
 | `content/languages/` | Languages | MDN, react.dev, Next.js, Laravel and htmx docs, see [Languages](#languages) | per module, all allow reuse |
+| `content/security/` | Security | [OWASP/CheatSheetSeries](https://github.com/OWASP/CheatSheetSeries), 91 cheat sheets in 11 modules | CC BY-SA 4.0 |
+| `content/interview/` | Algorithms: interview prep | [yangshun/tech-interview-handbook](https://github.com/yangshun/tech-interview-handbook) | MIT |
+| `content/devops/devops-tools.md` | DevOps | [tungbq/devops-basics](https://github.com/tungbq/devops-basics), 47 tool pages | Apache 2.0 |
+| `content/devops/kubernetes-the-hard-way.md` | DevOps | Study guide written for Atlas CE, linking [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (CC BY-NC-SA, not copied) | this repository's license |
+| `content/ai/` | AI & LLMs | [mlabonne/llm-course](https://github.com/mlabonne/llm-course) | Apache 2.0 |
 
 ## System Design Atlas
 
@@ -118,7 +123,7 @@ Twelve modules, each split into one child page per topic.
 
 | Module | Source | License |
 | --- | --- | --- |
-| Essential JavaScript for Frameworks | [mdn/content](https://github.com/mdn/content) | CC BY-SA 2.5 |
+| Essential JavaScript | [mdn/content](https://github.com/mdn/content) | CC BY-SA 2.5 |
 | React | [reactjs/react.dev](https://github.com/reactjs/react.dev) (Learn section) | CC BY 4.0 |
 | Next.js | [vercel/next.js](https://github.com/vercel/next.js/tree/canary/docs) (App Router, Getting Started) | MIT |
 | Laravel | [laravel/docs](https://github.com/laravel/docs) | MIT |
@@ -131,8 +136,8 @@ Twelve modules, each split into one child page per topic.
 | Qt | Written for Atlas CE; links to [doc.qt.io](https://doc.qt.io/qt-6/) | this repository's license |
 | Spring Boot | Written for Atlas CE; links to [docs.spring.io](https://docs.spring.io/spring-boot/) | this repository's license |
 
-The JavaScript module follows the 24 topics of the "Essential JavaScript for
-frameworks" list. That list links to [javascript.info](https://javascript.info),
+The Essential JavaScript module follows a 24-topic list of the JavaScript
+modern frameworks assume, plus JSON and `this`. That list links to [javascript.info](https://javascript.info),
 whose text is CC BY-NC-SA 4.0 and so can't be mixed into this repository's
 CC BY-SA content; each topic is adapted from the matching MDN pages instead,
 with the javascript.info chapter linked as further reading.
@@ -150,17 +155,12 @@ importing.
 | Planned for | Source | License |
 | --- | --- | --- |
 | System design | [donnemartin/system-design-primer](https://github.com/donnemartin/system-design-primer) | CC BY 4.0 |
-| Algorithms | [yangshun/tech-interview-handbook](https://github.com/yangshun/tech-interview-handbook) | MIT |
 | Algorithms | [jwasham/coding-interview-university](https://github.com/jwasham/coding-interview-university) | CC BY-SA 4.0 |
 | Algorithms | [donnemartin/interactive-coding-challenges](https://github.com/donnemartin/interactive-coding-challenges) | Apache 2.0 |
 | Algorithms | [TheAlgorithms/Python](https://github.com/TheAlgorithms/Python): Python implementations of algorithms and data structures | MIT ✓ |
 | Algorithms | [williamfiset/Algorithms](https://github.com/williamfiset/Algorithms): clean Java implementations with video explanations | MIT ✓ |
-| DevOps | [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way) | Apache 2.0 |
 | DevOps | [mxssl/sre-interview-prep-guide](https://github.com/mxssl/sre-interview-prep-guide) | to check |
-| DevOps | [tungbq/devops-basics](https://github.com/tungbq/devops-basics): docs and hands-on examples for 40+ DevOps tools | Apache 2.0 ✓ |
 | DevOps (security) | [madhuakula/kubernetes-goat](https://github.com/madhuakula/kubernetes-goat): deliberately vulnerable cluster for hands-on Kubernetes security | MIT ✓ |
-| Security (new track) | [OWASP/CheatSheetSeries](https://github.com/OWASP/CheatSheetSeries) | CC BY-SA 4.0 |
-| AI / LLM (new track) | [mlabonne/llm-course](https://github.com/mlabonne/llm-course) | Apache 2.0 |
 | AI / LLM (new track) | [dair-ai/Prompt-Engineering-Guide](https://github.com/dair-ai/Prompt-Engineering-Guide) | MIT |
 | CS fundamentals (new track) | [ossu/computer-science](https://github.com/ossu/computer-science) | MIT |
 
@@ -173,4 +173,5 @@ license to change, so link to them instead of importing.
 - [ByteByteGoHq/system-design-101](https://github.com/ByteByteGoHq/system-design-101): CC BY-NC-ND 4.0 ✓, no derivatives
 - [bregman-arie/devops-exercises](https://github.com/bregman-arie/devops-exercises): CC BY-NC-ND 3.0, no derivatives (~2,600 DevOps interview questions and exercises)
 - [ashishps1/awesome-system-design-resources](https://github.com/ashishps1/awesome-system-design-resources): GPL-3.0 ✓, a curated list of free system design resources
+- [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way): docs are CC BY-NC-SA 4.0 (Apache 2.0 covers only the code). `content/devops/kubernetes-the-hard-way.md` is a study guide written for Atlas CE that links each lab
 - [kamranahmedse/developer-roadmap](https://github.com/kamranahmedse/developer-roadmap): custom license, content can't be reused

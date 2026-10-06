@@ -20,6 +20,9 @@ interface SidebarProps {
   backend: DocMeta[];
   fde: DocMeta[];
   languages: DocMeta[];
+  security: DocMeta[];
+  interview: DocMeta[];
+  ai: DocMeta[];
 }
 
 /** Ids match the `section-collapsed-*` rules in globals.css. */
@@ -86,6 +89,27 @@ const SECTIONS = [
     heading: "Modules",
     note: "",
     accent: "var(--languages)",
+  },
+  {
+    id: "security",
+    track: "security",
+    heading: "Modules",
+    note: "",
+    accent: "var(--security)",
+  },
+  {
+    id: "interview",
+    track: "algorithms",
+    heading: "Interview Prep",
+    note: "",
+    accent: "var(--interview)",
+  },
+  {
+    id: "ai",
+    track: "ai",
+    heading: "Modules",
+    note: "",
+    accent: "var(--ai)",
   },
 ] as const satisfies readonly { id: string; track: Track; heading: string; note: string; accent: string }[];
 
@@ -215,7 +239,7 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
   );
 }
 
-export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend, fde, languages }: SidebarProps) {
+export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend, fde, languages, security, interview, ai }: SidebarProps) {
   const pathname = usePathname();
   const open = useUiStore((s) => s.sidebarOpen);
   const setOpen = useUiStore((s) => s.setSidebarOpen);
@@ -239,7 +263,13 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
               ? pathname.slice("/fde/".length)
               : pathname.startsWith("/languages/")
                 ? pathname.slice("/languages/".length)
-                : "";
+                : pathname.startsWith("/security/")
+                  ? pathname.slice("/security/".length)
+                  : pathname.startsWith("/interview/")
+                    ? pathname.slice("/interview/".length)
+                    : pathname.startsWith("/ai/")
+                      ? pathname.slice("/ai/".length)
+                      : "";
 
   // Coding and learn no longer get their own sidebar section — they're pooled
   // and re-split by what each item actually is, so e.g. Hash Tables (coding)
@@ -258,6 +288,9 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
     backend,
     fde,
     languages,
+    security,
+    interview,
+    ai,
   };
   const close = () => setOpen(false);
 

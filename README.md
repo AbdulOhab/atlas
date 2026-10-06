@@ -1,27 +1,34 @@
 # Atlas CE
 
-A reading app for system design interviews: concept modules built from the ground
-up, pages on the technologies those designs name, and worked designs with rendered
-architecture diagrams.
+A free, open reading app for software engineers: system design, algorithms,
+DevOps, backend, forward deployed engineering, languages and frameworks,
+security and AI, in one place with one sidebar, one search and one way of reading.
 
-Every design opens with the hard part — what the interviewer is actually testing —
-and closes with trade-offs and follow-up questions. Architecture diagrams are
-interactive: click a node to see its purpose, its trade-off and what it connects to.
-Some designs carry a worked interview script, the same design spoken aloud as a
-45-minute round.
+Atlas CE ("community edition") started as
+[System Design Atlas](https://github.com/mertkahyaoglu/atlas) by Mert Kahyaoğlu
+and grows it into eight tracks. Most of the new material is adapted from openly
+licensed documentation and courses, and every page says where it came from; see
+[CONTENT.md](CONTENT.md) for each source and its license.
 
-A second track covers the other half of the interview loop. Under
-[/coding](/coding), thirteen data structures and
-algorithms — hash tables through dynamic programming — each open with a
-visualisation you step through while the implementation runs line by line beside
-it.
+| Track | Route | What's in it |
+| --- | --- | --- |
+| System design | `/docs` | Concept modules, the technologies designs name, and worked designs with interactive architecture diagrams and interview scripts |
+| Algorithms | `/coding`, `/learn`, `/interview` | Data structures and algorithms with step-through visualisations, interview topics with big-O tables, and interview prep from the Tech Interview Handbook |
+| DevOps | `/devops` | Linux through Kubernetes, Terraform, observability and security, each module with its reference, labs and project |
+| Backend | `/backend` | HTTP, Node.js, Express, APIs, auth, SQL and data modeling, NestJS, FastAPI, Go and Gin |
+| Forward Deployed Engineering | `/fde` | Agentic engineering, building a Claude Code-style agent from scratch, agentic system design and platform engineering |
+| Languages | `/languages` | Essential JavaScript, TypeScript, Python, React, Next.js, Vue, Tailwind CSS, Laravel, HTMX, FastAPI, Qt and Spring Boot |
+| Security | `/security` | The OWASP Cheat Sheet Series in 11 modules: injection, XSS, auth, access control, APIs, cryptography, cloud, AI |
+| AI & LLMs | `/ai` | LLM fundamentals, the scientist path (pre-training, fine-tuning, alignment) and the engineer path (RAG, agents, deployment) |
 
-A third track, [/learn](/learn), carries sixteen
-visual-interview-prep topics (imported from [learningto.co](https://learningto.co)):
-every page runs the same circle — the big-O costs and what they mean, the Python
-structures to reach for, a brute force you name out loud and its optimized answer,
-the math the topic assumes, a step through the code, and practice challenges with
-progressive hints. The logo in the sidebar switches between the three tracks.
+What reading looks like:
+
+- **One sidebar per track**, switched from the logo. Long modules nest their
+  child pages (a DevOps module's labs, a framework's topics) under an arrow.
+- **Search everything** with Ctrl/⌘ + K: every page title and heading across all
+  tracks, jumping straight to the matching section.
+- **Progress**: mark a page complete and the sidebar ticks it off.
+- **Highlighted code** in every language the content uses, in light and dark themes.
 
 Contributions are welcome, particularly corrections. See
 [CONTRIBUTING.md](CONTRIBUTING.md).
@@ -47,40 +54,47 @@ no database and no CMS.
 
 ```
 app/
-  layout.tsx              root shell, theme bootstrap
-  page.tsx                home index
-  docs/[slug]/page.tsx    document page, statically generated per file
-  coding/page.tsx         coding track index
-  coding/[slug]/page.tsx  coding concept page, with its visualisation
-  learn/page.tsx          learn track index
-  learn/[slug]/page.tsx   learn topic page, with its panels
+  layout.tsx                 root shell, theme bootstrap
+  page.tsx                   landing page: one card per track
+  docs/                      system design index and pages
+  coding/, learn/            algorithms tracks
+  devops/, backend/, fde/,
+  languages/                 course-ordered tracks: index, [slug], [slug]/[part]
+  search-index.json/         static search index, built at build time
 components/
-  layout/                 sidebar, top bar, theme toggle
-  home/                   hero, filter bar, cards
-  docs/                   markdown renderer, diagrams, TOC, prev/next
-  docs/diagram/           React Flow canvas, node types, node detail dialog
-  viz/                    step-through player, canvas and code pane (coding track)
-  ui/                     tag, search input, badges, empty state
+  layout/                    sidebar, top bar, site switcher, search dialog
+  home/                      system design library: hero, filter bar, cards
+  docs/                      markdown renderer, code blocks, diagrams, TOC, prev/next,
+                             TrackDocPage (the page for course-ordered tracks)
+  docs/diagram/              React Flow canvas, node types, node detail dialog
+  viz/                       step-through player, canvas and code pane (coding track)
+  ui/                        tag, search input, badges, logo mark
 lib/
-  content.ts              filesystem loader, TOC builder, sibling lookup
-  headings.ts             client-safe heading ids and learn panel titles
-  tags.ts                 tag registry (single source of truth)
-  glossary.ts             abbreviations and their expansions, shown on hover
-  search.ts               filter and sort logic, pure and testable
-  types.ts                shared types
-  viz/                    one visualisation per coding concept, plus shared layout
+  content.ts                 filesystem loader, TOC builder, sibling lookup
+  parts.ts                   splits long docs into parent and child pages
+  trackDocs.ts               course order, shared modules and prev/next per track
+  related.ts                 modules a track borrows from another track
+  searchIndex.ts             builds the site-wide search index
+  highlight.ts               highlight.js setup: registered languages and aliases
+  headings.ts                client-safe heading ids and learn panel titles
+  tags.ts                    tag registry (single source of truth)
+  glossary.ts                abbreviations and their expansions, shown on hover
+  search.ts                  system design library filter and sort logic
+  types.ts                   shared types
+  viz/                       one visualisation per coding concept, plus shared layout
 store/
-  useUiStore.ts           theme (persisted) and sidebar
-  useFilterStore.ts       query, tags, sort
+  useUiStore.ts              theme (persisted), sidebar and collapsed sections
+  useFilterStore.ts          library query, tags, sort
+  useProgressStore.ts        completed pages
 content/
-  concepts/*.md           concept modules
-  tech/*.md               technology pages
-  designs/*.md            designs
-  coding/*.md             coding concepts
-  learn/*.md              learn topics (scraped from learningto.co)
+  concepts/, tech/, designs/ system design
+  scripts/                   interview scripts for designs
+  coding/, learn/            algorithms
+  devops/, backend/, fde/,
+  languages/                 one markdown file per module
 scripts/
-  check-viz.mjs           validates every visualisation, run in CI
-  check-abbr.mjs          fails on an abbreviation missing from the glossary, run in CI
+  check-viz.mjs              validates every visualisation, run in CI
+  check-abbr.mjs             fails on an abbreviation missing from the glossary, run in CI
 ```
 
 ## Adding a document
@@ -266,10 +280,39 @@ pure function of the algorithm's state.
 missing nodes, highlighted code lines outside the listing, content overflowing the
 canvas, boxes drawn on top of each other. CI runs it on every pull request.
 
+## Course-ordered tracks
+
+DevOps, Backend, FDE, Languages, Security, Interview Prep and AI share one page component and one set of
+rules, so adding a module is just adding a file.
+
+- **A module is one markdown file** in `content/<track>/`, with `title`, `order`,
+  `summary` and `category` in its frontmatter. `order` sets its place in the
+  sidebar; `category` groups it on the track's index page.
+- **Long modules split into child pages** automatically (`lib/parts.ts`), so the
+  file stays whole on disk. DevOps modules keep their main text on the parent
+  and give the Reference, each Lab and the Project their own page; Backend and
+  FDE modules split per `##` section once they pass ~25 minutes; Languages
+  modules always split per `##` topic. Child pages live at
+  `/<track>/<module>/<part>` with their own TOC, progress and prev/next.
+- **Shared modules** let a track list a page that lives in another track, in
+  course order, without copying it: an entry in `lib/related.ts` serves the
+  original content under the host route (e.g. `/backend/git`), so the reader
+  never leaves the track. The original page stays canonical.
+- **Credit every source.** Adapted sections open with a `> **Source:**` line
+  linking the original page, its project and its license, and the source is
+  listed in [CONTENT.md](CONTENT.md).
+
+A new track needs a `DocGroup` and `Track` in `lib/types.ts`, an entry in
+`GROUP_DIR`/`GROUP_ORDER` in `lib/content.ts`, a route in `lib/utils.ts`, an accent
+colour in `app/globals.css` and `tailwind.config.ts`, a label in `GroupBadge` and
+`lib/og.tsx`, a sidebar section, a site switcher entry, `RELATED` and the
+`app/<track>/` routes (copy an existing track's).
+
 ## Design notes
 
-Three accent colours carry information rather than decoration: teal marks concept
-modules, violet marks technologies, amber marks designs. The accent is set once per page as a CSS variable
+Accent colours carry information rather than decoration: within system design, teal
+marks concept modules, violet technologies and amber designs, and each other track
+has its own colour. The accent is set once per page as a CSS variable
 (`--accent`) and every component reads it, so no component branches on theme or group.
 
 Numbered markers appear on cards and in the sidebar because the content genuinely is
@@ -282,16 +325,12 @@ Dark is the default because this is long-form night reading. The theme is stored
 
 ## Extending it
 
-- **Full-text search across document bodies.** `lib/search.ts` currently matches on
-  title, summary, hard part and tags. Swap in a prebuilt index (FlexSearch, Pagefind)
-  generated at build time from `getAllDocs()`.
-- **Progress tracking.** Add a `useProgressStore` alongside the existing stores and
-  render a marker in `SidebarLink` and on the cards.
-- **Another content group.** `tech` is the worked example: add it to `DocGroup` in
-  `lib/types.ts`, give it a directory in `GROUP_DIR` and a slot in `GROUP_ORDER`, an
-  accent variable in `globals.css` and `tailwind.config.ts`, a label in `GroupBadge`,
-  and a `Section` in the sidebar and on the home page. Everything else — routes,
-  search, filters, prev/next, progress — is generic over the group.
+- **Full-text search.** The search index holds titles, summaries and headings
+  (~106 KB gzipped). Indexing whole bodies would need a chunked index such as
+  Pagefind to stay small.
+- **More modules.** [CONTENT.md](CONTENT.md) keeps a waiting list of openly
+  licensed sources lined up for import, and a list of sources that can only be
+  linked.
 
 ## See also
 
@@ -300,13 +339,16 @@ Dark is the default because this is long-form night reading. The theme is stored
 
 ## License
 
-Two licenses, because this repository is two things.
-
-- **The documents** — everything under `content/`, which is most of the work here —
-  are [CC BY-SA 4.0](LICENSE-CONTENT). Share them, translate them, build on them;
-  credit "System Design Atlas by Mert Kahyaoğlu" with a link back, and license what
-  you build from them the same way.
-- **The application code** — everything else — is [MIT](LICENSE).
+- **The application code**, everything outside `content/`, is [MIT](LICENSE).
+- **The original System Design Atlas documents** are
+  [CC BY-SA 4.0](LICENSE-CONTENT): credit "System Design Atlas by Mert Kahyaoğlu"
+  with a link back, and license what you build from them the same way.
+- **Imported and adapted documents** keep their source's license: MIT, Apache
+  2.0, CC BY, CC BY-SA, PSF and 0BSD among them. [CONTENT.md](CONTENT.md) lists
+  every source, what it was used for and its license; each adapted section
+  also names its source at the top. One imported page (DevOps interview
+  questions) comes from a repository with no license and is reproduced with
+  credit.
 
 Contributions are taken under the [DCO](CONTRIBUTING.md#sign-your-commits-dco), so
 commits need a `Signed-off-by` line. You keep the copyright in what you write.

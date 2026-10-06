@@ -47,6 +47,12 @@
   --fde-soft: rgba(190, 18, 60, 0.1);
   --languages: #4d7c0f;
   --languages-soft: rgba(77, 124, 15, 0.1);
+  --ai: #a21caf;
+  --ai-soft: rgba(162, 28, 175, 0.1);
+  --interview: #0369a1;
+  --interview-soft: rgba(3, 105, 161, 0.1);
+  --security: #4338ca;
+  --security-soft: rgba(67, 56, 202, 0.1);
 
   /* Status tones for HTTP method and status badges. */
   --tone-green: #1a7f4e;
@@ -108,6 +114,12 @@
   --fde-soft: rgba(251, 113, 133, 0.12);
   --languages: #a3e635;
   --languages-soft: rgba(163, 230, 53, 0.12);
+  --ai: #e879f9;
+  --ai-soft: rgba(232, 121, 249, 0.12);
+  --interview: #38bdf8;
+  --interview-soft: rgba(56, 189, 248, 0.12);
+  --security: #818cf8;
+  --security-soft: rgba(129, 140, 248, 0.12);
 
   --tone-green: #5cc98f;
   --tone-green-soft: rgba(92, 201, 143, 0.1);
@@ -380,7 +392,10 @@ html.section-collapsed-algo [data-section="algo"] [data-section-body],
 html.section-collapsed-devops [data-section="devops"] [data-section-body],
 html.section-collapsed-backend [data-section="backend"] [data-section-body],
 html.section-collapsed-fde [data-section="fde"] [data-section-body],
-html.section-collapsed-languages [data-section="languages"] [data-section-body] {
+html.section-collapsed-languages [data-section="languages"] [data-section-body],
+html.section-collapsed-ai [data-section="ai"] [data-section-body],
+html.section-collapsed-interview [data-section="interview"] [data-section-body],
+html.section-collapsed-security [data-section="security"] [data-section-body] {
   display: none;
 }
 
