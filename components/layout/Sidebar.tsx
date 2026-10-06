@@ -114,8 +114,15 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
       <div id={bodyId} data-section-body>
         <p className="mb-3 mt-2 px-3 text-tiny leading-snug text-inkFaint">{note}</p>
         <nav className="flex flex-col">
-          {docs.map((doc) => (
-            <SidebarLink key={doc.slug} doc={doc} active={doc.slug === activeSlug} onNavigate={onNavigate} />
+          {/* Numbered by position: pooled sections mix docs from tracks with their own orders. */}
+          {docs.map((doc, i) => (
+            <SidebarLink
+              key={`${doc.group}/${doc.slug}`}
+              doc={doc}
+              number={i + 1}
+              active={doc.slug === activeSlug}
+              onNavigate={onNavigate}
+            />
           ))}
         </nav>
       </div>

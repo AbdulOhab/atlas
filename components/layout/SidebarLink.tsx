@@ -10,9 +10,11 @@ interface SidebarLinkProps {
   doc: DocMeta;
   active: boolean;
   onNavigate: () => void;
+  /** Position in the sidebar section; falls back to the doc's own order. */
+  number?: number;
 }
 
-export function SidebarLink({ doc, active, onNavigate }: SidebarLinkProps) {
+export function SidebarLink({ doc, active, onNavigate, number }: SidebarLinkProps) {
   const completed = useIsCompleted(doc.slug);
 
   return (
@@ -34,7 +36,7 @@ export function SidebarLink({ doc, active, onNavigate }: SidebarLinkProps) {
           active ? "text-[color:var(--accent)]" : "text-inkFaint",
         )}
       >
-        {String(doc.order).padStart(2, "0")}
+        {String(number ?? doc.order).padStart(2, "0")}
       </span>
       <span className="leading-snug">{doc.title}</span>
       {completed && (

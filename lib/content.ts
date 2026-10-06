@@ -157,7 +157,8 @@ function readCoding(slug: string, data: Record<string, unknown>): CodingDetails 
     coding.pitfalls.length === 0 && "pitfalls",
     coding.followUps.length === 0 && "followUps",
   ].filter(Boolean);
-  if (missing.length > 0) {
+  // Imported topics carry no panels at all; only a partly filled set is a mistake.
+  if (missing.length > 0 && missing.length < 4) {
     console.warn(`[content] ${slug}: coding frontmatter is missing ${missing.join(", ")}`);
   }
 
