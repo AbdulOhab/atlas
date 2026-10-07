@@ -1,14 +1,14 @@
 ---
 title: "Cloud, Containers and Supply Chain"
 order: 8
-summary: "Securing what the code runs on and is built from: Docker, Kubernetes, IaC, CI/CD and GitHub Actions, cloud architecture, serverless, dependencies, SBOMs and zero trust."
+summary: "Securing what the code runs on and is built from: Docker and Node.js images, Kubernetes, IaC, CI/CD and GitHub Actions, cloud architecture, network segmentation, workload identity, databases, microservice architecture, serverless, dependencies, SBOMs and zero trust."
 category: "Security"
 level: Intermediate
 ---
 
 # Cloud, Containers and Supply Chain
 
-Securing what the code runs on and is built from: Docker, Kubernetes, IaC, CI/CD and GitHub Actions, cloud architecture, serverless, dependencies, SBOMs and zero trust.
+Securing what the code runs on and is built from: Docker and Node.js images, Kubernetes, IaC, CI/CD and GitHub Actions, cloud architecture, network segmentation, workload identity, databases, microservice architecture, serverless, dependencies, SBOMs and zero trust.
 
 ## Docker Security
 
@@ -384,6 +384,487 @@ Building on the principles in [Rule \#9](#rule-9---integrate-container-scanning-
 1. Daemonless Architecture: Unlike Docker, which requires a central daemon (dockerd) to create, run, and manage containers, Podman directly employs the fork-exec model. When a user requests to start a container, Podman forks from the current process, then the child process execs into the container's runtime.
 2. Rootless Containers: The fork-exec model facilitates Podman's ability to run containers without requiring root privileges. When a non-root user initiates a container start, Podman forks and execs under the user's permissions.
 3. SELinux Integration: Podman is built to work with SELinux, which provides an additional layer of security by enforcing mandatory access controls on containers and their interactions with the host system.
+
+## Node.js Docker
+
+> **Source:** [Node.js Docker](https://cheatsheetseries.owasp.org/cheatsheets/NodeJS_Docker_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+The following cheatsheet provides production-grade guidelines for building optimized and [secure Node.js Docker](https://snyk.io/blog/10-best-practices-to-containerize-nodejs-web-applications-with-docker/). You’ll find it helpful regardless of the Node.js application you aim to build. This article will be helpful for you if:
+
+- your aim is to build a frontend application using server-side rendering (SSR) Node.js capabilities for React.
+- you’re looking for advice on how to properly build a Node.js Docker image for your microservices, running Fastify, NestJS or other application frameworks.
+
+### 1) Use explicit and deterministic Docker base image tags
+
+It may seem to be an obvious choice to build your image based on the `node` Docker image, but what are you actually pulling in when you build the image? Docker images are always referenced by tags, and when you don’t specify a tag the default, `:latest` tag is used.
+
+So, in fact, by specifying the following in your Dockerfile, you always build the latest version of the Docker image that has been built by the **Node.js Docker working group**:
+
+#### FROM node
+
+The shortcomings of building based on the default `node` image are as follows:
+
+1. Docker image builds are inconsistent. Just like we’re using `lockfiles` to get a deterministic [`npm ci`](https://cheatsheetseries.owasp.org/cheatsheets/NPM_Security_Cheat_Sheet.html#2-enforce-the-lockfile) behavior every time we install npm packages, we’d also like to get deterministic docker image builds. If we build the image from node—which effectively means the `node:latest` tag—then every build will pull a newly built Docker image of `node`. We don’t want to introduce this sort of non-deterministic behavior.
+2. The node Docker image is based on a full-fledged operating system, full of libraries and tools that you may or may not need to run your Node.js web application. This has two downsides. Firstly a bigger image means a bigger download size which, besides increasing the storage requirement, means more time to download and re-build the image. Secondly, it means you’re potentially introducing security vulnerabilities, that may exist in all of these libraries and tools, into the image.
+
+In fact, the `node` Docker image is quite big and includes hundreds of security vulnerabilities of different types and severities. If you’re using it, then by default your starting point is going to be a baseline of 642 security vulnerabilities, and hundreds of megabytes of image data that is downloaded on every pull and build.
+
+The recommendations for building better Docker images are:
+
+1. Use small Docker images—this will translate to a smaller software footprint on the Docker image reducing the potential vulnerability vectors, and a smaller size, which will speed up the image build process
+2. Use the Docker image digest, which is the static SHA256 hash of the image. This ensures that you are getting deterministic Docker image builds from the base image.
+
+Based on this, let’s ensure that we use the Long Term Support (LTS) version of Node.js, and the minimal `alpine` image type to have the smallest size and software footprint on the image:
+
+#### FROM node:lts-alpine
+
+Nonetheless, this base image directive will still pull new builds of that tag. We can find the `SHA256` hash for it in the [Docker Hub for this Node.js tag](https://hub.docker.com/layers/node/library/node/lts-alpine/images/sha256-51e341881c2b77e52778921c685e711a186a71b8c6f62ff2edfc6b6950225a2f?context=explore), or by running the following command once we pulled this image locally, and locate the `Digest` field in the output:
+
+    $ docker pull node:lts-alpine
+    lts-alpine: Pulling from library/node
+    0a6724ff3fcd: Already exists
+    9383f33fa9f3: Already exists
+    b6ae88d676fe: Already exists
+    565e01e00588: Already exists
+    Digest: sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    Status: Downloaded newer image for node:lts-alpine
+    docker.io/library/node:lts-alpine
+
+Another way to find the `SHA256` hash is by running the following command:
+
+    $ docker images --digests
+    REPOSITORY                     TAG              DIGEST                                                                    IMAGE ID       CREATED             SIZE
+    node                           lts-alpine       sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a   51d926a5599d   2 weeks ago         116MB
+
+Now we can update the Dockerfile for this Node.js Docker image as follows:
+
+    FROM node@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    WORKDIR /usr/src/app
+    COPY . /usr/src/app
+    RUN npm ci
+    CMD "npm" "start"
+
+However, the Dockerfile above, only specifies the Node.js Docker image name without an image tag which creates ambiguity for which exact image tag is being used—it’s not readable, hard to maintain and doesn’t create a good developer experience.
+
+Let’s fix it by updating the Dockerfile, providing the full base image tag for the Node.js version that corresponds to that `SHA256` hash:
+
+    FROM node:lts-alpine@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    WORKDIR /usr/src/app
+    COPY . /usr/src/app
+    RUN npm ci
+    CMD "npm" "start"
+
+### 2) Install only production dependencies in the Node.js Docker image
+
+The following Dockerfile directive installs all dependencies in the container, including `devDependencies`, which aren’t needed for a functional application to work. It adds an unneeded security risk from packages used as development dependencies, as well as inflating the image size unnecessarily.
+
+**`RUN npm ci`**
+
+Enforce deterministic builds with `npm ci`. This prevents surprises in a continuous integration (CI) flow because it halts if any deviations from the lockfile are made.
+
+In the case of building a Docker image for production we want to ensure that we only install production dependencies in a deterministic way, and this brings us to the following recommendation for the best practice for installing npm dependencies in a container image:
+
+**`RUN npm ci --omit=dev`**
+
+The updated Dockerfile contents in this stage are as follows:
+
+    FROM node:lts-alpine@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    WORKDIR /usr/src/app
+    COPY . /usr/src/app
+    RUN npm ci --omit=dev
+    CMD "npm" "start"
+
+### 3) Optimize Node.js tooling for production
+
+When you build your Node.js Docker image for production, you want to ensure that all frameworks and libraries are using the optimal settings for performance and security.
+
+This brings us to add the following Dockerfile directive:
+
+**`ENV NODE_ENV production`**
+
+At first glance, this looks redundant, since we already specified only production dependencies in the `npm ci` phase—so why is this necessary?
+
+Developers mostly associate the `NODE_ENV=production` environment variable setting with the installation of production-related dependencies, however, this setting also has other effects which we need to be aware of.
+
+Some frameworks and libraries may only turn on the optimized configuration that is suited to production if that `NODE_ENV` environment variable is set to `production`. Putting aside our opinion on whether this is a good or bad practice for frameworks to take, it is important to know this.
+
+As an example, the [Express documentation](https://expressjs.com/en/advanced/best-practice-performance.html#set-node_env-to-production) outlines the importance of setting this environment variable for enabling performance and security related optimizations:
+
+The performance impact of the `NODE_ENV` variable could be very significant.
+
+Many of the other libraries that you are relying on may also expect this variable to be set, so we should set this in our Dockerfile.
+
+The updated Dockerfile should now read as follows with the `NODE_ENV` environment variable setting baked in:
+
+    FROM node:lts-alpine@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    ENV NODE_ENV production
+    WORKDIR /usr/src/app
+    COPY . /usr/src/app
+    RUN npm ci --omit=dev
+    CMD "npm" "start"
+
+### 4) Don’t run containers as root
+
+The principle of least privilege is a long-time security control from the early days of Unix and we should always follow this when we’re running our containerized Node.js web applications.
+
+The threat assessment is pretty straight-forward—if an attacker is able to compromise the web application in a way that allows for [command injection](https://owasp.org/www-community/attacks/Command_Injection) or [directory path traversal](https://owasp.org/www-community/attacks/Path_Traversal), then these will be invoked with the user who owns the application process. If that process happens to be root then they can do virtually everything within the container, including [attempting a container escape or [privilege escalation](https://owasp.org/www-project-web-security-testing-guide/latest/4-Web_Application_Security_Testing/05-Authorization_Testing/03-Testing_for_Privilege_Escalation). Why would we want to risk it? You’re right, we don’t.
+
+Repeat after me: **“friends don’t let friends run containers as root!”**
+
+The official `node` Docker image, as well as its variants like `alpine`, include a least-privileged user of the same name: `node`. However, it’s not enough to just run the process as `node`. For example, the following might not be ideal for an application to function well:
+
+    USER node
+    CMD "npm" "start"
+
+The reason for that is the `USER` Dockerfile directive only ensures that the process is owned by the `node` user. What about all the files we copied earlier with the `COPY` instruction? They are owned by root. That’s how Docker works by default.
+
+The complete and proper way of dropping privileges is as follows, also showing our up to date Dockerfile practices up to this point:
+
+    FROM node:lts-alpine@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    ENV NODE_ENV production
+    WORKDIR /usr/src/app
+    COPY --chown=node:node . /usr/src/app
+    RUN npm ci --omit=dev
+    USER node
+    CMD "npm" "start"
+
+### 5) Properly handle events to safely terminate a Node.js Docker web application
+
+One of the most common mistakes I see with blogs and articles about containerizing Node.js applications when running in Docker containers is the way that they invoke the process. All of the following and their variants are bad patterns you should avoid:
+
+- `CMD “npm” “start”`
+- `CMD [“yarn”, “start”]`
+- `CMD “node” “server.js”`
+- `CMD “start-app.sh”`
+
+Let’s dig in! I’ll walk you through the differences between them and why they’re all patterns to avoid.
+
+The following concerns are key to understanding the context for properly running and terminating Node.js Docker applications:
+
+1. An orchestration engine, such as Docker Swarm, Kubernetes, or even just Docker engine itself, needs a way to send signals to the process in the container. Mostly, these are signals to terminate an application, such as `SIGTERM` and `SIGKILL`.
+2. The process may run indirectly, and if that happens then it’s not always guaranteed that it will receive these signals.
+3. The Linux kernel treats processes that run as process ID 1 (PID) differently than any other process ID.
+
+Equipped with that knowledge, let’s begin investigating the ways of invoking the process for a container, starting off with the example from the Dockerfile we’re building:
+
+**`CMD "npm" "start"`**
+
+The caveat here is two fold. Firstly, we’re indirectly running the node application by directly invoking the npm client. Who’s to say that the npm CLI forwards all events to the node runtime? It actually doesn’t, and we can easily test that.
+
+Make sure that in your Node.js application you set an event handler for the `SIGHUP` signal which logs to the console every time you’re sending an event. A simple code example should look as follows:
+
+    function handle(signal) {
+       console.log(`*^!@4=> Received event: ${signal}`)
+    }
+    process.on('SIGHUP', handle)
+
+Then run the container, and once it’s up specifically send it the `SIGHUP` signal using the `docker` CLI and the special `--signal` command-line flag:
+
+**`$ docker kill --signal=SIGHUP elastic_archimedes`**
+
+Nothing happened, right? That’s because the npm client doesn’t forward any signals to the node process that it spawned.
+
+The other caveat has to do with the different ways in which way you can specify the `CMD` directive in the Dockerfile. There are two ways, and they are not the same:
+
+1. the shellform notation, in which the container spawns a shell interpreter that wraps the process. In such cases, the shell may not properly forward signals to your process.
+2. the execform notation, which directly spawns a process without wrapping it in a shell. It is specified using the JSON array notation, such as: `CMD [“npm”, “start”]`. Any signals sent to the container are directly sent to the process.
+
+Based on that knowledge, we want to improve our Dockerfile process execution directive as follows:
+
+**`CMD ["node", "server.js"]`**
+
+We are now invoking the node process directly, ensuring that it receives all of the signals sent to it, without it being wrapped in a shell interpreter.
+
+However, this introduces another pitfall.
+
+When processes run as PID 1 they effectively take on some of the responsibilities of an init system, which is typically responsible for initializing an operating system and processes. The kernel treats PID 1 in a different way than it treats other process identifiers. This special treatment from the kernel means that the handling of a `SIGTERM` signal to a running process won’t invoke a default fallback behavior of killing the process if the process doesn’t already set a handler for it.
+
+<!-- textlint-disable terminology -->
+To [quote the Node.js Docker working group recommendation](https://github.com/nodejs/docker-node/blob/master/docs/BestPractices.md#handling-kernel-signals) on this:  “Node.js was not designed to run as PID 1 which leads to unexpected behaviour when running inside of Docker. For example, a Node.js process running as PID 1 will not respond to SIGINT (CTRL-C) and similar signals”.
+<!-- textlint-enable terminology -->
+
+The way to go about it then is to use a tool that will act like an init process, in that it is invoked with PID 1, then spawns our Node.js application as another process while ensuring that all signals are proxied to that Node.js process. If possible, we’d like a small as possible tooling footprint for doing so to not risk having security vulnerabilities added to our container image.
+
+One such tool is [dumb-init](https://engineeringblog.yelp.com/2016/01/dumb-init-an-init-for-docker.html) which is statically linked and has a small footprint. Here’s how we’ll set it up:
+
+    RUN apk add dumb-init
+    CMD ["dumb-init", "node", "server.js"]
+
+This brings us to the following up to date Dockerfile. You’ll notice that we placed the `dumb-init` package install right after the image declaration, so we can take advantage of Docker’s caching of layers:
+
+    FROM node:lts-alpine@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    RUN apk add dumb-init
+    ENV NODE_ENV production
+    WORKDIR /usr/src/app
+    COPY --chown=node:node . .
+    RUN npm ci --omit=dev
+    USER node
+    CMD ["dumb-init", "node", "server.js"]
+
+Good to know: `docker kill` and `docker stop` commands only send signals to the container process with PID 1. If you’re running a shell script that runs your Node.js application, then take note that a shell instance—such as `/bin/sh`, for example—doesn’t forward signals to child processes, which means your app will never get a `SIGTERM`.
+
+### 6) Graceful tear down for your Node.js web applications
+
+If we’re already discussing process signals that terminate applications, let’s make sure we’re shutting them down properly and gracefully without disrupting users.
+
+When a Node.js application receives an interrupt signal, also known as `SIGINT`, or `CTRL+C`, it will cause an abrupt process kill, unless any event handlers were set of course to handle it in a different behavior. This means that connected clients to a web application will be immediately disconnected. Now, imagine hundreds of Node.js web containers orchestrated by Kubernetes, going up and down as needs arise to scale or manage errors. Not the greatest user experience.
+
+You can easily simulate this problem. Here’s a stock Fastify web application example, with an inherent delayed response of 60 seconds for an endpoint:
+
+    fastify.get('/delayed', async (request, reply) => {
+     const SECONDS_DELAY = 60000
+     await new Promise(resolve => {
+         setTimeout(() => resolve(), SECONDS_DELAY)
+     })
+     return { hello: 'delayed world' }
+    })
+
+    const start = async () => {
+     try {
+       await fastify.listen(PORT, HOST)
+       console.log(`*^!@4=> Process id: ${process.pid}`)
+     } catch (err) {
+       fastify.log.error(err)
+       process.exit(1)
+     }
+    }
+
+    start()
+
+Run this application and once it’s running send a simple HTTP request to this endpoint:
+
+`$ time curl https://localhost:3000/delayed`
+
+Hit `CTRL+C` in the running Node.js console window and you’ll see that the curl request exited abruptly. This simulates the same experience your users would receive when containers tear down.
+
+To provide a better experience, we can do the following:
+
+1. Set an event handler for the various termination signals like `SIGINT` and `SIGTERM`.
+2. The handler waits for clean up operations like database connections, ongoing HTTP requests and others.
+3. The handler then terminates the Node.js process.
+
+Specifically with Fastify, we can have our handler call on [fastify.close()](https://fastify.dev/docs/latest/Reference/Server/#close) which returns a promise that we will await, and Fastify will also take care to respond to every new connection with the HTTP status code 503 to signal that the application is unavailable.
+
+Let’s add our event handler:
+
+    async function closeGracefully(signal) {
+       console.log(`*^!@4=> Received signal to terminate: ${signal}`)
+
+       await fastify.close()
+       // await db.close() if we have a db connection in this app
+       // await other things we should cleanup nicely
+       process.exit()
+    }
+    process.on('SIGINT', closeGracefully)
+    process.on('SIGTERM', closeGracefully)
+
+Admittedly, this is more of a generic web application concern than Dockerfile related, but is even more important in orchestrated environments.
+
+### 7) Find and fix security vulnerabilities in your Node.js docker image
+
+See [Docker Security Cheat Sheet - Use static analysis tools](https://cheatsheetseries.owasp.org/cheatsheets/Docker_Security_Cheat_Sheet.html#rule-9-use-static-analysis-tools)
+
+### 8) Use multi-stage builds
+
+Multi-stage builds are a great way to move from a simple, yet potentially erroneous Dockerfile, into separated steps of building a Docker image, so we can avoid leaking sensitive information. Not only that, but we can also use a bigger Docker base image to install our dependencies, compile any native npm packages if needed, and then copy all these artifacts into a small production base image, like our alpine example.
+
+#### Prevent sensitive information leak
+
+The use-case here to avoid sensitive information leakage is more common than you think.
+
+If you’re building Docker images for work, there’s a high chance that you also maintain private npm packages. If that’s the case, then you probably needed to find some way to make that secret `NPM_TOKEN` available to the npm install.
+
+Here’s an example for what I’m talking about:
+
+    FROM node:lts-alpine@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    RUN apk add dumb-init
+    ENV NODE_ENV production
+    ENV NPM_TOKEN 1234
+    WORKDIR /usr/src/app
+    COPY --chown=node:node . .
+    #RUN npm ci --omit=dev
+    RUN echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc && \
+       npm ci --omit=dev
+    USER node
+    CMD ["dumb-init", "node", "server.js"]
+
+Doing this, however, leaves the `.npmrc` file with the secret npm token inside the Docker image. You could attempt to improve it by deleting it afterwards, like this:
+
+    RUN echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc && \
+       npm ci --omit=dev
+    RUN rm -rf .npmrc
+
+However, now the `.npmrc` file is available in a different layer of the Docker image. If this Docker image is public, or someone is able to access it somehow, then your token is compromised. A better improvement would be as follows:
+
+    RUN echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc && \
+       npm ci --omit=dev; \
+       rm -rf .npmrc
+
+The problem now is that the Dockerfile itself needs to be treated as a secret asset, because it contains the secret npm token inside it.
+
+Luckily, Docker supports a way to pass arguments into the build process:
+
+    ARG NPM_TOKEN
+    RUN echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc && \
+       npm ci --omit=dev; \
+       rm -rf .npmrc
+
+And then we build it as follows:
+
+**`$ docker build . -t nodejs-tutorial --build-arg NPM_TOKEN=1234`**
+
+I know you were thinking that we’re all done at this point but, sorry to disappoint 🙂
+
+That’s how it is with security—sometimes the obvious things are yet just another pitfall.
+
+What’s the problem now, you ponder? Build arguments passed like that to Docker are kept in the history log. Let’s see with our own eyes. Run this command:
+
+**`$ docker history nodejs-tutorial`**
+
+which prints the following:
+
+    IMAGE          CREATED              CREATED BY                                      SIZE      COMMENT
+    b4c2c78acaba   About a minute ago   CMD ["dumb-init" "node" "server.js"]            0B        buildkit.dockerfile.v0
+    <missing>      About a minute ago   USER node                                       0B        buildkit.dockerfile.v0
+    <missing>      About a minute ago   RUN |1 NPM_TOKEN=1234 /bin/sh -c echo "//reg…   5.71MB    buildkit.dockerfile.v0
+    <missing>      About a minute ago   ARG NPM_TOKEN                                   0B        buildkit.dockerfile.v0
+    <missing>      About a minute ago   COPY . . # buildkit                             15.3kB    buildkit.dockerfile.v0
+    <missing>      About a minute ago   WORKDIR /usr/src/app                            0B        buildkit.dockerfile.v0
+    <missing>      About a minute ago   ENV NODE_ENV=production                         0B        buildkit.dockerfile.v0
+    <missing>      About a minute ago   RUN /bin/sh -c apk add dumb-init # buildkit     1.65MB    buildkit.dockerfile.v0
+
+Did you spot the secret npm token there? That’s what I mean.
+
+There’s a great way to manage secrets for the container image, but this is the time to introduce multi-stage builds as a mitigation for this issue, as well as showing how we can build minimal images.
+
+#### Introducing multi-stage builds for Node.js Docker images
+
+Just like that principle in software development of Separation of Concerns, we’ll apply the same ideas in order to build our Node.js Docker images. We’ll have one image that we use to build everything that we need for the Node.js application to run, which in a Node.js world, means installing npm packages, and compiling native npm modules if necessary. That will be our first stage.
+
+The second Docker image, representing the second stage of the Docker build, will be the production Docker image. This second and last stage is the image that we actually optimize for and publish to a registry, if we have one. That first image that we’ll refer to as the `build` image, gets discarded and is left as a dangling image in the Docker host that built it, until it gets cleaned.
+
+Here is the update to our Dockerfile that represents our progress so far, but separated into two stages:
+
+    # --------------> The build image
+    FROM node:latest AS build
+    ARG NPM_TOKEN
+    WORKDIR /usr/src/app
+    COPY package*.json /usr/src/app/
+    RUN echo "//registry.npmjs.org/:_authToken=$NPM_TOKEN" > .npmrc && \
+       npm ci --omit=dev && \
+       rm -f .npmrc
+
+    # --------------> The production image
+    FROM node:lts-alpine@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    RUN apk add dumb-init
+    ENV NODE_ENV production
+    USER node
+    WORKDIR /usr/src/app
+    COPY --chown=node:node --from=build /usr/src/app/node_modules /usr/src/app/node_modules
+    COPY --chown=node:node . /usr/src/app
+    CMD ["dumb-init", "node", "server.js"]
+
+As you can see, I chose a bigger image for the `build` stage because I might need tooling like `gcc` (the GNU Compiler Collection) to compile native npm packages, or for other needs.
+
+In the second stage, there’s a special notation for the `COPY` directive that copies the `node_modules/` folder from the build Docker image into this new production base image.
+
+Also, now, do you see that `NPM_TOKEN` passed as build argument to the `build` intermediary Docker image? It’s not visible anymore in the `docker history nodejs-tutorial` command output because it doesn’t exist in our production docker image.
+
+### 9) Keeping unnecessary files out of your Node.js Docker images
+
+You have a `.gitignore` file to avoid polluting the git repository with unnecessary files, and potentially sensitive files too, right? The same applies to Docker images.
+
+Docker has a `.dockerignore` which will ensure it skips sending any glob pattern matches inside it to the Docker daemon. Here is a list of files to give you an idea of what you might be putting into your Docker image that we’d ideally want to avoid:
+
+    .dockerignore
+    node_modules
+    npm-debug.log
+    Dockerfile
+    .git
+    .gitignore
+
+As you can see, the `node_modules/` is actually quite important to skip because if we hadn’t ignored it, then the simplistic Dockerfile version that we started with would have caused the local `node_modules/` folder to be copied over to the container as-is.
+
+    FROM node@sha256:b2da3316acdc2bec442190a1fe10dc094e7ba4121d029cb32075ff59bb27390a
+    WORKDIR /usr/src/app
+    COPY . /usr/src/app
+    RUN npm ci
+    CMD "npm" "start"
+
+In fact, it’s even more important to have a `.dockerignore` file when you are practicing multi-stage Docker builds. To refresh your memory on how the 2nd stage Docker build looks like:
+
+    # --------------> The production image
+    FROM node:lts-alpine
+    RUN apk add dumb-init
+    ENV NODE_ENV production
+    USER node
+    WORKDIR /usr/src/app
+    COPY --chown=node:node --from=build /usr/src/app/node_modules /usr/src/app/node_modules
+    COPY --chown=node:node . /usr/src/app
+    CMD ["dumb-init", "node", "server.js"]
+
+The importance of having a `.dockerignore` is that when we do a `COPY . /usr/src/app` from the 2nd Dockerfile stage, we’re also copying over any local node\_modules/ to the Docker image. That’s a big no-no as we may be copying over modified source code inside `node_modules/`.
+
+On top of that, since we’re using the wildcard `COPY .` we may also be copying into the Docker image sensitive files that include credentials or local configuration.
+
+The take-away here for a `.dockerignore` file is:
+
+- Skip potentially modified copies of `node_modules/` in the Docker image.
+- Saves you from secrets exposure such as credentials in the contents of `.env` or `aws.json` files making their way into the Node.js Docker image.
+- It helps speed up Docker builds because it ignores files that would have otherwise caused a cache invalidation. For example, if a log file was modified, or a local environment configuration file, all would’ve caused the Docker image cache to invalidate at that layer of copying over the local directory.
+
+### 10) Mounting secrets into the Docker build image
+
+One thing to note about the `.dockerignore` file is that it is an all or nothing approach and can’t be turned on or off per build stages in a Docker multi-stage build.
+
+Why is it important? Ideally, we would want to use the `.npmrc` file in the build stage, as we may need it because it includes a secret npm token to access private npm packages. Perhaps it also needs a specific proxy or registry configuration to pull packages from.
+
+This means that it makes sense to have the `.npmrc` file available to the `build` stage—however, we don’t need it at all in the second stage for the production image, nor do we want it there as it may include sensitive information, like the secret npm token.
+
+One way to mitigate this `.dockerignore` caveat is to mount a local file system that will be available for the build stage, but there’s a better way.
+
+Docker supports a relatively new capability referred to as Docker secrets, and is a natural fit for the case we need with `.npmrc`. Here is how it works:
+
+- When we run the `docker build` command we will specify command-line arguments that define a new secret ID and reference a file as the source of the secret.
+- In the Dockerfile, we will add flags to the `RUN` directive to install the production npm, which mounts the file referred by the secret ID into the target location—the local directory `.npmrc` file which is where we want it available.
+- The `.npmrc` file is mounted as a secret and is never copied into the Docker image.
+- Lastly, let’s not forget to add the `.npmrc` file to the contents of the `.dockerignore` file so it doesn’t make it into the image at all, for either the build nor production images.
+
+Let’s see how all of it works together. First the updated `.dockerignore` file:
+
+    .dockerignore
+    node_modules
+    npm-debug.log
+    Dockerfile
+    .git
+    .gitignore
+    .npmrc
+
+Then, the complete Dockerfile, with the updated RUN directive to install npm packages while specifying the `.npmrc` mount point:
+
+    # --------------> The build image
+    FROM node:latest AS build
+    WORKDIR /usr/src/app
+    COPY package*.json /usr/src/app/
+    RUN --mount=type=secret,mode=0644,id=npmrc,target=/usr/src/app/.npmrc npm ci --omit=dev
+
+    # --------------> The production image
+    FROM node:lts-alpine
+    RUN apk add dumb-init
+    ENV NODE_ENV production
+    USER node
+    WORKDIR /usr/src/app
+    COPY --chown=node:node --from=build /usr/src/app/node_modules /usr/src/app/node_modules
+    COPY --chown=node:node . /usr/src/app
+    CMD ["dumb-init", "node", "server.js"]
+
+And finally, the command that builds the Node.js Docker image:
+
+    docker build . -t nodejs-tutorial --secret id=npmrc,src=.npmrc
+
+**Note:** Secrets are a new feature in Docker and if you’re using an older version, you might need to enable it Buildkit as follows:
+
+    DOCKER_BUILDKIT=1 docker build . -t nodejs-tutorial --build-arg NPM_TOKEN=1234 --secret id=npmrc,src=.npmrc
 
 ## Kubernetes Security
 
@@ -2086,6 +2567,594 @@ Refer to the documentation provided by the cloud service provider to understand 
 - [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/lambda-security.html)
 - [GCP Cloud Functions](https://cloud.google.com/functions/docs/securing)
 - [Azure Functions](https://learn.microsoft.com/en-us/azure/architecture/serverless-quest/functions-app-security)
+
+## Network segmentation
+
+> **Source:** [Network segmentation](https://cheatsheetseries.owasp.org/cheatsheets/Network_Segmentation_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+Network segmentation is the core of multi-layer defense in depth for modern services. Segmentation slow down an attacker if he cannot implement attacks such as:
+
+- SQL-injections, see [SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html);
+- compromise of workstations of employees with elevated privileges;
+- compromise of another server in the perimeter of the organization;
+- compromise of the target service through the compromise of the LDAP directory, DNS server, and other corporate services and sites published on the Internet.
+
+The main goal of this cheat sheet is to show the basics of network segmentation to effectively counter attacks by building a secure and maximally isolated service network architecture.
+
+Segmentation will avoid the following situations:
+
+- executing arbitrary commands on a public web server (NginX, Apache, Internet Information Service) prevents an attacker from gaining direct access to the database;
+- having unauthorized access to the database server, an attacker cannot access CnC on the Internet.
+
+### Content
+
+- Schematic symbols;
+- Three-layer network architecture;
+- Interservice interaction;
+- Network security policy;
+- Useful links.
+
+### Schematic symbols
+
+Elements used in network diagrams:
+
+![Schematic symbols](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_Schematic_symbols.drawio.png)
+
+Crossing the border of the rectangle means crossing the firewall:
+![Traffic passes through two firewalls](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_firewall_1.drawio.png)
+
+In the image above, traffic passes through two firewalls with the names FW1 and FW2
+
+![Traffic passes through one firewall](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_firewall_2.drawio.png)
+
+In the image above, traffic passes through one firewall, behind which there are two VLANs
+
+Further, the schemes do not contain firewall icons so as not to overload the schemes
+
+### Three-layer network architecture
+
+By default, developed information systems should consist of at least three components (**security zones**):
+
+1. [FRONTEND](https://cheatsheetseries.owasp.org/cheatsheets/Network_Segmentation_Cheat_Sheet.html#FRONTEND);
+2. [MIDDLEWARE](https://cheatsheetseries.owasp.org/cheatsheets/Network_Segmentation_Cheat_Sheet.html#MIDDLEWARE);
+3. [BACKEND](https://cheatsheetseries.owasp.org/cheatsheets/Network_Segmentation_Cheat_Sheet.html#BACKEND).
+
+#### FRONTEND
+
+FRONTEND - A frontend is a set of segments with the following network elements:
+
+- balancer;
+- application layer firewall;
+- web server;
+- web cache.
+
+![FRONTEND](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_FRONTEND.drawio.png)
+
+#### MIDDLEWARE
+
+MIDDLEWARE - a set of segments to accommodate the following network elements:
+
+- web applications that implement the logic of the information system (processing requests from clients, other services of the company and external services; execution of requests);
+- authorization services;
+- analytics services;
+- message queues;
+- stream processing platform.
+
+![MIDDLEWARE](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_MIDDLEWARE.drawio.png)
+
+#### BACKEND
+
+BACKEND - a set of network segments to accommodate the following network elements:
+
+- SQL database;
+- LDAP directory (Domain controller);
+- storage of cryptographic keys;
+- file server.
+
+![BACKEND](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_BACKEND.drawio.png)
+
+#### Example of Three-layer network architecture
+
+![BACKEND](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_TIER_Example.drawio.png)
+The following example shows an organization's local network. The organization is called "Сontoso".
+
+The edge firewall contains 2 VLANs of **FRONTEND** security zone:
+
+- _DMZ Inbound_ - a segment for hosting services and applications accessible from the Internet, they must be protected by WAF;
+- _DMZ Outgoing_ - a segment for hosting services that are inaccessible from the Internet, but have access to external networks (the firewall does not contain any rules for allowing traffic from external networks).
+
+The internal firewall contains 4 VLANs:
+
+- **MIDDLEWARE** security zone contains only one VLAN with name _APPLICATIONS_ - a segment designed to host information system applications that interact with each other (interservice communication) and interact with other services;
+- **BACKEND** security zone contains:
+    - _DATABASES_ - a segment designed to delimit various databases of an automated system;
+    - _AD SERVICES_ - segment designed to host various Active Directory services, in the example only one server with a domain controller Contoso.com is shown;
+    - _LOGS_ - segment, designed to host servers with logs, servers centrally store application logs of an automated system.
+
+### Interservice interaction
+
+Usually some information systems of the company interact with each other. It is important to define a firewall policy for such interactions.
+The base allowed interactions are indicated by the green arrows in the image below:
+![Interservice interaction](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_interservice.drawio.png)
+The image above also shows the allowed access from the FRONTEND and MIDDLEWARE segments to external networks (the Internet, for example).
+
+From this image follows:
+
+1. Access between FRONTEND and MIDDLEWARE segments of different information systems is prohibited;
+2. Access from the MIDDLEWARE segment to the BACKEND segment of another service is prohibited (access to a foreign database bypassing the application server is prohibited).
+
+Forbidden accesses are indicated by red arrows in the image below:
+![Prohibited Interservice Communication](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_interservice_deny.drawio.png)
+
+#### Many applications on the same network
+
+If you prefer to have fewer networks in your organization and host more applications on each network, it is acceptable to host the load balancer on those networks. This balancer will balance traffic to applications on the network.
+In this case, it will be necessary to open one port to such a network, and balancing will be performed, for example, based on the HTTP request parameters.
+An example of such segmentation:
+![Interservice Communication with balancing](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_interservice_balancer.drawio.png)
+
+As you can see, there is only one incoming access to each network, access is opened up to the balancer in the network. However, in this case, segmentation no longer works, access control between applications from different network segments is performed at the 7th level of the OSI model using a balancer.
+
+### Network security policy
+
+The organization must define a "paper" policy that describes firewall rules and basic allowed network access.
+This policy is at least useful for:
+
+- network administrators;
+- security representatives;
+- IT auditors;
+- architects of information systems and software;
+- developers;
+- IT administrators.
+
+It is convenient when the policy is described by similar images. The information is presented as concisely and simply as possible.
+
+#### Examples of individual policy provisions
+
+Examples in the network policy will help colleagues quickly understand what access is potentially allowed and can be requested.
+
+##### Permissions for CI/CD
+
+The network security policy may define, for example, the basic permissions allowed for the software development system. Let's look at an example of what such a policy might look like:
+![CI-CD](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_repo.drawio.png)
+
+##### Secure logging
+
+It is important that in the event of a compromise of any information system, its logs are not subsequently modified by an attacker. To do this, you can do the following: copy the logs to a separate server, for example, using the syslog protocol, which does not allow an attacker to modify the logs, syslog only allows you to add new events to the logs.
+The network security policy for this activity looks like this:
+![Logging](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_logs.drawio.png)
+
+In this example, we are also talking about application logs that may contain security events, as well as potentially important events that may indicate an attack.
+
+##### Permissions for monitoring systems
+
+Suppose a company uses Zabbix as an IT monitoring system. In this case, the policy might look like this:
+![Zabbix-Example](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Network_Segmentation_Cheat_Sheet_Monitoring.drawio.png)
+
+### Useful links
+
+- Full network segmentation cheat sheet by [sergiomarotco](https://github.com/sergiomarotco): [link](https://github.com/sergiomarotco/Network-segmentation-cheat-sheet).
+
+## Workload Identity Federation
+
+> **Source:** [Workload Identity Federation](https://cheatsheetseries.owasp.org/cheatsheets/Workload_Identity_Federation_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+Use workload identity federation instead of stored, long-lived cloud credentials for continuous integration and continuous deployment (CI/CD), when both platforms support it. This cheat sheet covers OpenID Connect (OIDC) federation for deployment jobs. It removes the need to keep a reusable cloud key in the pipeline, as described in [GitHub's OIDC overview](https://docs.github.com/en/actions/concepts/security/openid-connect). Manage secrets that cannot be replaced through the [Secrets Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html).
+
+Federation does not make a compromised job trustworthy. Code running in an authorized job can use its identity and credentials. Keep untrusted pull request code out of jobs that can obtain production access; apply the [CI/CD Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html) and, where applicable, the [GitHub Actions Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/GitHub_Actions_Security_Cheat_Sheet.html). See GitHub's explanation of [compromised runner risks](https://docs.github.com/en/actions/concepts/security/compromised-runners).
+
+### Understand the Trust Boundary
+
+The CI/CD platform issues a signed OIDC token describing the job. The job presents it to the cloud provider, which validates it against a configured trust policy before issuing temporary credentials. These may be access tokens or temporary access keys, depending on the provider. Use the provider's supported federation integration; do not implement a token validator in the pipeline. See the [Google Cloud deployment pipeline integration](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines).
+
+Validating a token against the configured trusted issuer does not by itself authorize production access. Configure both controls:
+
+- **Trust policy:** which external workloads may obtain credentials.
+- **Permissions policy:** which resources and operations those credentials authorize. A tightly scoped trust policy does not compensate for an administrative deployment role. [AWS distinguishes the role's trust and permissions policies](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_create_for-idp_oidc.html).
+
+### Restrict Which Jobs Are Trusted
+
+- Configure the exact trusted issuer (`iss`), expected audience (`aud`), and allowed subject (`sub`) or equivalent workload attributes. The provider must validate the signature and token validity period as well as these restrictions. Use the actual claims issued for your job and the provider's documented matching rules; for example, [Microsoft Entra requires matching issuer, subject, and audience values](https://learn.microsoft.com/en-us/entra/workload-id/workload-identity-federation-considerations).
+- Restrict access to the intended organization, repository or project, and deployment context. Trusting a shared CI/CD issuer alone can admit other tenants. Prefer immutable, non-reusable organization and repository identifiers where supported, rather than names that another owner could acquire. [Google Cloud documents these tenant restrictions and identifier risks](https://docs.cloud.google.com/iam/docs/workload-identity-federation-with-deployment-pipelines).
+- Allow only the required branches, environments, or workflows. Avoid wildcards that admit every repository or every job context. Verify which claims the cloud provider can actually enforce; a claim's presence in a token does not mean it is available as a policy condition. Follow the provider's integration documentation, such as [GitHub's AWS OIDC configuration guidance](https://docs.github.com/en/actions/how-tos/secure-your-work/security-harden-deployments/oidc-in-aws).
+- Require reviews for changes to trusted deployment workflow files; see the [GitHub Actions repository hardening guidance](https://cheatsheetseries.owasp.org/cheatsheets/GitHub_Actions_Security_Cheat_Sheet.html#harden-repository-settings).
+- When trusting a deployment environment, protect who can use it and which branches or tags may deploy to it. For GitHub Actions, the default environment-based subject does not also contain the branch. Match the subject format configured for your repository and enforce the branch restriction through environment protection or another supported condition. See the [GitHub OIDC subject reference](https://docs.github.com/en/actions/reference/security/oidc).
+
+### Limit Credential Exposure and Permissions
+
+- Grant only the cloud operations and resources the deployment needs. Use separate identities and trust rules for production and non-production. Keep federation configuration and permission administration outside ordinary deployment roles to prevent a compromised job from widening its own access. See [Google Cloud's federation security practices](https://docs.cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation).
+- Enable OIDC token requests only for jobs that need cloud access. In GitHub Actions, set `id-token: write` at the job level; it permits token requests and does not itself grant cloud permissions. See [GitHub's OIDC permission requirements](https://docs.github.com/en/actions/reference/security/oidc#workflow-permissions-for-the-requesting-the-oidc-token).
+- Request the shortest credential lifetime the provider supports that meets the job's needs. Do not assume credentials expire when the job ends or when its OIDC token expires: issued cloud credentials have their own lifetime. For example, [AWS temporary credentials remain valid until expiry unless their access is disabled](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp_control-access_disable-perms.html).
+- Treat both the OIDC token and issued credentials as secrets: do not print them, place them in artifacts or caches, or pass them to unrelated jobs. After verifying migration, revoke the replaced static keys and remove pipeline copies so they cannot bypass the federation restrictions. Apply the [Secrets Management lifecycle guidance](https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html#27-secret-lifecycle).
+
+### Verify and Monitor Access
+
+Before production use, test the permitted deployment and verify that unauthorized repositories, branches, and job contexts cannot obtain production credentials. Confirm that the authorized job cannot access resources outside its assigned permissions. Repeat these checks after changes to trust policies, claim formats, or workflow configuration. Use the platform's documented claims, such as the [GitHub OIDC reference](https://docs.github.com/en/actions/reference/security/oidc), to select relevant cases.
+
+Enable cloud audit events for token exchange and role or service account use. Check which identity fields are recorded and correlate them with CI/CD run records; complete workflow attribution is not automatic. For example, [Google Cloud requires enabling relevant data access logs and choosing an unambiguous subject mapping](https://docs.cloud.google.com/iam/docs/best-practices-for-using-workload-identity-federation#enable-data-access-logs). Alert on unexpected identities and changes to federation trust or permissions.
+
+Prepare to stop new credential issuance and restrict already-issued credentials if a job is compromised. Removing a trust relationship alone is not a guarantee that existing sessions stop working. Follow the provider's incident procedure, such as [revoking AWS role session permissions](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_revoke-sessions.html), and account for policy propagation delays.
+
+## Database Security
+
+> **Source:** [Database Security](https://cheatsheetseries.owasp.org/cheatsheets/Database_Security_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+This cheat sheet provides guidance for securely configuring SQL databases such as MySQL, PostgreSQL, MariaDB, and Microsoft SQL Server.
+It is designed primarily for application developers and system administrators responsible for managing or interacting with relational databases.
+
+For application-layer injection defenses, see the [SQL Injection Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html).
+For guidance on non-relational systems (e.g., MongoDB, Redis, Cassandra, DynamoDB), refer to the [NoSQL Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/NoSQL_Security_Cheat_Sheet.html)
+
+### Protecting the Backend Database
+
+The application's backend database should be isolated from other servers and only connect with as few hosts as possible. This task will depend on the system and network architecture. Consider these suggestions:
+
+- Disabling network (TCP) access and requiring all access is over a local socket file or named pipe.
+- Configuring the database to only bind on localhost.
+- Restricting access to the network port to specific hosts with firewall rules.
+- Placing the database server on a dedicated internal network segment that is isolated from the application server.
+- Protect any web-based management tools (e.g., phpMyAdmin, pgAdmin) with authentication, HTTPS, and network restrictions.
+
+When an application is running on an untrusted system (such as a thick-client), it should always connect to the backend through an API that can enforce appropriate access control and restrictions. Direct connections should **never** be made from a thick client to the backend database.
+
+#### Implementing Transport Layer Protection
+
+Most database default configurations start with unencrypted network connections, though some do encrypt the initial authentication (such as Microsoft SQL Server). Even if the initial authentication is encrypted, the rest of the traffic will be unencrypted and all kinds of sensitive information will be sent across the network in clear text. The following steps should be taken to prevent unencrypted traffic:
+
+- Configure the database to only allow encrypted connections.
+- Install a trusted digital certificate on the server.
+- The client application should connect using TLSv1.2+ with modern ciphers (e.g, AES-GCM or ChaCha20).
+- The client application should verify that the digital certificate is correct.
+
+The [Transport Layer Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html) contains further guidance on securely configuring TLS.
+
+### Configuring Secure Authentication
+
+The database should always require authentication, including connections from the local server. Database accounts should be:
+
+- Protected with strong and unique passwords.
+- Used by a single application or service.
+- Configured with the minimum permissions required as discussed in the [permissions section below](#creating-secure-permissions).
+
+As with any system that has its own user accounts, the usual account management processes should be followed, including:
+
+- Regular reviews of the accounts to ensure that they are still required.
+- Regular reviews of permissions.
+- Removing user accounts when an application is decommissioned.
+- Changing the passwords when staff leave, or there is reason to believe that they may have been compromised.
+
+For Microsoft SQL Server, consider the use of [Windows or Integrated-Authentication](https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/sql/authentication-in-sql-server), which uses existing Windows accounts rather than SQL Server accounts. This also removes the requirement to store credentials in the application, as it will connect using the credentials of the Windows user it is running under. The [Windows Native Authentication Plugins](https://dev.mysql.com/doc/connector-net/en/connector-net-programming-authentication-windows-native.html) provides similar functionality for MySQL.
+
+#### Storing Database Credentials Securely
+
+Database credentials should never be stored in the application source code, especially if they are unencrypted. Instead, they should be stored in a configuration file that:
+
+- Is outside of the web root.
+- Has appropriate permissions so that it can only be read by the required user(s).
+- Is not checked into source code repositories.
+
+Where possible, these credentials should also be encrypted or otherwise protected using built-in functionality, such as the `web.config` encryption available in [ASP.NET](https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/connection-strings-and-configuration-files#encrypting-configuration-file-sections-using-protected-configuration).
+
+### Creating Secure Permissions
+
+When developers are assigning permissions to database user accounts, they should employ the principle of least privilege (i.e, the accounts should only have the minimal permissions required for the application to function). This principle can be applied at a number of increasingly granular levels depending on the functionality available in the database. You can do the following in all environments:
+
+- Do not use the built-in `root`, `sa` or `SYS` accounts.
+- Do not grant the account administrative rights over the database instance.
+- Make sure the account can only connect from allowed hosts. This would often be `localhost` or the address of the application server.
+- The account should only access the specific databases it needs. Development, UAT and Production environments should all use separate databases and accounts.
+- Only grant the required permissions on the databases. Most applications would only need `SELECT`, `UPDATE` and `DELETE` permissions. The account should not be the owner of the database as this can lead to privilege escalation vulnerabilities.
+- Avoid using database links or linked servers. Where they are required, use an account that has been granted access to only the minimum databases, tables, and system privileges required.
+
+Most security-critical applications, apply permissions at more granular levels, including:
+
+- Table-level permissions.
+- Column-level permissions.
+- Row-level permissions
+- Blocking access to the underlying tables, and requiring all access through restricted [views](<https://en.wikipedia.org/wiki/View_(SQL)>).
+
+### Database Configuration and Hardening
+
+The database server's underlying operating system should be hardened by basing it on a secure baseline such as the [CIS Benchmarks](https://www.cisecurity.org/cis-benchmarks/) or the [Microsoft Security Baselines](https://learn.microsoft.com/en-us/windows/security/threat-protection/windows-security-baselines).
+
+The database application should also be properly configured and hardened. The following principles should apply to any database application and platform:
+
+- Install any required security updates and patches.
+- Configure the database services to run under a low privileged user account.
+- Remove any default accounts and databases.
+- Store [transaction logs](https://en.wikipedia.org/wiki/Transaction_log) on a separate disk to the main database files.
+- Configure a regular backup of the database. Ensure that the backups are protected with appropriate permissions, and ideally encrypted.
+
+The following sections give some further recommendations for specific database software, in addition to the more general recommendations given above.
+
+#### Hardening a Microsoft SQL Server
+
+- Disable `xp_cmdshell`, `xp_dirtree` and other stored procedures that are not required.
+- Disable Common Language Runtime (CLR) execution.
+- Disable the SQL Browser service.
+- Disable [Mixed Mode Authentication](https://learn.microsoft.com/en-us/sql/relational-databases/security/choose-an-authentication-mode?view=sql-server-ver15) unless it is required.
+- Ensure that the sample [Northwind and AdventureWorks databases](https://learn.microsoft.com/en-us/dotnet/framework/data/adonet/sql/linq/downloading-sample-databases) have been removed.
+- See Microsoft's articles on [securing SQL Server](https://learn.microsoft.com/en-us/sql/relational-databases/security/securing-sql-server).
+
+#### Hardening a MySQL or a MariaDB Server
+
+- Run the `mysql_secure_installation` script to remove the default databases and accounts.
+- Disable the [FILE](https://dev.mysql.com/doc/refman/8.0/en/privileges-provided.html#priv_file) privilege for all users to prevent them reading or writing files.
+- See the [Oracle MySQL](https://dev.mysql.com/doc/refman/8.0/en/security-guidelines.html) and [MariaDB](https://mariadb.com/kb/en/library/securing-mariadb/) hardening guides.
+
+#### Hardening a PostgreSQL Server
+
+- See the [PostgreSQL Server Setup and Operation documentation](https://www.postgresql.org/docs/current/runtime.html) and the older [Security documentation](https://www.postgresql.org/docs/7.0/security.htm).
+
+#### MongoDB
+
+- See the [NoSQL Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/NoSQL_Security_Cheat_Sheet.html) for general guidance on securing NoSQL databases.
+- See the [MongoDB security checklist](https://docs.mongodb.com/manual/administration/security-checklist/).
+
+#### Redis
+
+- See the [Redis security guide](https://redis.io/topics/security).
+
+## Microservices based Security Arch Doc
+
+> **Source:** [Microservices based Security Arch Doc](https://cheatsheetseries.owasp.org/cheatsheets/Microservices_based_Security_Arch_Doc_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+The microservice architecture is being increasingly used for designing and implementing application systems in both cloud-based and on-premise infrastructures. There are many security challenges need to be addressed in the application design and implementation phases. In order to address some security challenges it is necessity to collect security-specific information on application architecture.
+The goal of this article is to provide a concrete proposal of approach to collect microservice-based architecture information to securing application.
+
+### Context
+
+During securing applications based on microservices architecture, security architects/engineers usually face with the following questions (mostly referenced in the [OWASP Application Security Verification Standard Project](https://github.com/OWASP/ASVS) under the section [V1 "Architecture, Design and Threat Modeling Requirements"](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x10-V1-Architecture.md#v1-architecture-design-and-threat-modeling)):
+
+1. Threat modeling and enforcement of the principle of least privilege:
+    - What scopes or API keys does microservice minimally need to access other microservice APIs?
+    - What grants does microservice minimally need to access database or message queue?
+2. Data leakage analysis:
+    - What storages or message queues do contain sensitive data?
+    - Does microservice read/write date from/to specific database or message queue?
+    - What microservices are invoked by dedicated microservice? What data is passed between microservices?
+3. Attack surface analysis:
+    - What microservices endpoints need to be tested during security testing?
+
+In most cases, existing application architecture documentation is not suitable to answer those questions. Next sections propose what architecture security-specific information can be collected to answer the questions above.
+
+### Objective
+
+The objectives of the cheat sheet are to explain what architecture security-specific information can be collected to answer the questions above and provide concrete proposal of approach to collect microservice-based architecture information to securing application.
+
+### Proposition
+
+#### Collect information on the building blocks
+
+##### Identify and describe application-functionality services
+
+Application-functionality services implement one or several business process or functionality (e.g., storing customer details, storing and displaying product catalog). Collect information on the parameters listed below related to each application-functionality service.
+
+| Parameter name | Description |
+| :--- | :--- |
+| Service name (ID) | Unique service name or ID |
+| Short description | Short description of business process or functionality implemented by the microservice |
+| Link to source code repository | Specify a link to service source code repository |
+| Development Team | Specify development team which develops the microservice |
+| API definition | If microservice exposes external interface specify a link to the interface description (e.g., OpenAPI specification). It is advisable to define used security scheme, e.g. define scopes or API keys needed to invoke dedicated endpoint (e.g., [see](https://swagger.io/docs/specification/authentication/)). |
+| The microservice architecture description | Specify a link to the microservice architecture diagram, description (if available) |
+| Link to runbook | Specify a link to the microservice runbook |
+
+##### Identify and describe infrastructure services
+
+Infrastructure services including remote services may implement authentication, authorization, service registration and discovery, security monitoring, logging etc. Collect information on the parameters listed below related to each infrastructure service.
+
+| Parameter name | Description |
+| :--- | :--- |
+|Service name (ID) | Unique service name or ID |
+|Short description | Short description of functionality implemented by the service (e.g., authentication, authorization, service registration and discovery, logging, security monitoring, API gateway). |
+|Link to source code repository | Specify a link to service source code repository (if applicable) |
+|Link to the service documentation | Specify a link to the service documentation that includes service API definition, operational guidance/runbook, etc. |
+
+##### Identify and describe data storages
+
+Collect information on the parameters listed below related to each data storage.
+
+| Parameter name | Description |
+| :--- | :--- |
+|Storage name (ID) | Unique storage name or ID |
+|Software type | Specify software that implements the data storage (e.g., PostgreSQL, Redis, Apache Cassandra). |
+
+##### Identify and describe message queues
+
+Messaging systems (e.g., RabbitMQ or Apache Kafka) are used to implement asynchronous microservices communication mechanism. Collect information on the parameters listed below related to each message queue.
+
+| Parameter name | Description |
+| :--- | :--- |
+|Message queue (ID) | Unique message queue name or ID |
+|Software type | Specify software that implements the message queue (e.g., RabbitMQ, Apache Kafka). |
+
+##### Identify and describe data assets
+
+Identify and describe data assets that processed by system microservices/services. It is advisable firstly to identify assets, which are valuable from a security perspective (e.g., "User information", "Payment"). Collect information on the parameters listed below related to each asset.
+
+| Parameter name | Description |
+| :--- | :--- |
+| Asset name (ID) | Unique asset name or ID |
+| Protection level | Specify asset protection level (e.g., PII, confidential) |
+| Additional info | Add clarifying information |
+
+#### Collect information on relations between building blocks
+
+##### Identify "service-to-storage" relations
+
+Collect information on the parameters listed below related to each "service-to-storage" relation.
+
+| Parameter name | Description |
+| :--- | :--- |
+| Service name (ID) | Specify service name (ID) defined above |
+| Storage name (ID) | Specify storage name (ID) defined above |
+| Access type | Specify access type, e.g. "Read" or "Read/Write" |
+
+##### Identify "service-to-service" synchronous communications
+
+Collect information on the parameters listed below related to each "service-to-service" synchronous communication.
+
+| Parameter name | Description |
+| :--- | :--- |
+| Caller service name (ID) | Specify caller service name (ID) defined above |
+| Called service name (ID) | Specify called service name (ID) defined above |
+| Protocol/framework used| Specify protocol/framework used for communication, e.g. HTTP (REST, SOAP), Apache Thrift, gRPC |
+| Short description | Shortly describe the purpose of communication (requests for query of information or request/commands for a state-changing business function) and data passed between services (if possible, in therms of assets defined above) |
+
+##### Identify "service-to-service" asynchronous communications
+
+Collect information on the parameters listed below related to each "service-to-service" asynchronous communication.
+
+| Parameter name | Description |
+| :--- | :--- |
+| Publisher service name (ID) | Specify publisher service name (ID) defined above |
+| Subscriber service name (ID) | Specify subscriber service name (ID) defined above |
+| Message queue (ID) | Specify message queue (ID) defined above |
+| Short description | Shortly describe the purpose of communication (receiving of information or commands for a state-changing business function) and data passed between services (if possible, in therms of assets defined above) |
+
+##### Identify "asset-to-storage" relations
+
+Collect information on the parameters listed below related to each "asset-to-storage" relation.
+
+| Parameter name | Description |
+| :--- | :--- |
+| Asset name (ID) | Asset name (ID) defined above |
+| Storage name (ID) | Specify storage name (ID) defined above |
+| Storage type | Specify storage type for the asset, e.g. "golden source" or "cache" |
+
+#### Create a graphical presentation of application architecture
+
+It is advisable to create graphical presentation of application architecture (building blocks and relations defined above) in form of services call graph or data flow diagram. In order to do that one can use special software tools (e.g. Enterprise Architect) or [DOT language](https://en.wikipedia.org/wiki/DOT_%28graph_description_language%29). See example of using DOT language [here](https://gist.github.com/vladgolubev/80c5523336ddec3859c0e90d9a070882).
+
+#### Use collected information in secure software development practices
+
+Collected information may be useful for doing application security practices, e.g. during defining security requirements, threat modeling or security testing. Sections below contains examples of activities related to securing application architecture (as well as its mapping to OWASP projects) and tips for their implementation using information collected above.
+
+##### Attack surface analysis
+
+###### Implementation tips
+
+To enumerate microservices endpoints that need to be tested during security testing and analyzed during threat modeling analyze data collected under the following sections:
+
+- Identify and describe application-functionality services (parameter "API definition")
+- Identify and describe infrastructure services (parameter "Link to the service documentation")
+
+###### Mapping to OWASP projects
+
+- [OWASP ASVS, V1 "Architecture, Design and Threat Modeling Requirements", #1.1.2](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x10-V1-Architecture.md#v1-architecture-design-and-threat-modeling)
+- [OWASP Attack Surface Analysis Cheat Sheet](https://github.com/OWASP/CheatSheetSeries/blob/master/cheatsheets/Attack_Surface_Analysis_Cheat_Sheet.md)
+
+##### Data leakage analysis
+
+###### Implementation tips
+
+To analyze possible data leakage analyze data collected under the following sections:
+
+- Identify and describe data assets
+- Identify "service-to-storage" relations
+- Identify "service-to-service" synchronous communications
+- Identify "service-to-service" asynchronous communications
+- Identify "asset-to-storage" relations
+
+###### Mapping to OWASP projects
+
+- [OWASP ASVS, V1 "Architecture, Design and Threat Modeling Requirements", #1.1.2](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x10-V1-Architecture.md#v1-architecture-design-and-threat-modeling)
+- [OWASP Top 10-2017 A3-Sensitive Data Exposure](https://owasp.org/www-project-top-ten/OWASP_Top_Ten_2017/Top_10-2017_A3-Sensitive_Data_Exposure)
+
+##### Application's trust boundaries, components, and significant data flows justification
+
+###### Implementation tips
+
+Start the review of the application's trust boundaries, components, and significant data flows with the inventories from these sections:
+
+- Identify and describe application-functionality services
+- Identify and describe infrastructure services
+- Identify and describe data storages
+- Identify and describe message queues
+- Identify "service-to-storage" relations
+- Identify "service-to-service" synchronous communications
+- Identify "service-to-service" asynchronous communications
+
+Use these inventories as inputs to a [system model](https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html#system-modeling). Mark the trust boundaries and the flows that cross them, and justify each crossing. Record the endpoint identities, authentication and authorization enforcement points, and protections for data in transit (see [NIST SP 800-204, sections 4.1 and 4.3](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-204.pdf)). Check these controls against the deployed configuration and behavior; the inventories alone do not verify enforcement.
+
+###### Mapping to OWASP projects
+
+- [OWASP ASVS, V1 "Architecture, Design and Threat Modeling Requirements", #1.1.4](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x10-V1-Architecture.md#v1-architecture-design-and-threat-modeling)
+
+##### Analysis of the application's high-level architecture
+
+###### Implementation tips
+
+To verify definition and security analysis of the application's high-level architecture and all connected remote services analyze data collected under the following sections:
+
+- Identify and describe application-functionality services
+- Identify and describe infrastructure services
+- Identify and describe data storages
+- Identify and describe message queues
+
+###### Mapping to OWASP projects
+
+- [OWASP ASVS, V1 "Architecture, Design and Threat Modeling Requirements", #1.1.5](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x10-V1-Architecture.md#v1-architecture-design-and-threat-modeling)
+
+##### Implementation of centralized security controls verification
+
+###### Implementation tips
+
+To verify implementation of centralized, simple (economy of design), vetted, secure, and reusable security controls to avoid duplicate, missing, ineffective, or insecure controls analyze data collected under the section "Identify and describe infrastructure services".
+
+###### Mapping to OWASP projects
+
+- [OWASP ASVS, V1 "Architecture, Design and Threat Modeling Requirements", #1.1.6](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x10-V1-Architecture.md#v1-architecture-design-and-threat-modeling)
+
+##### Enforcement of the principle of least privilege
+
+###### Implementation tips
+
+To define minimally needed microservice permissions analyze data collected under the following sections:
+
+- Identify and describe application-functionality services (parameter "API definition")
+- Identify "service-to-storage" relations
+- Identify "service-to-service" synchronous communications
+- Identify "service-to-service" asynchronous communications
+
+###### Mapping to OWASP projects
+
+- [OWASP ASVS 4.0.3, V4 "Access Control", #4.1.3](https://github.com/OWASP/ASVS/blob/v4.0.3_release/4.0/en/0x12-V4-Access-Control.md#v41-general-access-control-design)
+
+##### Sensitive data identification and classification
+
+###### Implementation tips
+
+To verify that all sensitive data is identified and classified into protection levels analyze data collected under the following sections:
+
+- Identify and describe data assets
+- Identify "asset-to-storage" relations
+
+###### Mapping to OWASP projects
+
+- [OWASP ASVS, V1 "Architecture, Design and Threat Modeling Requirements", #1.8.1](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x10-V1-Architecture.md#v1-architecture-design-and-threat-modeling)
+
+##### Application components business/security functions verification
+
+###### Implementation tips
+
+To verify the definition and documentation of all application components in terms of the business or security functions they provide analyze data collected under the following sections (parameter "Short description"):
+
+- Identify and describe application-functionality services
+- Identify and describe infrastructure services
+
+###### Mapping to OWASP projects
+
+- [OWASP ASVS, V1 "Architecture, Design and Threat Modeling Requirements", #1.11.1](https://github.com/OWASP/ASVS/blob/master/4.0/en/0x10-V1-Architecture.md#v1-architecture-design-and-threat-modeling)
 
 ## Serverless / FaaS Security
 

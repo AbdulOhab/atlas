@@ -17,7 +17,7 @@ license; credit the original authors when you reuse their material.
 | `content/backend/` | Backend | Assembled from 14 open documentation projects, see [Backend](#backend) | per section, all allow reuse |
 | `content/fde/` | Forward Deployed Engineering | Assembled from 10 open source courses and docs, see [Forward Deployed Engineering](#forward-deployed-engineering) | per section, all allow reuse |
 | `content/languages/` | Languages | MDN, react.dev, Next.js, Laravel and htmx docs, see [Languages](#languages) | per module, all allow reuse |
-| `content/security/` | Security | [OWASP/CheatSheetSeries](https://github.com/OWASP/CheatSheetSeries), 91 cheat sheets in 11 modules | CC BY-SA 4.0 |
+| `content/security/` | Security | [OWASP/CheatSheetSeries](https://github.com/OWASP/CheatSheetSeries), 124 cheat sheets in 11 modules | CC BY-SA 4.0 |
 | `content/interview/` | Algorithms: interview prep | [yangshun/tech-interview-handbook](https://github.com/yangshun/tech-interview-handbook) | MIT |
 | `content/devops/devops-tools.md` | DevOps | [tungbq/devops-basics](https://github.com/tungbq/devops-basics), 47 tool pages | Apache 2.0 |
 | `content/devops/kubernetes-the-hard-way.md` | DevOps | Study guide written for Atlas CE, linking [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (CC BY-NC-SA, not copied) | this repository's license |

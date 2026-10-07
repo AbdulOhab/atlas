@@ -1,14 +1,14 @@
 ---
 title: "API Security"
 order: 6
-summary: "Securing the service surface: REST, GraphQL, gRPC, WebSockets, webhooks, microservices, denial of service and bots."
+summary: "Securing the service surface: REST and assessing it, web services, GraphQL, gRPC, WebSockets, webhooks, microservices, denial of service and bots."
 category: "Security"
 level: Intermediate
 ---
 
 # API Security
 
-Securing the service surface: REST, GraphQL, gRPC, WebSockets, webhooks, microservices, denial of service and bots.
+Securing the service surface: REST and assessing it, web services, GraphQL, gRPC, WebSockets, webhooks, microservices, denial of service and bots.
 
 ## REST Security
 
@@ -269,6 +269,257 @@ Here is a non-exhaustive selection of security related REST API **status codes**
 | 503         | Service Unavailable    |  The REST service is temporarily unable to process the request. Used to inform the client it should retry at a later time.                                                                                         |
 
 Additional information about HTTP return code usage in REST API can be found [here](https://www.restapitutorial.com/httpstatuscodes.html) and [here](https://restfulapi.net/http-status-codes).
+
+## REST Assessment
+
+> **Source:** [REST Assessment](https://cheatsheetseries.owasp.org/cheatsheets/REST_Assessment_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### About RESTful Web Services
+
+Web Services are an implementation of web technology used for machine to machine communication. As such they are used for Inter application communication, Web 2.0 and Mashups and by desktop and mobile applications to call a server.
+
+RESTful web services (often called simply REST) are a light weight variant of Web Services based on the RESTful design pattern. In practice RESTful web services utilizes HTTP requests that are similar to regular HTTP calls in contrast with other Web Services technologies such as SOAP which utilizes a complex protocol.
+
+### Key relevant properties of RESTful web services
+
+- Use of HTTP methods (`GET`, `POST`, `PUT` and `DELETE`) as the primary verb for the requested operation.
+- Non-standard parameters specifications:
+    - As part of the URL.
+    - In headers.
+- Structured parameters and responses using JSON or XML in a parameter values, request body or response body. Those are required to communicate machine useful information.
+- Custom authentication and session management, often utilizing custom security tokens: this is needed as machine to machine communication does not allow for login sequences.
+- Lack of formal documentation. A [proposed standard for describing RESTful web services called WADL](http://www.w3.org/Submission/wadl/) was submitted by Sun Microsystems but was never officially adapted.
+
+### The challenge of security testing RESTful web services
+
+- Inspecting the application does not reveal the attack surface, I.e. the URLs and parameter structure used by the RESTful web service. The reasons are:
+    - No application utilizes all the available functions and parameters exposed by the service
+    - Those used are often activated dynamically by client side code and not as links in pages.
+    - The client application is often not a web application and does not allow inspection of the activating link or even relevant code.
+- The parameters are non-standard making it hard to determine what is just part of the URL or a constant header and what is a parameter worth [fuzzing](https://owasp.org/www-community/Fuzzing).
+- As a machine interface the number of parameters used can be very large, for example a JSON structure may include dozens of parameters. [fuzzing](https://owasp.org/www-community/Fuzzing) each one significantly lengthen the time required for testing.
+- Custom authentication mechanisms require reverse engineering and make popular tools not useful as they cannot track a login session.
+
+### How to pentest a RESTful web service
+
+Determine the attack surface through documentation - RESTful pen testing might be better off if some level of clear-box testing is allowed and you can get information about the service.
+
+This information will ensure fuller coverage of the attack surface. Such information to look for:
+
+- Formal service description - While for other types of web services such as SOAP a formal description, usually in WSDL is often available, this is seldom the case for REST. That said, either WSDL 2.0 or WADL can describe REST and are sometimes used.
+- A developer guide for using the service may be less detailed but will commonly be found, and might even be considered *opaque-box* testing.
+- Application source or configuration - in many frameworks, including dotNet ,the REST service definition might be easily obtained from configuration files rather than from code.
+
+Collect full requests using a [proxy](https://www.zaproxy.org/) - while always an important pen testing step, this is more important for REST based applications as the application UI may not give clues on the actual attack surface.
+
+Note that the proxy must be able to collect full requests and not just URLs as REST services utilize more than just GET parameters.
+
+Analyze collected requests to determine the attack surface:
+
+- Look for non-standard parameters:
+    - Look for abnormal HTTP headers - those would many times be header based parameters.
+    - Determine if a URL segment has a repeating pattern across URLs. Such patterns can include a date, a number or an ID like string and indicate that the URL segment is a URL embedded parameter.
+        - For example: `http://server/srv/2013-10-21/use.php`
+    - Look for structured parameter values - those may be JSON, XML or a non-standard structure.
+    - If the last element of a URL does not have an extension, it may be a parameter. This is especially true if the application technology normally uses extensions or if a previous segment does have an extension.
+        - For example: `http://server/svc/Grid.asmx/GetRelatedListItems`
+    - Look for highly varying URL segments - a single URL segment that has many values may be parameter and not a physical directory.
+        - For example if the URL `http://server/src/XXXX/page` repeats with hundreds of value for `XXXX`, chances `XXXX` is a parameter.
+
+Verify non-standard parameters: in some cases (but not all), setting the value of a URL segment suspected of being a parameter to a value expected to be invalid can help determine if it is a path elements of a parameter. If a path element, the web server will return a *404* message, while for an invalid value to a parameter the answer would be an application level message as the value is legal at the web server level.
+
+Analyzing collected requests to optimize [fuzzing](https://owasp.org/www-community/Fuzzing) - after identifying potential parameters to fuzz, analyze the collected values for each to determine:
+
+- Valid vs. invalid values, so that [fuzzing](https://owasp.org/www-community/Fuzzing) can focus on marginal invalid values.
+    - For example sending *0* for a value found to be always a positive integer.
+- Sequences allowing to fuzz beyond the range presumably allocated to the current user.
+
+Lastly, when [fuzzing](https://owasp.org/www-community/Fuzzing), don't forget to emulate the authentication mechanism used.
+
+### Assessing OpenAPI and Swagger-Based REST APIs
+
+Modern REST APIs commonly publish a machine-readable description in [OpenAPI](https://spec.openapis.org/oas/v3.1.0) (formerly Swagger). Unlike the WADL option noted above, this format is widely adopted, and for an assessment it is the fastest route to the attack surface.
+
+- Probe the common description locations first - `/openapi.json`, `/swagger.json` and `/docs` - before relying only on traffic captured through a [proxy](https://www.zaproxy.org/). The description lists paths, methods, parameters, schemas and security requirements in one place.
+- Reconcile the description with observed behavior. Call endpoints the description does not mention and send fields the schema does not define; an undocumented field the API accepts is a discrepancy to investigate, not proof of a contract violation, because additional properties may be valid depending on the intended schema and its documentation. Compare what you observed with the intended schema and the authorization policy before treating the field as a violation (see mass assignment below).
+- Fuzz from the schema: start with a valid request that satisfies the declared types, required fields and `enum` values, then mutate one constraint at a time, following the same [fuzzing](https://owasp.org/www-community/Fuzzing) approach used above.
+- Build the per-operation security test matrix from the effective OpenAPI [`security`](https://spec.openapis.org/oas/v3.1.0#security-requirement-object) requirements, which are the root-level requirements unless the operation declares its own `security`, in which case that declaration replaces them instead of combining with them: no credentials, a valid token, and a token that lacks the declared requirement (see the next section). [`securitySchemes`](https://spec.openapis.org/oas/v3.1.0#security-scheme-object) only define the reusable security mechanisms those requirements refer to.
+
+### JWT and OAuth2 Assessment
+
+A REST API is only as strong as the token checks in front of it, so test the token handling itself before testing the endpoints behind it.
+
+- Tamper with the token: change a claim in the payload, re-sign it with a key you control, or remove the signature, and confirm the API rejects it. Also try `alg: none` and algorithm confusion. The corresponding server-side rules are in the [JSON Web Token Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/JSON_Web_Token_Cheat_Sheet.html) and the [REST Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html#jwt), with the threat background in [RFC 8725](https://datatracker.ietf.org/doc/html/rfc8725).
+- Send a token that is expired (`exp`), not yet valid (`nbf`), or issued for another issuer (`iss`) or audience (`aud`). These [standard claims](https://datatracker.ietf.org/doc/html/rfc7519#section-4) must be checked against the configuration of the API rather than trusted as presented.
+- Send malformed tokens - truncated or extra parts, invalid Base64 or JSON - and confirm the API returns an authentication failure instead of a server error or a partially parsed token.
+- Check scope and role enforcement: call each operation with a valid token whose [OAuth 2.0](https://www.rfc-editor.org/rfc/rfc6749) scope does not grant it, and with a valid token belonging to a lower-privileged role that lacks permission for it. Both should be denied the result, on read and write operations alike, with the status code that the documented response policy of the API prescribes for such a denial: for example [`401 Unauthorized`](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.2) or [`403 Forbidden`](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.4) as described for bearer requests in [RFC 6750 Section 3.1](https://www.rfc-editor.org/rfc/rfc6750#section-3.1), or `404 Not Found` when the API [conceals the existence of the resource](https://www.rfc-editor.org/rfc/rfc9110#section-15.5.4).
+
+### Broken Object Level Authorization (BOLA)
+
+[Broken Object Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa1-broken-object-level-authorization/) is the API form of [IDOR](https://owasp.org/www-community/attacks/insecure_direct_object_reference): an endpoint uses an identifier from the request without checking that the caller may access the object it points at.
+
+- Run the swap test: create the same kind of object with two accounts or tenants, then replay each request under the other session's identifiers. Cover reads and writes (`GET`, `PUT`, `PATCH`, `DELETE`); an ownership check on `GET` next to an unchecked `PUT` on the same resource is a common result.
+- Prefer identifiers the other session can already observe - list responses, error messages, notification links - over guessing, and include nested routes such as `/users/{id}/orders/{id}`, where authorization is often only enforced for the outer resource.
+- Test vertical escalation too: use a low-privilege token against owner-only or administrator-only operations of the same API; whether a role may call such an operation at all is [Broken Function Level Authorization](https://owasp.org/API-Security/editions/2023/en/0xa5-broken-function-level-authorization/), a separate check from BOLA's per-object access.
+- Repeat for every object type the API exposes; the object is wherever an identifier in the request ends up, not only in the obvious profile or order endpoints.
+
+Prevention guidance is in the [Insecure Direct Object Reference Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html) and the [Authorization Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html); test methodology is in the [WSTG IDOR test](https://wstg.owasp.org/latest/4-Web_Application_Security_Testing/05-Authorization/04-Insecure_Direct_Object_References/).
+
+### Mass Assignment in JSON APIs
+
+Frameworks that bind a JSON request body directly to an internal object make [mass assignment](https://cheatsheetseries.owasp.org/cheatsheets/Mass_Assignment_Cheat_Sheet.html) testable with a single request: anything the client sends may be written, including fields the API never advertised.
+
+- Take a normal create or update request and add fields outside the contract - a role, a verification flag, an internal identifier - then read the object back to see whether they were stored. Repeat for nested objects and arrays and for each update verb, including partial-update endpoints.
+- Confirm effect, not just reflection: a field echoed in the response means little until a following request shows that it persisted and changed behavior.
+- Treat every field the server accepts but the schema does not define as a candidate for this test (see the OpenAPI section above).
+
+See [CWE-915](https://cwe.mitre.org/data/definitions/915.html) for the weakness classification.
+
+### Rate Limiting and Throttling Assessment
+
+Missing or weak limits let an attacker guess credentials, harvest data or consume capacity at will; this is [API4:2023 Unrestricted Resource Consumption](https://owasp.org/API-Security/editions/2023/en/0xa4-unrestricted-resource-consumption/).
+
+- Drive the authentication, token and account recovery endpoints and check that throttling engages; without it, password guessing and [credential stuffing](https://cheatsheetseries.owasp.org/cheatsheets/Credential_Stuffing_Prevention_Cheat_Sheet.html) remain cheap. Compare with the [login throttling](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html#login-throttling) expectations for web applications.
+- Exercise the expensive operations - search, export, bulk writes - and note whether a limit applies to them at all. Throttling by request frequency does not by itself bound the amount of work performed within a single request, so check what one request can cost as well.
+- Identify what the limit is keyed on: a per-IP limit is worked around by changing address, so per-account or per-API-key limits must still hold, and an authenticated session must not disable them.
+- Record the observed limit, the point at which it triggers and the response returned, so each finding states the missing control precisely.
+
+### Related Resources
+
+See the [REST Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/REST_Security_Cheat_Sheet.html) for implementation guidance corresponding to these assessment topics.
+
+## Web Service Security
+
+> **Source:** [Web Service Security](https://cheatsheetseries.owasp.org/cheatsheets/Web_Service_Security_Cheat_Sheet.html) · [OWASP Cheat Sheet Series](https://github.com/OWASP/CheatSheetSeries), CC BY-SA 4.0
+
+### Introduction
+
+This article is focused on providing guidance for securing web services and preventing web services related attacks.
+
+Please notice that due to the difference in implementation between different frameworks, this cheat sheet is kept at a high level.
+
+### Transport Confidentiality
+
+Transport confidentiality protects against eavesdropping and man-in-the-middle attacks against web service communications to/from the server.
+
+**Rule**: All communication with and between web services containing sensitive features, an authenticated session, or transfer of sensitive data must be encrypted using well-configured [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security). This is recommended even if the messages themselves are encrypted because [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) provides numerous benefits beyond traffic confidentiality including integrity protection, replay defenses, and server authentication. For more information on how to do this properly see the [Transport Layer Security Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Transport_Layer_Security_Cheat_Sheet.html).
+
+### Server Authentication
+
+**Rule**: TLS must be used to authenticate the service provider to the service consumer. The service consumer should verify the server certificate is issued by a trusted provider, is not expired, is not revoked, matches the domain name of the service, and that the server has proven that it has the private key associated with the public key certificate (by properly signing something or successfully decrypting something encrypted with the associated public key).
+
+### User Authentication
+
+User authentication verifies the identity of the user or the system trying to connect to the service. Such authentication is usually a function of the container of the web service.
+
+**Rule**: If used, Basic Authentication must be conducted over [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security), but Basic Authentication is not recommended because it discloses secrets in plain text (base64 encoded) in HTTP Headers.
+
+**Rule**: Client Certificate Authentication using [Mutual-TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) is a common form of authentication that is recommended where appropriate. See: [Authentication Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Authentication_Cheat_Sheet.html).
+
+### Transport Encoding
+
+[SOAP](https://en.wikipedia.org/wiki/SOAP) encoding styles are meant to move data between software objects into XML format and back again.
+
+**Rule**: Enforce the same encoding style between the client and the server.
+
+### Message Integrity
+
+This is for data at rest. The integrity of data in transit can easily be provided by [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security).
+
+When using [public key cryptography](https://en.wikipedia.org/wiki/Public-key_cryptography), encryption does guarantee confidentiality but it does not guarantee integrity since the receiver's public key is public. For the same reason, encryption does not ensure the identity of the sender.
+
+**Rule**: For XML data, use XML digital signatures to provide message integrity using the sender's private key. This signature can be validated by the recipient using the sender's digital certificate (public key).
+
+### Message Confidentiality
+
+Data elements meant to be kept confidential must be encrypted using a strong encryption cipher with an adequate key length to deter brute-forcing.
+
+**Rule**: Messages containing sensitive data must be encrypted using a strong encryption cipher. This could be transport encryption or message encryption.
+
+**Rule**: Messages containing sensitive data that must remain encrypted at rest after receipt must be encrypted with strong data encryption, not just transport encryption.
+
+### Authorization
+
+Web services need to authorize web service clients the same way web applications authorize users. A web service needs to make sure a web service client is authorized to perform a certain action (coarse-grained) on the requested data (fine-grained).
+
+**Rule**: A web service should authorize its clients whether they have access to the method in question. Following an authentication challenge, the web service should check the privileges of the requesting entity whether they have access to the requested resource. This should be done on every request, and a challenge-response Authorization mechanism added to sensitive resources like password changes, primary contact details such as email, physical address, payment or delivery instructions.
+
+**Rule**: Ensure access to administration and management functions within the Web Service Application is limited to web service administrators. Ideally, any administrative capabilities would be in an application that is completely separate from the web services being managed by these capabilities, thus completely separating normal users from these sensitive functions.
+
+### Schema Validation
+
+Schema validation enforces constraints and syntax defined by the schema.
+
+**Rule**: Web services must validate [SOAP](https://en.wikipedia.org/wiki/SOAP) payloads against their associated XML schema definition ([XSD](https://www.w3schools.com/xml/schema_intro.asp)).
+
+**Rule**: The [XSD](https://www.w3schools.com/xml/schema_intro.asp) defined for a [SOAP](https://en.wikipedia.org/wiki/SOAP) web service should, at a minimum, define the maximum length and character set of every parameter allowed to pass into and out of the web service.
+
+**Rule**: The [XSD](https://www.w3schools.com/xml/schema_intro.asp) defined for a [SOAP](https://en.wikipedia.org/wiki/SOAP) web service should define strong (ideally allow-list) validation patterns for all fixed format parameters (e.g., zip codes, phone numbers, list values, etc.).
+
+### Content Validation
+
+**Rule**: Like any web application, web services need to validate input before consuming it. Content validation for XML input should include:
+
+- Validation against malformed XML entities.
+- Validation against [XML Bomb attacks](https://en.wikipedia.org/wiki/Billion_laughs_attack).
+- Validating inputs using a strong allowlist.
+- Validating against [external entity attacks](https://owasp.org/www-community/vulnerabilities/XML_External_Entity_%28XXE%29_Processing).
+
+### Output Encoding
+
+Web services need to ensure that the output sent to clients is encoded to be consumed as data and not as scripts. This gets pretty important when web service clients use the output to render HTML pages either directly or indirectly using AJAX objects.
+
+**Rule**: All the rules of output encoding applies as per [Cross Site Scripting Prevention Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Cross_Site_Scripting_Prevention_Cheat_Sheet.html).
+
+### Virus Protection
+
+[SOAP](https://en.wikipedia.org/wiki/SOAP) provides the ability to attach files and documents to [SOAP](https://en.wikipedia.org/wiki/SOAP) messages. This gives the opportunity for hackers to attach viruses and malware to these [SOAP](https://en.wikipedia.org/wiki/SOAP) messages.
+
+**Rule**: Ensure Virus Scanning technology is installed and preferably inline so files and attachments could be checked before being saved on disk.
+
+**Rule**: Ensure Virus Scanning technology is regularly updated with the latest virus definitions/rules.
+
+### Message Size
+
+Web services like web applications could be a target for DOS attacks by automatically sending the web services thousands of large size [SOAP](https://en.wikipedia.org/wiki/SOAP) messages. This either cripples the application making it unable to respond to legitimate messages or it could take it down entirely.
+
+**Rule**: [SOAP](https://en.wikipedia.org/wiki/SOAP) Messages size should be limited to an appropriate size limit. Larger size limit (or no limit at all) increases the chances of a successful DoS attack.
+
+### Availability
+
+#### Resources Limiting
+
+During regular operation, web services require computational power such as CPU cycles and memory. Due to malfunctioning or while under attack, a web service may required too much resources, leaving the host system unstable.
+
+**Rule**: Limit the amount of CPU cycles the web service can use based on expected service rate, in order to have a stable system.
+
+**Rule**: Limit the amount of memory the web service can use to avoid system running out of memory. In some cases the host system may start killing processes to free up memory.
+
+**Rule**: Limit the number of simultaneous open files, network connections and started processes.
+
+#### Message Throughput
+
+Throughput represents the number of web service requests served during a specific amount of time.
+
+**Rule**: Enforce request-rate and execution-time limits based on tested service capacity and the cost of each operation. Tune stricter limits for expensive operations, following [OWASP's resource-consumption guidance](https://api-security.owasp.org/editions/2023/en/0xa4-unrestricted-resource-consumption/#how-to-prevent). Maximizing throughput alone does not prevent resource exhaustion.
+
+#### XML Denial of Service Protection
+
+XML Denial of Service is probably the most serious attack against web services. So the web service must provide the following validation:
+
+**Rule**: Validation against recursive payloads.
+
+**Rule**: Validation against oversized payloads.
+
+**Rule**: Protection against [XML entity expansion](https://www.ws-attacks.org/XML_Entity_Expansion).
+
+**Rule**: Reject XML element names that exceed configured length limits. SOAP action identifiers are separate from XML element names; for example, the [SOAP 1.2 Action feature](https://www.w3.org/TR/soap12-part2/#ActionFeature) uses a URI value that can guide message dispatch or routing.
+
+This protection should be provided by your XML parser/schema validator. To verify, build test cases to make sure your parser to resistant to these types of attacks.
+
+### Endpoint Security Profile
+
+**Rule**: Treat Web Services Interoperability (WS-I) Basic Profile conformance as an interoperability requirement, not a security baseline. Its [security section](https://docs.oasis-open.org/ws-brsp/BasicProfile/v1.2/BasicProfile-v1.2.html#_Toc392058316) permits conformant services without security countermeasures. Independently enforce the transport security, authentication, authorization, and resource limits described above.
 
 ## GraphQL
 
