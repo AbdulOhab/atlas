@@ -4,7 +4,7 @@ import { TrackIndex } from "@/components/docs/TrackIndex";
 export const metadata: Metadata = {
   title: "AI & LLMs",
   description:
-    "Large language models end to end, from Maxime Labonne's LLM Course: fundamentals, the LLM scientist path (architecture, pre-training, fine-tuning, alignment, evaluation, quantization) and the LLM engineer path (RAG, agents, inference, deployment, security).",
+    "Large language models end to end: generative AI foundations, prompt engineering, transformers and tokenizers, fine-tuning and reasoning models, the LLM scientist and engineer paths, building generative AI apps, RAG, agents and open models.",
   alternates: { canonical: "/ai" },
 };
 
@@ -14,7 +14,7 @@ export default function AiIndex() {
       host="ai"
       kicker="AI and LLMs"
       title="How large language models are built, tuned and shipped."
-      lead="The LLM Course in three paths: the fundamentals it assumes, the scientist's path to building better models, and the engineer's path to building applications on them. Each topic explains the idea and lists the best references to go deeper."
+      lead="From the fundamentals to shipping: generative AI and prompt engineering, how transformers and tokenizers work, fine-tuning and reasoning models, then building apps with RAG, agents and open models. Drawn from Microsoft's Generative AI for Beginners, the DAIR.AI Prompt Engineering Guide, the Hugging Face LLM course and Maxime Labonne's LLM Course."
     />
   );
 }

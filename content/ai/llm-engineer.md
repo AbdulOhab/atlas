@@ -1,6 +1,6 @@
 ---
 title: "The LLM Engineer"
-order: 3
+order: 9
 summary: "Building applications with LLMs: running models, vector storage, RAG and advanced RAG, agents, inference optimization, deployment and security."
 category: "AI"
 level: Intermediate

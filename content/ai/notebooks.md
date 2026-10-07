@@ -1,6 +1,6 @@
 ---
 title: "Notebooks"
-order: 4
+order: 10
 summary: "Hands-on notebooks and tools from the course: automated evaluation and merging, fine-tuning, quantization and other experiments, each runnable in Colab."
 category: "AI"
 level: Intermediate

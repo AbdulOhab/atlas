@@ -21,7 +21,7 @@ license; credit the original authors when you reuse their material.
 | `content/interview/` | Algorithms: interview prep | [yangshun/tech-interview-handbook](https://github.com/yangshun/tech-interview-handbook) | MIT |
 | `content/devops/devops-tools.md` | DevOps | [tungbq/devops-basics](https://github.com/tungbq/devops-basics), 47 tool pages | Apache 2.0 |
 | `content/devops/kubernetes-the-hard-way.md` | DevOps | Study guide written for Atlas CE, linking [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (CC BY-NC-SA, not copied) | this repository's license |
-| `content/ai/` | AI & LLMs | [mlabonne/llm-course](https://github.com/mlabonne/llm-course) | Apache 2.0 |
+| `content/ai/` | AI & LLMs | [mlabonne/llm-course](https://github.com/mlabonne/llm-course), [microsoft/generative-ai-for-beginners](https://github.com/microsoft/generative-ai-for-beginners), [dair-ai/Prompt-Engineering-Guide](https://github.com/dair-ai/Prompt-Engineering-Guide), [huggingface/course](https://github.com/huggingface/course) | Apache 2.0, MIT, MIT, Apache 2.0 |
 
 ## System Design Atlas
 

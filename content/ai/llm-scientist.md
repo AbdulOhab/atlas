@@ -1,6 +1,6 @@
 ---
 title: "The LLM Scientist"
-order: 2
+order: 6
 summary: "Building the best possible models: the transformer architecture, pre-training, post-training datasets, supervised fine-tuning, preference alignment, evaluation, quantization and new trends."
 category: "AI"
 level: Intermediate
