@@ -9,13 +9,6 @@ import { LogoMark } from "@/components/ui/LogoMark";
 
 const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: string }[] = [
   {
-    id: "sysdesign",
-    label: "sysdesign",
-    blurb: "Concepts, technologies and worked designs",
-    href: "/docs",
-    accent: "var(--concept)",
-  },
-  {
     id: "algorithms",
     label: "algorithms",
     blurb: "Data structures and algorithms — step-by-step diagrams plus visual interview prep",
@@ -23,11 +16,11 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     accent: "var(--coding)",
   },
   {
-    id: "devops",
-    label: "devops",
-    blurb: "Linux, networking, containers, CI/CD, cloud and the rest of the production toolchain",
-    href: "/devops",
-    accent: "var(--devops)",
+    id: "languages",
+    label: "languages",
+    blurb: "Languages and frameworks: JavaScript, TypeScript, Python, React, Next.js, Vue, Tailwind, Laravel, HTMX, FastAPI, Qt, Spring Boot",
+    href: "/languages",
+    accent: "var(--languages)",
   },
   {
     id: "backend",
@@ -37,18 +30,18 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     accent: "var(--backend)",
   },
   {
-    id: "fde",
-    label: "fde",
-    blurb: "Forward Deployed Engineering: agentic engineering, building Claude Code, agentic system design, platform engineering",
-    href: "/fde",
-    accent: "var(--fde)",
+    id: "sysdesign",
+    label: "sysdesign",
+    blurb: "Concepts, technologies and worked designs",
+    href: "/docs",
+    accent: "var(--concept)",
   },
   {
-    id: "languages",
-    label: "languages",
-    blurb: "Languages and frameworks: JavaScript, TypeScript, Python, React, Next.js, Vue, Tailwind, Laravel, HTMX, FastAPI, Qt, Spring Boot",
-    href: "/languages",
-    accent: "var(--languages)",
+    id: "devops",
+    label: "devops",
+    blurb: "Linux, networking, containers, CI/CD, cloud and the rest of the production toolchain",
+    href: "/devops",
+    accent: "var(--devops)",
   },
   {
     id: "security",
@@ -63,6 +56,13 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     blurb: "LLM fundamentals, training and fine-tuning, RAG, agents, inference and deployment",
     href: "/ai",
     accent: "var(--ai)",
+  },
+  {
+    id: "fde",
+    label: "fde",
+    blurb: "Forward Deployed Engineering: agentic engineering, building Claude Code, agentic system design, platform engineering",
+    href: "/fde",
+    accent: "var(--fde)",
   },
 ];
 

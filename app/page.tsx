@@ -35,17 +35,6 @@ export default function HomePage() {
 
   const sections: Section[] = [
     {
-      id: "sysdesign",
-      kicker: "System design",
-      title: "How large systems are built, and what each choice costs.",
-      body: "Concept modules, the technologies real designs name, and worked designs with interactive architecture diagrams.",
-      href: "/docs",
-      accent: "var(--concept)",
-      icon: Network,
-      docs: sysdesign,
-      start: [...concepts].sort(byOrder).slice(0, 4),
-    },
-    {
       id: "algorithms",
       kicker: "Algorithms",
       title: "Data structures and algorithms, one step at a time.",
@@ -57,15 +46,15 @@ export default function HomePage() {
       start: [...coding].sort(byOrder).slice(0, 4),
     },
     {
-      id: "devops",
-      kicker: "DevOps",
-      title: "From Linux to production, one module at a time.",
-      body: "Linux, networking, containers, CI/CD, cloud, Terraform, Kubernetes, security and interview prep, in order.",
-      href: "/devops",
-      accent: "var(--devops)",
-      icon: Terminal,
-      docs: devops,
-      start: [...devops].sort(byOrder).slice(0, 4),
+      id: "languages",
+      kicker: "Languages",
+      title: "The languages and frameworks real projects are built with.",
+      body: "JavaScript, TypeScript and Python, then React, Next.js, Vue, Tailwind, Laravel, HTMX, FastAPI, Qt and Spring Boot.",
+      href: "/languages",
+      accent: "var(--languages)",
+      icon: Braces,
+      docs: languages,
+      start: [...languages].sort(byOrder).slice(0, 4),
     },
     {
       id: "backend",
@@ -79,26 +68,26 @@ export default function HomePage() {
       start: [...backend].sort(byOrder).slice(0, 4),
     },
     {
-      id: "fde",
-      kicker: "Forward Deployed Engineering",
-      title: "Agents, the harness behind them, and the platform they run on.",
-      body: "Agentic engineering, building a Claude Code-style agent from scratch, agentic system design and platform engineering.",
-      href: "/fde",
-      accent: "var(--fde)",
-      icon: Bot,
-      docs: fde,
-      start: [...fde].sort(byOrder).slice(0, 4),
+      id: "sysdesign",
+      kicker: "System design",
+      title: "How large systems are built, and what each choice costs.",
+      body: "Concept modules, the technologies real designs name, and worked designs with interactive architecture diagrams.",
+      href: "/docs",
+      accent: "var(--concept)",
+      icon: Network,
+      docs: sysdesign,
+      start: [...concepts].sort(byOrder).slice(0, 4),
     },
     {
-      id: "languages",
-      kicker: "Languages",
-      title: "The languages and frameworks real projects are built with.",
-      body: "JavaScript, TypeScript and Python, then React, Next.js, Vue, Tailwind, Laravel, HTMX, FastAPI, Qt and Spring Boot.",
-      href: "/languages",
-      accent: "var(--languages)",
-      icon: Braces,
-      docs: languages,
-      start: [...languages].sort(byOrder).slice(0, 4),
+      id: "devops",
+      kicker: "DevOps",
+      title: "From Linux to production, one module at a time.",
+      body: "Linux, networking, containers, CI/CD, cloud, Terraform, Kubernetes, security and interview prep, in order.",
+      href: "/devops",
+      accent: "var(--devops)",
+      icon: Terminal,
+      docs: devops,
+      start: [...devops].sort(byOrder).slice(0, 4),
     },
     {
       id: "security",
@@ -115,12 +104,23 @@ export default function HomePage() {
       id: "ai",
       kicker: "AI & LLMs",
       title: "How large language models are built, tuned and shipped.",
-      body: "The math and neural networks behind LLMs, pre-training, fine-tuning, alignment, then RAG, agents, inference and deployment.",
+      body: "Generative AI and prompt engineering, transformers and tokenizers, fine-tuning and reasoning models, then building apps with RAG, agents and open models.",
       href: "/ai",
       accent: "var(--ai)",
       icon: Sparkles,
       docs: ai,
       start: [...ai].sort(byOrder).slice(0, 4),
+    },
+    {
+      id: "fde",
+      kicker: "Forward Deployed Engineering",
+      title: "Agents, the harness behind them, and the platform they run on.",
+      body: "Agentic engineering, building a Claude Code-style agent from scratch, agentic system design and platform engineering.",
+      href: "/fde",
+      accent: "var(--fde)",
+      icon: Bot,
+      docs: fde,
+      start: [...fde].sort(byOrder).slice(0, 4),
     },
   ];
 
@@ -134,7 +134,7 @@ export default function HomePage() {
             Everything a software engineer studies, in one place.
           </h1>
           <p className="mt-4 text-lead text-inkMuted">
-            System design, algorithms, DevOps, backend, forward deployed engineering, languages, security and AI: eight tracks, each readable on its own. Pick one to start.
+            Algorithms, languages, backend, system design, DevOps, security, AI and forward deployed engineering: eight tracks in the order you’d learn them, each readable on its own. Pick one to start.
           </p>
         </header>
 

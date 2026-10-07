@@ -12,14 +12,14 @@ licensed documentation and courses, and every page says where it came from; see
 
 | Track | Route | What's in it |
 | --- | --- | --- |
-| System design | `/docs` | Concept modules, the technologies designs name, and worked designs with interactive architecture diagrams and interview scripts |
 | Algorithms | `/coding`, `/learn`, `/interview` | Data structures and algorithms with step-through visualisations, interview topics with big-O tables, and interview prep from the Tech Interview Handbook |
-| DevOps | `/devops` | Linux through Kubernetes, Terraform, observability and security, each module with its reference, labs and project |
-| Backend | `/backend` | HTTP, Node.js, Express, APIs, auth, SQL and data modeling, NestJS, FastAPI, Go and Gin |
-| Forward Deployed Engineering | `/fde` | Agentic engineering, building a Claude Code-style agent from scratch, agentic system design and platform engineering |
 | Languages | `/languages` | Essential JavaScript, TypeScript, Python, React, Next.js, Vue, Tailwind CSS, Laravel, HTMX, FastAPI, Qt and Spring Boot |
+| Backend | `/backend` | HTTP, Node.js, Express, APIs, auth, SQL and data modeling, NestJS, FastAPI, Go and Gin |
+| System design | `/docs` | Concept modules, the technologies designs name, and worked designs with interactive architecture diagrams and interview scripts |
+| DevOps | `/devops` | Linux through Kubernetes, Terraform, observability and security, each module with its reference, labs and project |
 | Security | `/security` | The OWASP Cheat Sheet Series in 11 modules: injection, XSS, auth, access control, APIs, cryptography, cloud, AI |
 | AI & LLMs | `/ai` | LLM fundamentals, the scientist path (pre-training, fine-tuning, alignment) and the engineer path (RAG, agents, deployment) |
+| Forward Deployed Engineering | `/fde` | Agentic engineering, building a Claude Code-style agent from scratch, agentic system design and platform engineering |
 
 What reading looks like:
 
