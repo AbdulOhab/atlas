@@ -9,3 +9,6 @@ __pycache__/
 *.tsbuildinfo
 
 xNote
+
+# Server details for scripts/deploy.sh
+.deploy.env
