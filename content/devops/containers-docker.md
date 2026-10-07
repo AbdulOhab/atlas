@@ -33,6 +33,32 @@ Docker is the **most transformative tool in modern DevOps**. It solves the "work
 
 ---
 
+## Fundamentals
+
+### The problem
+
+"It works on my machine." An application depends on a runtime version, system libraries, config files and environment variables. Each server, CI runner and laptop has slightly different ones, so deployments break in ways nobody can reproduce. Virtual machines fix that by shipping a whole OS, but they're heavy: gigabytes in size and minutes to boot. Linux already had the isolation features to do it more lightly (namespaces, cgroups), but they were hard to use. Docker (2013, Solomon Hykes at dotCloud) made them easy, and added a portable image format.
+
+### Goals
+
+- **Package once, run anywhere:** the app and its whole user-space environment in one image.
+- **Lightweight isolation:** start in milliseconds and share the host kernel, so many containers fit on one machine.
+- **Reproducible builds:** a `Dockerfile` describes the image as code.
+- **A standard unit for shipping:** registries to push and pull images, and the same image from laptop to production.
+
+### The ideas everything else rests on
+
+- **A container is a process,** not a small VM: an ordinary Linux process with restricted views (namespaces for PID, network, mounts and users) and limits (cgroups for CPU and memory).
+- **Images are layered and immutable.** Each Dockerfile instruction adds a read-only layer, and layers are shared and cached between images. Order instructions from least to most frequently changing.
+- **A container adds a thin writable layer** on top of its image, which disappears when the container is removed. Persistent data goes in volumes.
+- **Image vs container** is like class vs instance: one image, many running containers.
+- **Networking:** containers get their own network namespace. Ports are published to the host, and user-defined networks give name-based discovery.
+- **The OCI standards** (image and runtime specs) mean images built by Docker run on containerd, Podman and Kubernetes.
+
+### Trade-offs
+
+Containers share the host kernel, so isolation is weaker than a VM's: don't run as root, and keep images minimal. Linux containers need a Linux kernel, which on Mac and Windows means a hidden VM. Running many containers across many machines (scheduling, healing, networking) isn't Docker's job. That's Kubernetes.
+
 ## Table of Contents
 
 1. [What Are Containers?](#1-what-are-containers)

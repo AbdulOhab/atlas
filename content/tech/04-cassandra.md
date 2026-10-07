@@ -32,6 +32,30 @@ concepts:
 
 # Cassandra
 
+## Fundamentals
+
+### The problem
+
+Facebook's inbox search (2008) needed to absorb huge write volumes across data centers and stay writable even when machines and links failed. A single-primary relational database could do neither. Avinash Lakshman, one of the authors of Amazon's Dynamo, and Prashant Malik built Cassandra by combining Dynamo's masterless distribution with the data model of Google's Bigtable.
+
+### Goals
+
+- **Always writable:** no single point of failure, no leader election in the write path.
+- **Linear scale:** double the nodes, double the throughput.
+- **Multi-datacenter replication** built in.
+- **Fast writes at any volume.**
+
+### Design decisions
+
+- **Masterless ring.** Every node is equal. A partition key hashes to a token, and the next N nodes on the ring hold its replicas. Any node can coordinate any request.
+- **Tunable consistency.** Each query picks how many replicas must answer (`ONE`, `QUORUM`, `ALL`). `QUORUM` reads plus `QUORUM` writes overlap, so reads see the latest write.
+- **LSM storage.** Writes go to a commit log and a memtable, then flush to immutable SSTables that are later compacted. A write never reads first, so writes are cheap.
+- **Query-first modeling.** The partition key decides which node holds the data and the clustering key decides the sort order within it. You design one table per query, and duplicating data is expected.
+
+### Trade-offs
+
+There are no joins, no ad-hoc queries and no multi-partition transactions. A query that doesn't fit the key needs a new table. Deletes write tombstones that slow reads until compaction removes them. Conflicts resolve by last write wins on timestamps. It's excellent for known, high-volume access patterns and painful for anything else.
+
 ## Use cases
 
 ### Chat messages and feeds, keyed for the query

@@ -32,6 +32,31 @@ concepts:
 
 # API gateway
 
+## Fundamentals
+
+### The problem
+
+When a monolith splits into dozens of services, every one of them needs the same edge concerns: TLS, authentication, rate limiting, request logging, CORS, timeouts. Clients would also need to know where every service lives. Writing that logic into each service means many inconsistent copies. The API gateway pattern, popularized around 2013 with microservices (Netflix's Zuul, then Kong, AWS API Gateway and Envoy-based gateways), puts one front door in front of all of them.
+
+### Goals
+
+- **One entry point** with stable public URLs, whatever happens to the services behind it.
+- **Cross-cutting concerns in one place,** applied consistently.
+- **Protect the backends** from abuse, overload and malformed traffic.
+- **Decouple clients from internal topology,** so services can be split, merged or moved without client changes.
+
+### Design decisions
+
+- **Routing** by host, path, method or header to upstream services, often with load balancing and health checks.
+- **Authentication at the edge.** Verify the token or API key once, then pass the identity inward as trusted headers.
+- **Rate limits and quotas** per client, key or route, often backed by a shared store like Redis.
+- **Timeouts, retries and circuit breaking,** so one slow service doesn't tie up every connection.
+- **Request and response transformation, and aggregation** (the backend-for-frontend pattern), used sparingly.
+
+### Trade-offs
+
+It's an extra network hop and a critical single tier, so it must be highly available and fast. It also tempts teams to put business logic in it, turning it into a new monolith nobody owns. Keep it to edge concerns, and keep authorization decisions that need domain knowledge in the services.
+
 ## Use cases
 
 ### One front door for every request

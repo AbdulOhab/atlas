@@ -10,6 +10,30 @@ level: Beginner
 
 HTMX lets plain HTML make requests and swap in the response, so a server-rendered app gets interactivity without a JavaScript framework. One concept per page, from the official docs.
 
+## Fundamentals
+
+### The problem
+
+The original web was hypermedia: the server sends HTML, links and forms make requests, and the browser shows the response. Single-page apps replaced that with JSON APIs plus a large JavaScript client that rebuilds the HTML in the browser, so most apps now carry two codebases and a state-sync problem between them. htmx (2020, the successor to intercooler.js) asks whether most apps need that at all. Its answer is to give HTML a few more abilities and keep the server in charge.
+
+### Goals
+
+- **Extend HTML, don't replace it.** Any element should be able to make any HTTP request and update any part of the page.
+- **Keep the state on the server.** The server renders HTML, and the HTML on the page is the state (HATEOAS).
+- **Locality of behavior.** What an element does is written on the element, not in a script file elsewhere.
+- **Be small.** One dependency-free script, around 14 KB compressed, no build step.
+
+### The ideas everything else rests on
+
+- **Hypermedia as the engine.** The response is HTML ready to display, not data for the client to turn into HTML.
+- **Four questions per element:** what triggers a request (`hx-trigger`), which method and URL (`hx-get`, `hx-post`…), where the response goes (`hx-target`), and how it is inserted (`hx-swap`).
+- **Partial pages.** The server returns fragments, and a "component" is a template partial.
+- **Progressive enhancement.** Links and forms still work if htmx fails to load, when you build them that way.
+
+### Trade-offs
+
+htmx suits apps that look like documents and forms: dashboards, admin panels, CRUD. It's a poor fit for rich client-side interactions like editors, canvases or offline-first apps, where state really lives in the browser. Every interaction is a network round trip. You'll still reach for a little JavaScript (Alpine.js, or htmx's own scripting hooks) for purely local UI behavior.
+
 ## htmx in a Nutshell
 
 > **Source:** [htmx in a Nutshell](https://htmx.org/docs/#introduction) · [htmx docs](https://github.com/bigskysoftware/htmx), 0BSD

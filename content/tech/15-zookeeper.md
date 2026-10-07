@@ -32,6 +32,30 @@ concepts:
 
 # ZooKeeper
 
+## Fundamentals
+
+### The problem
+
+Distributed systems keep needing a few decisions that every node must agree on: which node is the leader, which nodes are alive, which worker owns which shard, what the current configuration is. Getting those right needs consensus, which is notoriously hard to implement, and every project was writing its own buggy version. Yahoo built ZooKeeper (2008, inspired by Google's Chubby lock service) as a shared, reliable service for that coordination, used by Hadoop, HBase, Kafka and many others.
+
+### Goals
+
+- **Strong consistency for small, critical data:** every client sees updates in the same order.
+- **High availability:** keeps working as long as a majority of servers are up.
+- **Simple primitives** that clients combine into locks, elections and membership, rather than offering those directly.
+
+### Design decisions
+
+- **A replicated tree of znodes,** like a tiny filesystem held in memory, with small data per node.
+- **ZAB consensus.** One leader orders all writes, which commit when a majority (quorum) acknowledges them. An ensemble of 3 tolerates 1 failure, and 5 tolerate 2.
+- **Ephemeral nodes** vanish when the client's session ends, which makes them the basis for liveness and membership.
+- **Sequential nodes** get an increasing counter suffix, the basis for fair locks and leader election (the lowest number wins).
+- **Watches** notify a client once when a node changes, so it doesn't have to poll.
+
+### Trade-offs
+
+It's built for coordination metadata, not data storage: kilobytes per node, write throughput limited by the quorum. Reads can be slightly stale unless you `sync` first. Session timeouts are a tuning problem, since a GC pause can make a healthy client look dead. Newer systems use etcd (Raft) or embed consensus themselves, as Kafka did with KRaft.
+
 ## Use cases
 
 ### Electing exactly one leader

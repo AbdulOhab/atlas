@@ -12,6 +12,30 @@ Tailwind CSS styles an interface with small, single-purpose classes written stra
 
 > **Note:** Tailwind's own documentation isn't released under an open license, so this module is written for Atlas CE from scratch. Each topic links to the matching page of the [official docs](https://tailwindcss.com/docs).
 
+## Fundamentals
+
+### The problem
+
+On a large project, CSS goes wrong in predictable ways. Every new component gets a new class name and a new block of rules. Nobody dares delete old rules because they can't tell what uses them, so the stylesheet only grows. Design values drift, giving you twelve shades of grey and seventeen margins. Adam Wathan's answer, Tailwind CSS (2017), was to stop writing custom CSS per component and compose from a fixed set of small classes instead.
+
+### Goals
+
+- **Style without leaving the markup**, and without inventing names for things that don't need them.
+- **Constrain choices to a design system.** Spacing, colors and type sizes come from a scale, so interfaces stay consistent by default.
+- **Ship only what's used.** The build scans your files and generates CSS just for the classes you wrote, so the stylesheet stays small however big the app gets.
+- **Make change safe.** Deleting markup deletes its styles, and editing one element can't break another.
+
+### The ideas everything else rests on
+
+- **Utility classes:** each class sets one property to one value from the scale (`p-4`, `text-sm`, `bg-slate-900`).
+- **Variants as prefixes:** state and context are written into the class name, such as `hover:`, `focus:`, `md:` and `dark:`. Responsive design is mobile-first.
+- **The theme is the source of truth.** In v4 it is defined in CSS with `@theme`, and every utility and CSS variable derives from it.
+- **Reuse through components, not classes.** Repetition is handled by a React, Vue or Blade component, or a loop, not by `@apply`-ing utilities into new class names.
+
+### Trade-offs
+
+Markup gets long and looks noisy until you're used to reading it. You still need to know CSS, because Tailwind is CSS with shorter names, not a replacement. Tooling (editor autocomplete, class sorting) matters more than with plain CSS. Some one-off styles are clearer as arbitrary values (`top-[117px]`) or a few lines of real CSS.
+
 ## Utility-First Styling
 
 > **Official docs:** [Styling with utility classes](https://tailwindcss.com/docs/styling-with-utility-classes)

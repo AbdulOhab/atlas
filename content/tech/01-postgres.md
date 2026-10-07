@@ -34,6 +34,31 @@ concepts:
 
 # PostgreSQL
 
+## Fundamentals
+
+### The problem
+
+Business data has relationships and rules. An order belongs to a customer, a balance can't go negative, and two people must not book the same seat. If the application enforces all that by hand, every bug and every concurrent request is a chance to corrupt it. A relational database makes the database itself guarantee correctness. PostgreSQL grew out of Michael Stonebraker's POSTGRES project at Berkeley (1986). It aimed to be a relational database that was also extensible: new types, indexes and functions, without forking the engine.
+
+### Goals
+
+- **Correctness first:** full ACID transactions and constraints the database enforces.
+- **Standards compliance:** SQL as the standard defines it, not a dialect of shortcuts.
+- **Extensibility:** user-defined types, operators, index methods and extensions (PostGIS, pgvector, TimescaleDB).
+- **Concurrency without readers and writers blocking each other.**
+
+### Design decisions
+
+- **MVCC.** An update writes a new version of the row instead of overwriting it. Each transaction sees a consistent snapshot, so reads never wait for writes. Old versions are later cleaned up by `VACUUM`.
+- **Write-ahead log.** Every change is written to the WAL and flushed before the commit returns. Crash recovery replays it, and replicas stream it.
+- **A cost-based planner** chooses join orders and indexes from table statistics, so the same SQL can run very differently as data grows.
+- **One primary for writes.** Replicas scale reads. Scaling writes means partitioning or sharding (Citus), not a built-in cluster.
+- **Process per connection,** which is why connection pools like PgBouncer are standard.
+
+### Trade-offs
+
+You get joins, constraints and transactions on a single write node, until that node is the limit. Bloat from old row versions needs vacuum tuning, and thousands of direct connections need a pooler. Most systems should start here and move data off it only when a specific access pattern demands it.
+
 ## Use cases
 
 ### Orders and money, in one transaction

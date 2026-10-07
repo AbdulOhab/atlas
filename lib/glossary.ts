@@ -40,6 +40,8 @@ export const GLOSSARY: Record<string, string> = {
   CQRS: "Command Query Responsibility Segregation",
   CRDT: "Conflict-free replicated data type",
   CTO: "Chief technology officer",
+  CUDA: "Compute Unified Device Architecture, NVIDIA's GPU programming platform",
+  CVS: "Concurrent Versions System, a centralized version control system from the 1990s",
   DIP: "Dependency inversion principle — depend on abstractions, not concrete details",
   DIY: "Do it yourself — solve the problem manually, then turn your own process into the algorithm",
   DTO: "Data transfer object — a structure with public fields and no behavior, for wire or database formats",
@@ -66,6 +68,9 @@ export const GLOSSARY: Record<string, string> = {
   EXIF: "Exchangeable Image File Format (photo metadata)",
   FCM: "Firebase Cloud Messaging (Google's push service)",
   FIFO: "First in, first out",
+  GPL: "GNU General Public License",
+  IOCP: "I/O completion ports, Windows' asynchronous I/O mechanism",
+  LFS: "Large File Storage, the Git extension that keeps big binaries outside the repository",
   LIFO: "Last in, first out",
   FX: "Foreign exchange",
   GA: "General admission (unreserved seating)",
@@ -104,6 +109,9 @@ export const GLOSSARY: Record<string, string> = {
   ML: "Machine learning",
   MRU: "Most recently used",
   MVCC: "Multi-version concurrency control",
+  PC: "Personal computer",
+  SEQUEL: "Structured English Query Language, SQL's original name",
+  SIMD: "Single instruction, multiple data: one CPU instruction applied to many values at once",
   mTLS: "Mutual TLS: both sides of the connection present a certificate",
   NAT: "Network address translation",
   NoSQL: "Non-relational database (“not only SQL”)",
@@ -192,7 +200,7 @@ export const NOT_ABBREVIATIONS: string[] = [
   // Code identifiers in scraped starter code, not abbreviations.
   "BANC", "LRUCache", "ADOBECODEBANC", "ABC",
   // Names of products and projects, not abbreviations to expand.
-  "gRPC", "InnoDB", "iOS", "MySQL", "PostGIS", "TinyURL",
+  "gRPC", "InnoDB", "iOS", "MINIX", "MySQL", "PostGIS", "POSTGRES", "TinyURL", "TJ",
   // Not abbreviations at all.
   "ISO", "II", "III", "IV", "VI", "VII", "VIII", "OK",
   // This site's own name, and words capitalized for emphasis or structure.

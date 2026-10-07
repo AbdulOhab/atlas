@@ -33,6 +33,32 @@ Clicking through the AWS console doesn't scale. When you manage 50 servers, 3 en
 
 ---
 
+## Fundamentals
+
+### The problem
+
+Cloud infrastructure created by clicking in a console can't be reviewed, repeated or reliably recreated. Nobody knows exactly what exists, staging drifts from production, and rebuilding after a disaster is guesswork. Scripts that call cloud APIs help, but they describe *steps*, not *results*: running one twice creates two servers. HashiCorp's Terraform (2014) describes infrastructure as declarative code that works across any provider.
+
+### Goals
+
+- **Infrastructure as code:** versioned, reviewed and reused like application code.
+- **Declarative:** describe the end state, and Terraform works out the create, update and delete steps.
+- **Safe change:** show exactly what will happen before anything happens.
+- **Any API:** one workflow for AWS, GCP, Azure, Kubernetes, DNS, GitHub and more, through providers.
+
+### The ideas everything else rests on
+
+- **Resources** are declared in HCL. Each block is one real object (a VM, a bucket, a DNS record), with arguments and computed attributes.
+- **Providers** are plugins that translate resources into a specific platform's API calls.
+- **State.** Terraform records what it created and maps each resource in code to a real ID. State is how it knows what to change or delete, so in a team it lives in a shared, locked remote backend.
+- **The dependency graph.** References between resources (`aws_instance.web.subnet_id = aws_subnet.a.id`) define order, so independent resources are created in parallel.
+- **Plan → apply.** `plan` diffs code against state and reality, and `apply` executes exactly that diff. Review the plan as you would a pull request.
+- **Modules** package resources into reusable components with inputs and outputs.
+
+### Trade-offs
+
+State is both the strength and the hazard: if it's lost, corrupted or edited by two people at once, Terraform no longer knows what it manages. Changes made outside Terraform cause drift. Some argument changes force destroy-and-recreate, so read every plan. HCL is deliberately limited, and complex logic gets awkward. Terraform provisions infrastructure; configuring what runs inside a server is Ansible's job.
+
 ## Table of Contents
 
 1. [Infrastructure as Code Concepts](#1-infrastructure-as-code-concepts)

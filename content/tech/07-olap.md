@@ -32,6 +32,30 @@ concepts:
 
 # OLAP stores
 
+## Fundamentals
+
+### The problem
+
+Transactional databases (OLTP) are built to read and write a few whole rows quickly. Analytics asks the opposite: "revenue by country by day across two billion orders" reads a few *columns* across *all* rows. A row store drags every column of every row off disk to answer it. OLAP stores, from early column stores like C-Store and Vertica to ClickHouse (Yandex, 2016), Druid and BigQuery, are built for that scan-and-aggregate pattern.
+
+### Goals
+
+- **Aggregate billions of rows in seconds or less.**
+- **Read only what the query touches:** just the needed columns, just the relevant parts.
+- **Ingest high volumes of append-only events** such as logs, clicks and metrics.
+
+### Design decisions
+
+- **Columnar storage.** Each column is stored separately, so a query reads just the columns it names.
+- **Compression.** A column holds one type of often-repeating value, so it compresses very well (dictionary, run-length, delta), and less I/O means faster scans.
+- **Vectorized execution.** Operations process batches of values at a time, using CPU caches and SIMD instructions.
+- **Sorting and skipping.** Data sorted by a key plus min/max statistics per block lets the engine skip blocks that can't match.
+- **Pre-aggregation.** Materialized views or rollups (as in Druid) keep summaries up to date as data arrives.
+
+### Trade-offs
+
+Point lookups, single-row updates and deletes are slow or awkward, and data is appended in batches. These systems complement your OLTP database, fed by a stream or by ETL, rather than replace it. They suit dashboards and analytics, not serving a single user's request.
+
 ## Use cases
 
 ### Counting clicks per minute, at a billion a day

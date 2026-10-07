@@ -25,6 +25,13 @@ license; credit the original authors when you reuse their material.
 | `content/uidesign/` | UI Design | Study guides written for Atlas CE, distilling *Refactoring UI* by Adam Wathan & Steve Schoger ([refactoringui.com](https://www.refactoringui.com), all rights reserved, not copied) | this repository's license |
 | `content/craft/` | Craft | Study guides written for Atlas CE, distilling *Clean Code* by Robert C. Martin ([cleancoder.com](https://cleancoder.com)) and *Cracking the Coding Interview* by Gayle Laakmann McDowell ([careercup.com](https://www.careercup.com/book)), all rights reserved, not copied | this repository's license |
 
+The **Fundamentals** section at the start of each technology module (every
+Languages module, the Backend framework, runtime and SQL modules, every Key
+technology page, and the Git, Linux, Docker, Kubernetes, Terraform and Ansible
+modules) is written for Atlas CE and falls under this repository's license. It
+covers the problem the technology was built to solve, its goals, the ideas the
+rest of the module rests on, and its trade-offs.
+
 ## System Design Atlas
 
 The original reader and the system design and coding documents are

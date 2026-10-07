@@ -32,6 +32,29 @@ concepts:
 
 # Redis
 
+## Fundamentals
+
+### The problem
+
+Disk-based databases are too slow for data that is read or changed thousands of times a second: counters, sessions, rate limits, leaderboards, "who's online". Salvatore Sanfilippo hit this in 2009 building a real-time web analytics product on MySQL. He wrote Redis (REmote DIctionary Server) to keep data in memory and expose it not as opaque blobs but as data structures with atomic operations the server runs for you.
+
+### Goals
+
+- **Latency measured in microseconds,** by keeping the whole dataset in RAM.
+- **Data structures as the API:** lists, sets, sorted sets, hashes and streams, so a leaderboard is `ZADD`/`ZRANGE`, not read-modify-write in the app.
+- **Simplicity:** a single-threaded command loop, a text protocol, and few configuration options.
+
+### Design decisions
+
+- **One thread executes commands,** so each command, and each Lua script or `MULTI` block, is atomic without locks. Throughput comes from doing each command fast, not from parallelism. Newer versions do network I/O on helper threads.
+- **Memory is the limit.** `maxmemory` and an eviction policy decide what disappears when it's full.
+- **Durability is a dial:** none, periodic RDB snapshots, or an append-only file fsynced every second or on every write.
+- **Replication is asynchronous,** and Cluster splits keys across 16,384 hash slots.
+
+### Trade-offs
+
+It's fast because it's in memory and single-threaded, so the dataset must fit in RAM, one slow command (`KEYS *`, a huge `SMEMBERS`) blocks everyone, and a failover can lose acknowledged writes. Treat it as the source of truth only for data you can afford to lose or rebuild.
+
 ## Use cases
 
 ### Cache-aside in front of a database

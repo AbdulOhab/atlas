@@ -10,6 +10,31 @@ level: Beginner
 
 Python is the language of scripting, data and a large share of backend services, FastAPI included. This module follows the official Python Tutorial.
 
+## Fundamentals
+
+### The problem
+
+In the late 1980s you could write a quick script in the shell, which was terrible beyond a page of code, or a real program in C, which was slow to write and full of memory bugs. Guido van Rossum wanted a language in between: as quick to write as a script, structured enough for real programs, and readable by the next person. Python (1991) was that language. Its readability is why it later became the language of data science, machine learning and automation.
+
+### Goals
+
+- **Readability first.** Code is read far more often than it's written. Indentation is syntax, so the layout you see is the structure the program has.
+- **"There should be one obvious way to do it"** (from `import this`, the Zen of Python), as opposed to Perl's "more than one way".
+- **Batteries included.** A large standard library means files, HTTP, JSON, CSV, dates and testing work without installing anything.
+- **Glue.** Call into C easily, so the slow parts can be fast. NumPy and PyTorch are thin Python over C, C++ and CUDA.
+
+### The ideas everything else rests on
+
+- **Everything is an object,** including functions, classes and modules. Names are labels bound to objects, not boxes holding values, which explains mutable default arguments and aliasing.
+- **Dynamic, strong typing.** Types are checked at runtime, and Python never silently converts `"1" + 1`. Type hints are optional and only tools read them, though FastAPI and Pydantic put them to work.
+- **Protocols over inheritance.** Iterate anything with `__iter__`, call anything with `__call__`, use anything with `__enter__`/`__exit__` in `with`. This is duck typing made formal.
+- **Iterators and generators.** `for` loops, comprehensions and `yield` all speak the same lazy iteration protocol.
+- **Modules and packages** are files and folders, and `import` runs them once.
+
+### Trade-offs
+
+CPython interprets bytecode, so pure-Python loops are slow; the fast paths live in C extensions. The GIL long kept threads from running Python code in parallel (free-threaded builds are now arriving). Dynamic typing pushes errors to runtime unless you add a type checker. Packaging and environments (`venv`, `pip`, `uv`) are a topic of their own.
+
 ## Whetting Your Appetite
 
 > **Source:** [Whetting Your Appetite](https://docs.python.org/3/tutorial/appetite.html) · [Python Tutorial](https://github.com/python/cpython/tree/main/Doc/tutorial), PSF License

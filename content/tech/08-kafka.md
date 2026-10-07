@@ -32,6 +32,31 @@ concepts:
 
 # Kafka
 
+## Fundamentals
+
+### The problem
+
+Around 2010 LinkedIn had dozens of systems — databases, search, a Hadoop cluster, monitoring, recommendations — each needing data from the others, connected by a tangle of point-to-point pipelines. Existing message queues couldn't handle the volume and deleted messages once consumed, so a new system couldn't replay history. Jay Kreps, Neha Narkhede and Jun Rao built Kafka (open-sourced 2011) around one structure: a distributed commit log.
+
+### Goals
+
+- **One central pipeline** that any producer writes to and any number of consumers read from, independently.
+- **Throughput in millions of messages per second** on commodity hardware.
+- **Durability and replay:** messages are kept for a retention period, not deleted when read.
+- **Decoupling:** producers don't know or wait for consumers.
+
+### Design decisions
+
+- **The log.** A topic is split into partitions, each an append-only, ordered sequence of records with offsets. Order is guaranteed *within* a partition, and the message key chooses the partition.
+- **Consumers pull and track their own offset.** Reading doesn't remove anything, so a new consumer can start from the beginning and a broken one can rewind.
+- **Consumer groups.** Each partition is read by one member of a group, which is how consumption scales. More consumers than partitions leaves some idle.
+- **Sequential disk I/O and the OS page cache,** plus zero-copy transfer from disk to socket, are why a disk-based log is this fast.
+- **Replication.** Each partition has a leader and followers, and `acks=all` waits for the in-sync replicas.
+
+### Trade-offs
+
+It's a log, not a work queue: there's no per-message acknowledgement, no delayed delivery and no priority. Exactly-once processing is possible but has conditions. Partition counts limit parallelism and are hard to change for keyed data. Running a cluster is real operational work.
+
 ## Use cases
 
 ### One write, several independent readers

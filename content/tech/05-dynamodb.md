@@ -32,6 +32,30 @@ concepts:
 
 # DynamoDB
 
+## Fundamentals
+
+### The problem
+
+During the 2004 holiday season Amazon's relational databases buckled under shopping-cart traffic, and most of those queries were simple lookups by key. The internal Dynamo paper (2007) described a key-value store that put availability ahead of everything else. DynamoDB (2012) is the managed service that grew from it: no servers to run, and the same latency at a gigabyte or a petabyte.
+
+### Goals
+
+- **Single-digit-millisecond latency at any scale,** with no performance cliff as data grows.
+- **Fully managed:** no nodes, patches, backups or failovers to operate.
+- **Pay for throughput or per request,** not for machines.
+
+### Design decisions
+
+- **The partition key decides everything.** It's hashed to pick the physical partition. Each partition has a throughput ceiling, so a "hot" key is the main way to hit limits.
+- **Sort keys** order items inside a partition, so one query can fetch a range ("all orders for user 42 in March").
+- **Only key-based access is efficient.** `Query` uses keys, while `Scan` reads the whole table. Global secondary indexes are asynchronously maintained copies keyed differently.
+- **Single-table design.** Different entity types share one table with overloaded keys, so related items come back in one request instead of a join.
+- **Opt-in strength:** eventually consistent reads by default, strongly consistent reads, conditional writes, and transactions across up to 100 items.
+
+### Trade-offs
+
+You must know your access patterns before you design the table, and changing them later is expensive. There are no joins or ad-hoc queries, so analytics belong elsewhere (export to S3). Costs follow traffic, which suits spiky workloads and can surprise you on steady heavy ones. And it's AWS-only.
+
 ## Use cases
 
 ### One table, one round trip

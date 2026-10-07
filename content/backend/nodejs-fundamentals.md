@@ -12,6 +12,31 @@ Node.js runs JavaScript outside the browser on the V8 engine, with a standard li
 
 **Course outline modules:** 4 (JavaScript with Node.js), 9 (JS Essentials), 10 (Process)
 
+## Fundamentals
+
+### The problem
+
+In 2009 most web servers handled concurrency with one thread (or process) per connection. Each thread spends nearly all its time waiting on the disk, the database or the network, and holds memory while it waits, so tens of thousands of open connections (chat, long polling, streaming) exhausted the server. Ryan Dahl saw that JavaScript had no blocking I/O in its culture or its libraries, and that Google's V8 engine had made it fast. Node.js combined V8 with an event loop and non-blocking I/O, and put JavaScript on the server.
+
+### Goals
+
+- **Handle many concurrent connections cheaply,** with one thread doing work and the operating system doing the waiting.
+- **Never block.** Every I/O API is asynchronous by default.
+- **One language across the stack,** so browser developers can write servers and code can be shared.
+- **Small core, large ecosystem.** Keep the runtime minimal and let npm packages supply everything else.
+
+### The ideas everything else rests on
+
+- **The event loop.** Your JavaScript runs on one thread. I/O is handed to the operating system (epoll, kqueue, IOCP) or to libuv's thread pool, and callbacks run when results arrive. The loop works through timers, I/O callbacks, `setImmediate` and close handlers in phases, and promise microtasks run between each step.
+- **Concurrency without parallelism.** Thousands of requests can be in flight at once, but only one piece of your JavaScript runs at a time. CPU-heavy work blocks everyone, so it goes to worker threads or another service.
+- **Streams and buffers.** Data is processed in chunks as it arrives, with backpressure, instead of being loaded whole into memory.
+- **Modules and npm.** CommonJS (`require`) and ES modules (`import`), with `package.json` describing the project and its dependencies.
+- **Process as an EventEmitter.** Signals, exit codes, environment variables and uncaught errors are all events on `process`.
+
+### Trade-offs
+
+Node.js is a poor fit for CPU-bound work. An unhandled exception or rejected promise can take down the whole process, which serves every user, so run it under a supervisor and fail fast. The npm ecosystem is huge and uneven, and every dependency is code you trust.
+
 ## Introduction to Node.js
 
 > **Source:** [Introduction to Node.js](https://nodejs.org/en/learn/getting-started/introduction-to-nodejs) · [Node.js Learn](https://github.com/nodejs/learn), MIT

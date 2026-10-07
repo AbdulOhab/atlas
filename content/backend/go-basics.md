@@ -12,6 +12,33 @@ Go is a small, compiled language built for servers: fast startup, a strong stand
 
 **Course outline modules:** 37 (Go Language Basics)
 
+## Fundamentals
+
+### The problem
+
+By 2007 Google's servers were written mostly in C++ and Java. Builds of large C++ binaries took close to an hour, dependency management was fragile, and writing correct concurrent code with threads and locks was hard. Robert Griesemer, Rob Pike and Ken Thompson designed Go (released 2009) for that environment: large codebases, many engineers, networked servers, multicore machines.
+
+### Goals
+
+- **Simplicity.** A small language that fits in your head, with few ways to do each thing, so any Go code reads like any other.
+- **Fast builds,** helped by a dependency model with no circular imports and no header files.
+- **Concurrency as a first-class feature,** not a library.
+- **Easy deployment.** Compile to a single static binary with no runtime to install.
+- **Tooling built in:** `go fmt`, `go test`, `go vet` and modules, so teams don't argue about style or build setups.
+
+### The ideas everything else rests on
+
+- **Goroutines.** Lightweight threads that start with a few KB of stack, scheduled by the Go runtime across OS threads. You can run hundreds of thousands at once.
+- **Channels.** Typed pipes between goroutines. "Don't communicate by sharing memory; share memory by communicating." `select` waits on several channels at once.
+- **Interfaces are satisfied implicitly.** A type implements an interface by having its methods, with no `implements` keyword. Small interfaces like `io.Reader` compose everywhere.
+- **Composition over inheritance.** There are no classes, only structs, methods and embedding.
+- **Errors are values.** Functions return `(result, error)` and you check `if err != nil`. Failure paths are visible in the code rather than thrown.
+- **Garbage collection** tuned for low pause times, so servers don't stall.
+
+### Trade-offs
+
+It's deliberately plain: verbose error handling, generics only since 1.18, no exceptions, few abstractions. You trade expressiveness for code anyone on the team can read. The GC and runtime make Go less suited than C or Rust to the tightest memory or latency budgets.
+
 ## Hello world
 
 > **Source:** [Hello world](https://gobyexample.com/hello-world) · [Go by Example](https://github.com/mmcgrana/gobyexample), CC BY 3.0

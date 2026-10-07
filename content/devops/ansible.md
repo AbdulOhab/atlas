@@ -32,6 +32,32 @@ Terraform creates infrastructure (VMs, networks, databases). But who installs pa
 
 ---
 
+## Fundamentals
+
+### The problem
+
+Once servers exist, someone has to install packages, write config files, create users and deploy the app, the same way on every machine. Doing it by hand over SSH creates "snowflake" servers that drift apart. Earlier tools (Puppet, Chef) required an agent on every machine, a central server and a Ruby DSL to learn. Michael DeHaan built Ansible (2012) to need nothing on the managed machines but SSH and Python, and nothing to learn beyond YAML.
+
+### Goals
+
+- **Agentless:** connect over SSH (or WinRM), do the work and leave. Nothing to install or keep running on targets.
+- **Simple, readable automation:** playbooks are YAML lists of tasks that read like a runbook.
+- **Idempotent:** running a playbook twice gives the same result as running it once.
+- **One tool for configuration, deployment and orchestration** across many machines.
+
+### The ideas everything else rests on
+
+- **Inventory:** the list of hosts, organized into groups, with variables per host or group. Static files or dynamic plugins for the cloud.
+- **Modules** do the actual work (`apt`, `copy`, `template`, `service`, `user`). Each one checks the current state and changes only what differs, which is where idempotency comes from.
+- **Playbooks → plays → tasks.** A play maps a group of hosts to an ordered list of tasks. Tasks run in order, on many hosts in parallel.
+- **Desired state, not commands.** `state: present` instead of `apt-get install`. Avoid `shell` and `command` when a module exists, because they aren't idempotent by default.
+- **Handlers** run once at the end, and only when notified by a change (restart nginx only if its config changed).
+- **Roles** package tasks, templates, variables and handlers for reuse. Jinja2 templates render config files from variables.
+
+### Trade-offs
+
+Push over SSH is simple but slows down across thousands of hosts, and there's no agent continuously enforcing state: drift returns until the next run. YAML gets awkward for complex logic. It's best paired with Terraform (create the infrastructure) or replaced by immutable images and containers (bake configuration in once instead of changing servers in place).
+
 ## Table of Contents
 
 1. [Configuration Management Concepts](#1-configuration-management-concepts)

@@ -10,6 +10,31 @@ level: Beginner
 
 Vue is a progressive framework for building interfaces from reactive templates and components. This module follows the official guide using the Composition API.
 
+## Fundamentals
+
+### The problem
+
+Evan You worked with AngularJS at Google and liked its data binding, but found the framework heavy and opinionated for smaller jobs. Vue (2014) kept the part that made interfaces easy, templates that update when data changes, and made the rest optional. You could drop it onto one page with a `<script>` tag or grow it into a full single-page app.
+
+### Goals
+
+- **Approachable:** templates are valid-looking HTML, and you need nothing beyond HTML, CSS and JavaScript to start.
+- **Progressive:** adopt as much as you need, from one widget to a router, a state store and a build toolchain.
+- **Reactive by default:** change the data, and exactly the parts of the page that used it update.
+- **Performant without manual tuning:** the compiler and the reactivity system work out what to update.
+
+### The ideas everything else rests on
+
+- **Fine-grained reactivity.** `ref()` and `reactive()` wrap values in proxies that record who reads them and notify those readers on writes. React re-runs a component and compares the output. Vue knows exactly which dependencies changed.
+- **Computed and watchers.** `computed()` is derived state, cached until its inputs change. `watch()` runs side effects when something changes.
+- **Templates compiled to render functions.** The compiler marks which parts of the template are static, so updates skip them.
+- **Single-File Components.** `<template>`, `<script setup>` and `<style scoped>` in one `.vue` file keep a component's structure, logic and styles together.
+- **Props down, events up.** Parents pass data, children `emit` events, which is the same one-way flow as React.
+
+### Trade-offs
+
+Reactivity through proxies has edges: destructuring a reactive object loses reactivity, and you must remember `.value` on refs in script. There are two APIs (Options and Composition) in the wild. The ecosystem is smaller than React's, though the official router (Vue Router), store (Pinia) and meta-framework (Nuxt) cover most needs.
+
 ## Introduction
 
 > **Source:** [Introduction](https://vuejs.org/guide/introduction.html) · [Vue docs](https://github.com/vuejs/docs), CC BY 4.0 (text)

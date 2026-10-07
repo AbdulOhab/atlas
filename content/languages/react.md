@@ -10,6 +10,31 @@ level: Beginner
 
 React builds interfaces from components: functions that take props and return JSX. This module follows the official Learn path: describing the UI, adding interactivity, managing state, and the escape hatches.
 
+## Fundamentals
+
+### The problem
+
+In 2011 Facebook's interfaces were built the usual way: render HTML, then write jQuery code that changes the DOM by hand whenever data changes. With many pieces of data updating many parts of the page, the code that kept the screen in sync with the data became the main source of bugs, like the notification count that showed one number while the chat showed another. React (2013) was built to remove that whole category of code.
+
+### Goals
+
+- **UI as a function of state.** You describe what the screen should look like for the current data. React works out which DOM changes get it there.
+- **Composition.** Build interfaces from small, reusable components that you can reason about one at a time.
+- **Predictability.** Data flows one way, down from parents to children, so you can trace where a value came from.
+- **Learn once, write anywhere.** The same model drives the DOM, native apps (React Native) and the server.
+
+### The ideas everything else rests on
+
+- **Components are functions.** They take props and return a description of UI (JSX). They should be pure: same inputs, same output, no side effects during render.
+- **State triggers re-render.** Calling a setter doesn't change the variable in place. It schedules a new render with the new value. Each render is a snapshot.
+- **Reconciliation.** React compares the new description with the old one and applies only the differences to the DOM. `key` tells it which list item is which.
+- **One-way data flow.** Children change parent data by calling functions the parent passed down. State lives in the closest common parent ("lifting state up").
+- **Effects are the escape hatch** for synchronizing with things outside React, such as subscriptions, timers and the network. They aren't for deriving data you could compute during render.
+
+### Trade-offs
+
+React is a library, not a framework. Routing, data fetching and builds come from elsewhere, which is why Next.js exists. Re-rendering whole subtrees is simple but can be wasteful, so you'll meet memoization (or the React Compiler). Hooks have rules (top level only, stable order) that exist because state is matched by call order.
+
 ## Thinking in React
 
 > **Source:** [Thinking in React](https://react.dev/learn/thinking-in-react) · [react.dev](https://github.com/reactjs/react.dev), CC BY 4.0

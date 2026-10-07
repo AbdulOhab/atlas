@@ -12,6 +12,31 @@ NestJS puts an opinionated, Angular-style structure on top of Express: every fea
 
 **Course outline modules:** 26 (NestJS)
 
+## Fundamentals
+
+### The problem
+
+Express and similar frameworks leave architecture to you, so large Node.js codebases tend to grow into folders of route files, scattered validation, hand-wired dependencies and no two projects alike. Kamil Myśliwiec created NestJS (2017) to bring the structure Angular gave front-end teams, and Spring gave Java teams, to Node.js backends: modules, dependency injection and clear layers.
+
+### Goals
+
+- **A consistent architecture** for large teams and long-lived services.
+- **Testability through dependency injection,** so any dependency can be swapped for a fake.
+- **TypeScript first,** using decorators and type metadata to wire the app.
+- **Platform-agnostic.** Runs on Express or Fastify, and the same building blocks serve HTTP, WebSockets, GraphQL and microservice transports.
+
+### The ideas everything else rests on
+
+- **Modules** group related controllers and providers and declare what they import and export. The app is a graph of modules.
+- **Controllers** handle routing and the HTTP shape only. **Providers** (services, repositories) hold the logic and are injected through constructors.
+- **The DI container** creates providers once (singleton by default) and resolves each class's dependencies from its constructor types.
+- **The request pipeline** has distinct, ordered hooks: middleware → guards (may this request proceed? usually auth) → interceptors (before and after, for logging, caching or response mapping) → pipes (validate and transform input) → handler → exception filters (turn errors into responses).
+- **Decorators** (`@Controller`, `@Get`, `@Injectable`, `@Body`) are metadata the framework reads at startup.
+
+### Trade-offs
+
+There's more ceremony and more concepts than a plain Express app, which is overkill for a small service. Decorators and DI make the flow less explicit, so you need to know the pipeline order to debug it. Circular module dependencies are a common pain point.
+
 ## First steps
 
 > **Source:** [First steps](https://docs.nestjs.com/first-steps) · [NestJS docs](https://github.com/nestjs/docs.nestjs.com), MIT

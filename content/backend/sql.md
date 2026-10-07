@@ -12,6 +12,32 @@ SQL is how a backend talks to a relational database. These are the statements yo
 
 **Course outline modules:** 17 (Database Read Query Fundamentals), 19 (Structured Query Language)
 
+## Fundamentals
+
+### The problem
+
+Before 1970, programs reached data by walking pointers through hierarchical or network databases. Each query had to know exactly how the records were physically linked, and changing the storage meant rewriting the programs. Edgar Codd at IBM proposed the relational model: store data as plain tables (relations) and let users say *what* they want, not *how* to find it. SQL (originally SEQUEL, IBM, 1974) is the language built on that idea, standardized in 1986 and still the main way to talk to databases.
+
+### Goals
+
+- **Data independence.** Queries don't depend on how data is stored or indexed, so the database can change both without breaking applications.
+- **Declarative queries.** You describe the result, and the query planner picks the algorithm.
+- **Integrity.** Types, keys and constraints keep invalid data out, whatever code writes it.
+- **Safe concurrency.** Many users read and write at once without corrupting each other's work (transactions).
+
+### The ideas everything else rests on
+
+- **Tables, rows, keys.** A primary key identifies a row, and foreign keys link tables. Relationships are values that match, not pointers.
+- **Set-based thinking.** Every statement operates on whole sets of rows. `WHERE` filters, `JOIN` combines, `GROUP BY` aggregates, and the output is another table you can query.
+- **Logical order differs from written order.** `FROM`/`JOIN` → `WHERE` → `GROUP BY` → `HAVING` → `SELECT` → `ORDER BY` → `LIMIT`. This is why you can't use a `SELECT` alias in `WHERE`.
+- **`NULL` means unknown,** so `NULL = NULL` is not true. Comparisons with it yield unknown, which is why there are `IS NULL` and `COALESCE`.
+- **Transactions (ACID).** A group of statements commits or rolls back as one unit, isolated from concurrent transactions to a level you choose.
+- **Normalization.** Store each fact once and join to combine, then denormalize on purpose when reads need it.
+
+### Trade-offs
+
+The planner is clever but not psychic, so indexes and query shape still decide performance (`EXPLAIN` shows you its plan). Rigid schemas mean migrations. Scaling writes beyond one machine is hard, which is where the NoSQL systems in the Tech track come in.
+
 ## Creating databases and tables
 
 > **Source:** [Creating databases and tables](https://github.com/prisma/dataguide/blob/main/content/04-postgresql/08-create-and-delete-databases-and-tables.mdx) · [Prisma's Data Guide](https://github.com/prisma/dataguide), Apache 2.0

@@ -32,6 +32,30 @@ concepts:
 
 # gRPC
 
+## Fundamentals
+
+### The problem
+
+Inside a large system, services call each other constantly. JSON over REST is human-friendly but loose: field names are re-sent in every message, parsing is slow, there's no enforced contract between teams, and streaming is awkward. Google ran billions of internal calls per second on an RPC framework called Stubby with Protocol Buffers. gRPC (2015) is its open-source successor, built on HTTP/2.
+
+### Goals
+
+- **A strict contract.** Services and messages are defined in a `.proto` file, and client and server code is generated from it in many languages.
+- **Efficiency:** compact binary encoding and multiplexed connections.
+- **Streaming as a first-class feature:** server, client and bidirectional streams.
+- **Production features built in:** deadlines, cancellation, metadata, status codes, interceptors.
+
+### Design decisions
+
+- **Protocol Buffers.** Fields are identified by number, not name, so messages are small and schemas evolve safely: add fields freely, never reuse a number.
+- **HTTP/2 transport.** Many concurrent calls share one connection without head-of-line blocking at the HTTP level, and streams map onto HTTP/2 streams.
+- **Generated stubs.** Calling a remote method looks like calling a local function, with types checked at compile time.
+- **Deadlines propagate.** A caller's remaining time budget travels with the call so downstream services stop work nobody is waiting for.
+
+### Trade-offs
+
+Browsers can't speak native gRPC (gRPC-Web needs a proxy), so it lives behind the edge while public APIs stay REST or GraphQL. Binary payloads are harder to inspect with curl or logs. Long-lived HTTP/2 connections defeat connection-level load balancers, so you need L7 or client-side balancing.
+
 ## Use cases
 
 ### Service-to-service calls with one deadline

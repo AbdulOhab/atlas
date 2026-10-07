@@ -10,6 +10,31 @@ level: Beginner
 
 TypeScript is JavaScript with a type checker. It catches mistakes before the code runs and powers the editor features React, Next.js and NestJS projects rely on. This module follows the official Handbook.
 
+## Fundamentals
+
+### The problem
+
+JavaScript programs grew from page scripts into codebases with hundreds of thousands of lines and many authors. In a dynamic language, renaming a field or changing a function's arguments means searching and hoping, and the most common bugs are type errors: `undefined` where an object was expected, a string where a number was meant. Microsoft built TypeScript (2012) to catch those mistakes before the code runs, without asking anyone to leave JavaScript.
+
+### Goals
+
+- **Be a superset of JavaScript.** Every JavaScript program is already a TypeScript program, so you can adopt it one file at a time.
+- **Erase completely.** Types are removed at compile time and leave no runtime cost or runtime behavior. The output is plain JavaScript.
+- **Describe real JavaScript as people write it,** including its dynamic patterns, rather than force a new style.
+- **Power the editor.** Autocomplete, go-to-definition and safe renames come from the same type checker.
+
+### The ideas everything else rests on
+
+- **Structural typing.** A value fits a type if it has the right shape, whatever its name or class. `{ name: string }` accepts any object with a string `name`.
+- **Inference.** Most types are worked out from the code. You annotate the boundaries (function parameters, exported APIs) and the checker fills in the rest.
+- **Narrowing.** `typeof`, `in`, equality checks and discriminant fields refine a union type inside a branch, so the checker follows your control flow.
+- **Unions and literal types** model "one of these" exactly (`"idle" | "loading" | "error"`), which is how most JavaScript data really looks.
+- **Generics** let a function or type keep the connection between its input and output types.
+
+### Trade-offs
+
+The types are a compile-time promise, not a runtime check. Data from the network can still be anything, so validate at the edges with something like Zod. The type system is deliberately unsound in places (`any`, type assertions, some variance rules) to stay practical. And there is a build step and a configuration surface (`tsconfig.json`) to own.
+
 ## The TypeScript Handbook
 
 > **Source:** [The TypeScript Handbook](https://www.typescriptlang.org/docs/handbook/2/the-handbook.html) · [TypeScript Handbook](https://github.com/microsoft/TypeScript-Website), CC BY 4.0

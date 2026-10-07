@@ -32,6 +32,31 @@ concepts:
 
 # Object storage
 
+## Fundamentals
+
+### The problem
+
+Images, videos, backups, logs and data-lake files are large, numerous and rarely changed. Keeping them on file servers means managing disks, RAID, capacity planning and directory trees that slow down at millions of entries. Putting them in a database bloats it. Amazon S3 (2006) introduced object storage: a flat, effectively unlimited store of immutable blobs behind an HTTP API, paid for by the gigabyte.
+
+### Goals
+
+- **Effectively unlimited capacity** with no provisioning.
+- **Extreme durability.** S3 is designed for eleven nines (99.999999999%), copied across multiple facilities.
+- **Simple HTTP access** from anywhere, with fine-grained permissions.
+- **Low cost per GB,** with cheaper tiers for data you rarely read.
+
+### Design decisions
+
+- **Flat namespace.** A bucket holds objects addressed by key. "Folders" are just key prefixes.
+- **Whole-object operations.** You PUT and GET whole objects (or byte ranges) and can't modify the middle of one. Large uploads use multipart upload.
+- **Metadata separate from data,** both spread across many machines, which is how it scales to trillions of objects.
+- **Presigned URLs** let clients upload and download directly, so large bytes never pass through your servers.
+- **Strong read-after-write consistency** (S3 since 2020). Lifecycle rules move or expire objects by age.
+
+### Trade-offs
+
+Per-request latency is tens of milliseconds, so it's not for hot request-path reads (put a CDN in front). There are no partial updates, no file locking and no rename, and listing is slow. Store the bytes here and the metadata about them (owner, size, status) in a database.
+
 ## Use cases
 
 ### Uploads that never touch your servers

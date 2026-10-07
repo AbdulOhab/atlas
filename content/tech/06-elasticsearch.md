@@ -32,6 +32,31 @@ concepts:
 
 # Elasticsearch
 
+## Fundamentals
+
+### The problem
+
+A relational database answers "rows where `title = 'x'`" well. It doesn't answer "the ten documents most relevant to *wireless noise cancelling headphones*, tolerating typos, with counts per brand" well. `LIKE '%…%'` scans everything and has no idea of relevance. Apache Lucene (1999) solved full-text search as a Java library. Shay Banon built Elasticsearch (2010) to make Lucene distributed and reachable over a JSON REST API.
+
+### Goals
+
+- **Relevance-ranked full-text search** over large volumes of text.
+- **Near-real-time:** new documents become searchable within about a second.
+- **Horizontal scale and resilience:** shards spread across nodes, with replicas.
+- **Aggregations** for faceting and analytics on the same data, as used for logs in the ELK stack.
+
+### Design decisions
+
+- **The inverted index.** Every term maps to the list of documents containing it, the way a book's index maps words to pages. A search intersects lists instead of scanning documents.
+- **Analysis at index time.** Text is tokenized, lowercased, stemmed and filtered into terms. The same analyzer must apply at query time, or terms won't match.
+- **Relevance scoring** (BM25) weighs how rare a term is and how often it appears in each document.
+- **Immutable segments.** Lucene writes small segments and merges them in the background. A "refresh" makes new segments searchable, which is why search is *near* real-time.
+- **Shards fixed at index creation.** Changing the count means reindexing.
+
+### Trade-offs
+
+It's a derived index, not a database: no transactions, weaker durability guarantees, and mapping changes need a reindex. Keep the source of truth in a database and feed Elasticsearch from it (change data capture or an outbox). Clusters are memory-hungry and need tuning to run well.
+
 ## Use cases
 
 ### A search index kept in sync by a change stream

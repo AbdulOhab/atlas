@@ -34,6 +34,32 @@ If you're uncomfortable in a Linux terminal, you are stuck. This module makes yo
 
 ---
 
+## Fundamentals
+
+### The problem
+
+In 1991 Unix was the operating system of serious computing, but it was proprietary and expensive, and the free teaching system MINIX had a restrictive license. Linus Torvalds, a student in Helsinki, wrote a free Unix-like kernel for his PC. Combined with the GNU project's tools (shell, compiler, utilities), it became a complete free operating system that anyone could run, study and modify. Today it runs almost every server, container, cloud VM and Android phone.
+
+### Goals
+
+- **Unix compatibility (POSIX),** so decades of Unix software and knowledge carry over.
+- **Free and open (GPL).** Anyone can use and improve it, and improvements stay open.
+- **Portability:** the same kernel runs from tiny embedded boards to supercomputers.
+- **Stability and multi-user safety,** with processes and users isolated from each other.
+
+### The ideas everything else rests on
+
+- **Kernel vs user space.** The kernel owns the hardware, memory and scheduling. Programs ask it for everything through system calls.
+- **Everything is a file.** Devices, pipes, sockets and kernel information (`/proc`, `/sys`) all appear as files you open, read and write.
+- **Processes.** Every program runs as a process with a PID, a parent, an owner, open file descriptors and an exit code. New processes come from `fork` + `exec`, and `systemd` (PID 1) supervises services.
+- **Users, groups and permissions.** Read, write and execute for owner, group and others, with root able to bypass them. Least privilege starts here.
+- **Small tools composed through pipes.** Programs read stdin and write stdout, so `grep | sort | uniq -c` builds new tools out of old ones.
+- **One filesystem tree** from `/`, with disks mounted into it, and a standard layout (`/etc` config, `/var` changing data, `/usr` programs).
+
+### Trade-offs
+
+Text-based configuration and command-line work have a learning curve but are scriptable and repeatable, which is why automation is built on Linux. Distributions differ in package managers and defaults. Containers are built on kernel features (namespaces, cgroups), so learning Linux is learning how Docker really works.
+
 ## Table of Contents
 
 1. [Linux Fundamentals](#1-linux-fundamentals)

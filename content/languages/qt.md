@@ -12,6 +12,31 @@ Qt is a cross-platform C++ framework for desktop, embedded and mobile interfaces
 
 > **Note:** Qt's documentation is licensed under the GNU FDL, which can't be mixed into this site's CC BY-SA content, so this module is written for Atlas CE from scratch. Each topic links to the matching page of the [official docs](https://doc.qt.io/qt-6/).
 
+## Fundamentals
+
+### The problem
+
+In the early 1990s every desktop platform had its own GUI toolkit (Win32, Motif and later Cocoa), so an application for three platforms meant three codebases. Haavard Nord and Eirik Chambe-Eng started Qt (1991, first released 1995) to write a native-looking interface once in C++ and compile it everywhere. It later spread to embedded screens in cars, medical devices and appliances.
+
+### Goals
+
+- **Write once, compile anywhere:** Windows, macOS, Linux, embedded Linux, Android and iOS from one codebase.
+- **Native look and performance.** It's compiled C++, with no VM, and the styles follow each platform.
+- **More than widgets.** Networking, threads, file I/O, SQL, internationalization and graphics in one consistent library.
+- **Make C++ productive for UI:** object ownership, event handling and introspection that plain C++ lacks.
+
+### The ideas everything else rests on
+
+- **The event loop.** `QApplication::exec()` waits for input, timers and network events and dispatches them. Your code runs in response, so blocking the loop freezes the UI.
+- **Signals and slots.** Objects announce that something happened (a signal), and any number of other objects react (slots), without knowing about each other. Connections can safely cross threads.
+- **QObject and the meta-object system.** The `moc` code generator adds runtime type information, properties and signals to C++ classes.
+- **Parent-child ownership.** Deleting a parent deletes its children, which handles most memory management in a widget tree.
+- **Two UI technologies:** Widgets (classic desktop controls built in C++) and Qt Quick/QML (declarative, GPU-accelerated, suited to touch and animation).
+
+### Trade-offs
+
+The extra build step (`moc`) and Qt's own containers and strings sit alongside the standard library. Licensing (LGPL/GPL or commercial) matters for closed-source distribution. Apps are larger than a native-only one. PySide6 gives the same API in Python, trading speed for development time.
+
 ## How a Qt App Works
 
 > **Official docs:** [QApplication](https://doc.qt.io/qt-6/qapplication.html), [The Event System](https://doc.qt.io/qt-6/eventsandfilters.html)

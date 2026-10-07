@@ -10,6 +10,31 @@ level: Beginner
 
 Next.js adds routing, server rendering and data fetching on top of React. This module follows the official App Router Getting Started guide, page by page.
 
+## Fundamentals
+
+### The problem
+
+React only renders components. A real site also needs routing, server-side rendering for speed and search engines, data fetching, code splitting, image handling and a production build, and every team was assembling these from a dozen libraries with its own Webpack configuration. Vercel released Next.js (2016) to make those decisions once, with good defaults, so a React app starts with them already made.
+
+### Goals
+
+- **Zero-config production React:** routing, bundling, splitting and optimization out of the box.
+- **Render in the right place.** Some HTML is best built at build time, some per request on the server, some in the browser, and the framework should make each one a small choice.
+- **Fast first load.** Send HTML first, and the least JavaScript possible.
+- **Full-stack in one project.** UI, data access and API endpoints live together.
+
+### The ideas everything else rests on
+
+- **The file system is the router.** In the App Router, `app/blog/[slug]/page.tsx` *is* the `/blog/:slug` route. `layout.tsx` wraps its children and persists across navigations.
+- **Server Components by default.** Components run on the server, can read the database directly, and send no JavaScript to the browser. Mark a file `"use client"` only where you need state, effects or event handlers.
+- **Static vs dynamic rendering.** A route is prerendered at build time unless it reads something per request (cookies, headers, uncached data). Caching and revalidation decide how fresh the output is.
+- **Server Actions and Route Handlers** are the two ways the browser talks back: functions you call from a form, or plain HTTP endpoints.
+- **Streaming.** `loading.tsx` and `<Suspense>` send the page in pieces as data arrives.
+
+### Trade-offs
+
+The server/client boundary is powerful and a new thing to keep in your head: what can be passed across it, and where code actually runs. Caching rules have changed between major versions. Some features assume a Node.js server, or a host like Vercel, rather than a static file host.
+
 ## Installation
 
 > **Source:** [Installation](https://nextjs.org/docs/app/getting-started/installation) · [Next.js docs](https://github.com/vercel/next.js/tree/canary/docs), MIT

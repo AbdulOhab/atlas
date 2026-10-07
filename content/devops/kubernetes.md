@@ -33,6 +33,33 @@ You can containerize an app with Docker. But how do you run 50 containers across
 
 ---
 
+## Fundamentals
+
+### The problem
+
+Docker solved packaging. It didn't solve running hundreds of containers across dozens of machines: which machine has room, what happens when one dies, how containers find each other, how to roll out a new version without downtime, how to scale with load. Google had run everything in containers for a decade on an internal system called Borg. Kubernetes (2014, donated to the new CNCF in 2015) is the open-source system built from that experience.
+
+### Goals
+
+- **Declarative operations.** You describe the state you want, and the system keeps making it true.
+- **Self-healing:** restart crashed containers, replace dead nodes, and keep traffic away from unhealthy pods.
+- **Scaling and rolling updates** without downtime.
+- **Portability:** the same API on every cloud and on bare metal.
+- **Extensibility:** custom resources and controllers make it a platform for building platforms.
+
+### The ideas everything else rests on
+
+- **Desired state + reconciliation loops.** Every object has a `spec` (what you want) and a `status` (what is). Controllers watch both and act to close the gap, forever. This one idea explains most of Kubernetes.
+- **The API server is the center.** Everything (kubectl, controllers, the scheduler, kubelets) reads and writes objects through it, and they're stored in etcd.
+- **Pods** are the smallest unit: one or more containers sharing a network namespace and volumes. Pods are disposable and get replaced, never repaired.
+- **Controllers own pods:** a Deployment manages ReplicaSets, which manage pods, and StatefulSets, DaemonSets and Jobs cover other lifecycles.
+- **Services give stable addresses** to a changing set of pods, selected by **labels**. Labels and selectors are how every object finds its partners.
+- **The scheduler** places pods on nodes by resource requests and constraints. The **kubelet** on each node runs them.
+
+### Trade-offs
+
+It's complex, both to learn and to operate: networking, storage, RBAC, upgrades. For a few services, a managed platform or plain containers on a VM is often enough. It also doesn't make an app cloud-native by itself. The app must tolerate being killed and moved at any time.
+
 ## Table of Contents
 
 1. [Why Kubernetes?](#1-why-kubernetes)

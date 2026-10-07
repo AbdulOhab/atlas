@@ -10,6 +10,31 @@ level: Beginner
 
 Laravel is a batteries-included PHP framework. This module follows a request through it: routing and middleware, controllers and responses, Blade views, validation, then the database layer and authentication.
 
+## Fundamentals
+
+### The problem
+
+PHP made the web easy to start but hard to keep tidy: SQL in templates, a different structure in every project, and security left to each developer. In 2011 the leading framework, CodeIgniter, lacked features like built-in authentication. Taylor Otwell built Laravel to give PHP a complete, consistent framework with good defaults for everything a web app needs, and an API pleasant enough that people would enjoy using it.
+
+### Goals
+
+- **Batteries included:** routing, ORM, migrations, validation, auth, queues, mail, caching and testing all ship together.
+- **Developer happiness.** Expressive, readable APIs and conventions over configuration.
+- **Secure by default:** CSRF tokens, hashed passwords, escaped output and parameterized queries without extra work.
+- **One way to structure an app,** so any Laravel developer can find their way around any Laravel project.
+
+### The ideas everything else rests on
+
+- **The request lifecycle.** Every request enters `public/index.php`, boots the application, passes through middleware to a route, runs a controller, and returns a response back out through the middleware.
+- **The service container.** Laravel builds your classes for you and injects their dependencies, and service providers register what goes in it. Most of the "magic" is this container.
+- **Eloquent ORM (Active Record).** Each table is a model class and each row an object that knows how to save itself. Relationships are methods.
+- **Migrations** describe the schema as versioned code.
+- **Facades and helpers** are short static-looking names (`Cache::get`) that resolve real objects from the container.
+
+### Trade-offs
+
+The convenience hides a lot. Facades and container resolution make it harder to trace where code comes from. Active Record makes it easy to write N+1 queries. Laravel is opinionated: working against its conventions costs more than working with them. And each request boots the framework again, unless you run Octane.
+
 ## Request Lifecycle
 
 > **Source:** [Request Lifecycle](https://laravel.com/docs/lifecycle) · [Laravel docs](https://github.com/laravel/docs), MIT

@@ -32,6 +32,28 @@ concepts:
 
 # WebSockets
 
+## Fundamentals
+
+### The problem
+
+HTTP is request-response: the server can only answer when the client asks. Chat, live scores, collaborative editing and notifications need the server to push the moment something happens. Before 2011 that was faked with polling (wasteful), long polling (a request held open until there's news, then reopened) or Comet hacks, each paying HTTP header overhead per message. The WebSocket protocol (RFC 6455, 2011) gives the browser a real, persistent, two-way connection.
+
+### Goals
+
+- **Full-duplex messaging:** either side sends at any time.
+- **Low overhead per message:** a frame header of a few bytes instead of full HTTP headers.
+- **Work with the web's infrastructure:** same ports (80/443), an HTTP-compatible handshake, and passes through proxies.
+
+### Design decisions
+
+- **Upgrade handshake.** The client sends an HTTP request with `Upgrade: websocket`, the server replies `101 Switching Protocols`, and the same TCP connection then carries WebSocket frames.
+- **Messages and frames.** Text or binary messages, plus ping/pong for keep-alive and close frames for clean shutdown.
+- **No built-in semantics.** There are no topics, acknowledgements, reconnection or delivery guarantees, so you or a library (Socket.IO, Phoenix Channels) define them.
+
+### Trade-offs
+
+Persistent connections make the server tier stateful. Each server holds thousands of sockets, so load balancers need connection-aware routing, deploys must drain connections, and a message for user X must be routed to the server holding X's socket, usually through pub/sub such as Redis or Kafka. Clients disconnect all the time, so you need reconnect, resume and catch-up logic. For one-way push only, Server-Sent Events are simpler.
+
 ## Use cases
 
 ### Delivering a chat message to the right node

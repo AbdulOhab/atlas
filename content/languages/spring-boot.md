@@ -12,6 +12,31 @@ Spring Boot is the standard way to build Java backends: it takes the Spring Fram
 
 > **Note:** The Spring Getting Started guides are licensed CC BY-ND, which doesn't allow adapted versions, so this module is written for Atlas CE from scratch. Each topic links to the matching page of the [official reference](https://docs.spring.io/spring-boot/).
 
+## Fundamentals
+
+### The problem
+
+In the early 2000s, enterprise Java (J2EE and EJB) needed application servers, deployment descriptors and heavy component models just to wire objects together. The Spring Framework (2003) replaced that with plain Java objects connected by dependency injection. Spring then grew its own problem: a new project took pages of XML or configuration classes and careful matching of library versions. Spring Boot (2014) removed that setup.
+
+### Goals
+
+- **Working service in minutes:** `java -jar app.jar` starts a complete application with an embedded web server, with no external application server.
+- **Opinionated defaults, easily overridden.** Boot configures what it sees on the classpath and steps aside when you define your own.
+- **Curated dependencies.** "Starters" bring in a known-compatible set of libraries for a job (`spring-boot-starter-web`).
+- **Production-ready:** health checks, metrics and externalized configuration built in (Actuator).
+
+### The ideas everything else rests on
+
+- **Inversion of control and dependency injection.** You don't `new` your services. The application context creates *beans* and passes each one what it needs, usually through the constructor.
+- **Auto-configuration.** Conditional configuration classes ask "is this library present? did the user define this bean? is this property set?" and configure accordingly.
+- **Annotations as wiring:** `@RestController`, `@Service`, `@Repository` and `@Configuration` mark roles, and component scanning finds them.
+- **Externalized configuration.** `application.properties`/`.yml`, environment variables and profiles change behavior without changing code.
+- **Layers:** controller → service → repository, with Spring Data generating repository implementations from interfaces.
+
+### Trade-offs
+
+Auto-configuration is invisible until it does the wrong thing. Then you need to know which condition matched (`--debug` prints the report). Startup time and memory are higher than lighter frameworks, though native images with GraalVM help. There's a large surface to learn, but it covers almost any enterprise integration you will meet.
+
 ## Creating a Project
 
 > **Official docs:** [Developing Your First Application](https://docs.spring.io/spring-boot/tutorial/first-application/index.html), [Spring Initializr](https://start.spring.io)

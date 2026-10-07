@@ -10,6 +10,30 @@ level: Beginner
 
 React, Next.js and every other modern framework assume a handful of JavaScript features: modules, destructuring, spread, arrow functions, array methods, promises and async/await. These 24 topics are that list, plus JSON and `this`, one page each, in the order you'll meet them.
 
+## Fundamentals
+
+### The problem
+
+In 1995 web pages were static documents. Netscape wanted a small language that page authors, not just programmers, could drop into HTML to react to clicks and check forms without a round trip to the server. It had to run inside the browser, on any machine, from source text sent over the network. JavaScript was that language. Everything since, from Node.js to React, is that browser language stretched far beyond its first job.
+
+### Goals
+
+- **Run anywhere a browser runs**, from source, with no compile step and no install.
+- **Never break the web.** A page written in 1999 must still work, so features are only ever added, never removed. This is why the old quirks are still there.
+- **Stay responsive.** Scripts share one thread with the page, so they must never block waiting for the network.
+
+### The ideas everything else rests on
+
+- **One thread, one event loop.** Your code runs to completion, then the loop picks the next task: a click, a timer, a finished request. Nothing runs in parallel with your function, so there are no data races. In exchange, a slow loop freezes the page.
+- **Asynchrony instead of blocking.** Callbacks, then promises, then `async`/`await` are three spellings of one idea: "start this, and run that when it's done". `await` pauses one function, not the thread.
+- **Functions are values.** They're passed, returned and stored, and they close over the variables around them (closures). Event handlers, array methods and React components all depend on this.
+- **Objects are dynamic bags of properties** linked to a prototype. `class` is syntax over prototypes, not a different model.
+- **Modules** (`import`/`export`) give each file its own scope. Bundlers and the browser both follow that graph.
+
+### Trade-offs
+
+Dynamic typing and implicit coercion make small scripts quick to write and large programs easy to break. That is the gap TypeScript fills. Backwards compatibility means you have to learn which parts to avoid (`var`, `==`, `with`). A single thread gives you no parallelism for CPU-heavy work without workers.
+
 ## Import and Export
 
 > **Source:** [export](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/export), [import](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/import) · [MDN Web Docs](https://github.com/mdn/content), CC BY-SA 2.5

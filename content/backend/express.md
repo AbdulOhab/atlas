@@ -12,6 +12,30 @@ Express is the minimal web framework most Node.js backends start from. Routes ma
 
 **Course outline modules:** 4 (Express.js), 6-7 (API Development)
 
+## Fundamentals
+
+### The problem
+
+Node.js's built-in `http` module gives you a raw request and response and nothing else. You parse URLs, match routes, read bodies and set headers yourself. TJ Holowaychuk released Express (2010), inspired by Ruby's Sinatra, as the thinnest layer that makes that bearable: routing and a way to stack reusable steps in front of your handlers.
+
+### Goals
+
+- **Minimal and unopinionated.** No project structure, ORM or template engine is required, so you pick your own.
+- **Stay close to Node.js.** `req` and `res` are Node's own objects with a few helpers added, not a new abstraction.
+- **Composable through middleware,** so features like body parsing, sessions, CORS and logging are separate packages you plug in.
+
+### The ideas everything else rests on
+
+- **Middleware is the whole model.** A middleware is `(req, res, next) => {}`. Express keeps an ordered list of them, and each request walks the list until one sends a response. Routes are middleware that only match some methods and paths.
+- **Order matters.** Middleware runs in the order you register it, so the body parser must come before the handler that reads `req.body`, and the auth check before the protected routes.
+- **`next()` passes control.** Call `next()` to continue, `next(err)` to jump to error handlers, or send a response to stop.
+- **Error-handling middleware** has four arguments `(err, req, res, next)` and is registered last.
+- **Routers** are mini-apps with their own middleware stacks, mounted at a path to split a large app into modules.
+
+### Trade-offs
+
+Freedom means every Express app is structured differently, and validation, error formats and layering are up to you. That gap is what NestJS fills. Express 4 didn't catch rejected promises from `async` handlers (Express 5 does). It's not the fastest Node.js framework (Fastify is), but it's the one most middleware and tutorials assume.
+
 ## Hello world
 
 > **Source:** [Hello world](https://expressjs.com/en/starter/hello-world.html) · [Express docs](https://github.com/expressjs/expressjs.com), CC BY 4.0

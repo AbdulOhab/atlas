@@ -12,6 +12,30 @@ Gin is Go's most popular web framework: a fast router, request binding with vali
 
 **Course outline modules:** 38 (Web Development with Gin Framework)
 
+## Fundamentals
+
+### The problem
+
+Go's standard library `net/http` is a production-grade server, but for years its router matched only path prefixes. It had no method routing or path parameters (Go 1.22 added both), and it offered no binding, validation or middleware chaining. Gin (2014) wraps `net/http` with a fast radix-tree router and a small API modeled on Martini, so building a JSON API in Go takes less boilerplate.
+
+### Goals
+
+- **Speed.** A radix-tree router that matches routes without allocating memory.
+- **A small, familiar API:** routes, groups and middleware, like Express.
+- **Stay on `net/http`.** A Gin engine is an `http.Handler`, so it works with the standard server and its ecosystem.
+
+### The ideas everything else rests on
+
+- **`*gin.Context`** carries everything for one request: params, query, body binding, response writers, values set by middleware, and the abort and next controls.
+- **Handlers chain.** Middleware and the final handler form a slice. `c.Next()` runs the rest of the chain (code after it runs on the way back out), and `c.Abort()` stops it.
+- **Route groups** share a prefix and middleware, for example `/api/v1` behind auth.
+- **Binding and validation.** `c.ShouldBindJSON(&req)` decodes into a struct and checks its `binding:"required"` tags with the validator library.
+- **Recovery and logging** are default middleware, so a panic becomes a 500 response instead of a crashed server.
+
+### Trade-offs
+
+It adds a dependency and its own context type where the standard library alone is now enough for many services (Go 1.22's `ServeMux` routes by method and path). The `Context` isn't safe to use outside its request's goroutine without `c.Copy()`. Like Express, project structure is left to you.
+
 ## Quickstart
 
 > **Source:** [Quickstart](https://gin-gonic.com/en/docs/quickstart/) · [Gin docs](https://github.com/gin-gonic/website), MIT

@@ -32,6 +32,32 @@ level: Intermediate
 
 ---
 
+## Fundamentals
+
+### The problem
+
+In 2005 the Linux kernel lost free access to BitKeeper, the proprietary version control system it had used. The alternatives were centralized (CVS, Subversion): every commit, branch and history lookup went through one server, branching was expensive, and merging was painful. None of that worked for thousands of contributors spread around the world. Linus Torvalds wrote Git in about ten days to replace it.
+
+### Goals
+
+- **Distributed.** Every clone is a full repository with all its history. Work offline, and no single server is critical.
+- **Fast:** commits, diffs, branches and logs are local operations.
+- **Integrity.** Every object is addressed by a hash of its content, so corruption or tampering is detectable.
+- **Cheap branching and good merging,** to support thousands of parallel lines of work.
+
+### The ideas everything else rests on
+
+- **Snapshots, not diffs.** A commit records the whole tree as it was, plus its parent commits, author and message. Unchanged files are shared, not copied.
+- **Content-addressed objects.** Blobs (file contents), trees (directories), commits and tags are all stored by hash, so identical content is stored once.
+- **History is a DAG.** Commits point to their parents. A merge commit has two parents.
+- **Branches are just pointers.** A branch is a file holding one commit hash, and `HEAD` points to the current branch. That's why branching is instant.
+- **Three areas:** the working directory, the staging area (index) and the repository. `add` stages, `commit` records.
+- **Remotes are other copies.** `fetch`, `push` and `pull` sync objects and refs between repositories, and `origin/main` is your last known view of theirs.
+
+### Trade-offs
+
+The model is simple, but the command-line interface grew from it inconsistently, which is why Git feels hard. Rewriting history (`rebase`, `--force`) is powerful and dangerous on shared branches. Large binaries bloat every clone (Git LFS helps). Git tracks content, not intent, so conflicts still need a human.
+
 ## Table of Contents
 
 1. [Git Fundamentals](#1-git-fundamentals)

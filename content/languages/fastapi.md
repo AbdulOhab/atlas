@@ -10,6 +10,31 @@ level: Beginner
 
 FastAPI builds APIs from type-hinted Python functions: the types drive validation, serialization and the interactive docs. This module follows the official tutorial further than the Backend track's introduction.
 
+## Fundamentals
+
+### The problem
+
+Python web APIs were usually built with Flask or Django REST Framework. Validation, serialization and documentation were each written by hand and drifted out of sync with the code. They were also synchronous, a poor fit for services that spend most of their time waiting on databases and other APIs. Sebastián Ramírez built FastAPI (2018) on one observation: Python 3.6+ type hints already describe what each endpoint accepts and returns, so the framework should use them for everything else.
+
+### Goals
+
+- **Declare once:** a parameter's type annotation drives parsing, validation, conversion, the response schema and the docs.
+- **Standards-based.** The API is described as OpenAPI and JSON Schema, so interactive docs and client generators come for free.
+- **Fast to run:** async-first on Starlette (an ASGI toolkit), with throughput close to Node.js and Go frameworks.
+- **Fast to write, with editor support:** autocomplete and type checking work because everything is typed.
+
+### The ideas everything else rests on
+
+- **Path operations.** A decorated function (`@app.get("/items/{id}")`) is an endpoint. Its parameters say where each input comes from: the path, the query, the body, headers or cookies.
+- **Pydantic models** define request and response bodies as classes, with validation errors returned automatically as 422 responses.
+- **Dependency injection.** `Depends()` declares shared logic, such as the database session, the current user or pagination, and FastAPI resolves and caches it for each request.
+- **async and sync both work.** `async def` endpoints run on the event loop, and plain `def` endpoints run in a thread pool so they can't block it.
+- **ASGI.** The app is an ASGI callable served by Uvicorn, which also makes WebSockets and background tasks possible.
+
+### Trade-offs
+
+It's a microframework at heart: ORM, migrations, auth and admin are your choice (SQLAlchemy or SQLModel, Alembic and so on), not built in like Django. Async only helps if the libraries you call are async too. A blocking call inside `async def` stalls every request.
+
 ## First Steps
 
 > **Source:** [First Steps](https://fastapi.tiangolo.com/tutorial/first-steps/) · [FastAPI docs](https://github.com/fastapi/fastapi), MIT
