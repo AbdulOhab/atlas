@@ -69,9 +69,10 @@ function Inner() {
 
   return (
     <SimContext.Provider value={result}>
-      <div className="flex h-full min-h-0">
+      {/* Phones stack the three panes: palette strip, canvas, then the workload panel. */}
+      <div className="flex h-full min-h-0 flex-col md:flex-row">
         <Palette onAdd={addAtCentre} />
-        <div className="pg-canvas relative min-w-0 flex-1" onDragOver={onDragOver} onDrop={onDrop}>
+        <div className="pg-canvas relative h-[60vh] min-w-0 shrink-0 md:h-auto md:flex-1 md:shrink" onDragOver={onDragOver} onDrop={onDrop}>
           <ReactFlow
             nodes={nodes}
             edges={edges}

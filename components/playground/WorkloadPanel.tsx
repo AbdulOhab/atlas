@@ -49,7 +49,7 @@ export function WorkloadPanel({ result }: WorkloadPanelProps) {
   const warnings = result.issues.filter((i) => i.severity === "warning");
 
   return (
-    <aside className="flex w-72 shrink-0 flex-col border-l border-rule bg-surface">
+    <aside className="flex max-h-[45vh] w-full shrink-0 flex-col border-t border-rule bg-surface md:max-h-none md:w-72 md:border-l md:border-t-0">
       <div className="border-b border-rule px-4 py-3">
         <h2 className="text-small font-semibold text-ink">Chat app · scale</h2>
         <p className="mt-0.5 text-tiny leading-snug text-inkFaint">Pick a target, then make the system hold it.</p>

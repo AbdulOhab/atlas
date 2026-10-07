@@ -146,7 +146,7 @@ export default function HomePage() {
               <section
                 key={section.id}
                 style={{ "--accent": section.accent } as React.CSSProperties}
-                className="flex flex-col rounded-md border border-rule bg-surface p-5 transition-colors duration-fast hover:border-[color:var(--accent)]"
+                className="flex min-w-0 flex-col rounded-md border border-rule bg-surface p-5 transition-colors duration-fast hover:border-[color:var(--accent)]"
               >
                 <div className="flex items-center gap-2">
                   <span className="flex h-8 w-8 items-center justify-center rounded border border-rule text-[color:var(--accent)]">
@@ -178,7 +178,7 @@ export default function HomePage() {
 
                 <Link
                   href={section.href}
-                  className="mt-5 flex items-center justify-center gap-1.5 rounded border border-[color:var(--accent)] px-3 py-2 text-small font-medium text-[color:var(--accent)] transition-colors duration-fast hover:bg-[color:color-mix(in_srgb,var(--accent)_10%,transparent)]"
+                  className="mt-5 flex items-center justify-center gap-1.5 rounded border border-[color:var(--accent)] px-3 py-2 text-center text-small font-medium text-[color:var(--accent)] transition-colors duration-fast hover:bg-[color:color-mix(in_srgb,var(--accent)_10%,transparent)]"
                 >
                   Open {section.kicker}
                   <ArrowRight className="h-4 w-4" aria-hidden />

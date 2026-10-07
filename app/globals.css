@@ -299,8 +299,10 @@
     @apply my-12 border-0 border-t border-rule;
   }
 
+  /* Long commands and paths break rather than run off a phone screen. */
   .doc :not(pre) > code {
     @apply font-mono text-[0.85em] px-1.5 py-0.5 rounded-sm bg-raised text-ink;
+    overflow-wrap: anywhere;
   }
 
   .doc table {
@@ -1050,14 +1052,11 @@ html.section-collapsed-security [data-section="security"] [data-section-body] {
 }
 
 /* A wide child would make the whole transcript scroll sideways, so tables get
-   their own scroller and long paths in code break rather than push. */
+   their own scroller. (Long code already breaks: see `.doc :not(pre) > code`.) */
 .script-body .doc table {
   display: block;
   max-width: 100%;
   overflow-x: auto;
-}
-.script-body .doc :not(pre) > code {
-  overflow-wrap: anywhere;
 }
 
 /* ---------------------------------------------------------------------------
@@ -1069,6 +1068,13 @@ html.section-collapsed-security [data-section="security"] [data-section-body] {
 .pg-page {
   height: calc(100vh - 3.5rem);
   min-height: 480px;
+}
+
+/* Stacked on phones: the page scrolls instead of squeezing three panes into one screen. */
+@media (max-width: 767px) {
+  .pg-page {
+    height: auto;
+  }
 }
 
 .pg-canvas .react-flow {
