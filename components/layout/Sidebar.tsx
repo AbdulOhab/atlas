@@ -23,6 +23,8 @@ interface SidebarProps {
   security: DocMeta[];
   interview: DocMeta[];
   ai: DocMeta[];
+  uidesign: DocMeta[];
+  craft: DocMeta[];
 }
 
 /** Ids match the `section-collapsed-*` rules in globals.css. */
@@ -110,6 +112,20 @@ const SECTIONS = [
     heading: "Modules",
     note: "",
     accent: "var(--ai)",
+  },
+  {
+    id: "uidesign",
+    track: "uidesign",
+    heading: "UI Design",
+    note: "",
+    accent: "var(--uidesign)",
+  },
+  {
+    id: "craft",
+    track: "craft",
+    heading: "Craft",
+    note: "",
+    accent: "var(--craft)",
   },
 ] as const satisfies readonly { id: string; track: Track; heading: string; note: string; accent: string }[];
 
@@ -239,7 +255,7 @@ function Section({ id, heading, note, accent, docs, expanded, onToggle, activeSl
   );
 }
 
-export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend, fde, languages, security, interview, ai }: SidebarProps) {
+export function Sidebar({ concepts, tech, designs, coding, learn, devops, backend, fde, languages, security, interview, ai, uidesign, craft }: SidebarProps) {
   const pathname = usePathname();
   const open = useUiStore((s) => s.sidebarOpen);
   const setOpen = useUiStore((s) => s.setSidebarOpen);
@@ -269,7 +285,11 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
                     ? pathname.slice("/interview/".length)
                     : pathname.startsWith("/ai/")
                       ? pathname.slice("/ai/".length)
-                      : "";
+                      : pathname.startsWith("/uidesign/")
+                        ? pathname.slice("/uidesign/".length)
+                        : pathname.startsWith("/craft/")
+                          ? pathname.slice("/craft/".length)
+                          : "";
 
   // Coding and learn no longer get their own sidebar section — they're pooled
   // and re-split by what each item actually is, so e.g. Hash Tables (coding)
@@ -291,6 +311,8 @@ export function Sidebar({ concepts, tech, designs, coding, learn, devops, backen
     security,
     interview,
     ai,
+    uidesign,
+    craft,
   };
   const close = () => setOpen(false);
 

@@ -33,6 +33,8 @@ const COLOR = {
   ai: "#e879f9",
   interview: "#38bdf8",
   security: "#818cf8",
+  uidesign: "#22d3ee",
+  craft: "#fde047",
 } as const;
 
 const ACCENT: Record<DocGroup, string> = {
@@ -48,6 +50,8 @@ const ACCENT: Record<DocGroup, string> = {
   ai: COLOR.ai,
   interview: COLOR.interview,
   security: COLOR.security,
+  uidesign: COLOR.uidesign,
+  craft: COLOR.craft,
 };
 
 const GROUP_LABEL: Record<DocGroup, string> = {
@@ -63,6 +67,8 @@ const GROUP_LABEL: Record<DocGroup, string> = {
   ai: "AI & LLMs",
   interview: "Interview Prep",
   security: "Security",
+  uidesign: "UI Design",
+  craft: "Clean Code & Interviews",
 };
 
 /**

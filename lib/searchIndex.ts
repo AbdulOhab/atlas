@@ -29,11 +29,13 @@ const TRACK_OF: Record<DocGroup, string> = {
   security: "security",
   interview: "algorithms",
   ai: "ai",
+  uidesign: "uidesign",
+  craft: "craft",
 };
 
 const headings = (content: string): [string, string][] => buildToc(content).map((e) => [e.text, e.id]);
 
-const HOSTS: HostTrack[] = ["devops", "backend", "fde", "languages", "security", "interview", "ai"];
+const HOSTS: HostTrack[] = ["devops", "backend", "fde", "languages", "security", "interview", "ai", "uidesign", "craft"];
 
 export function buildSearchIndex(): SearchEntry[] {
   const docs = getAllDocs();

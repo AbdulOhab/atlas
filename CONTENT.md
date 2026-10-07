@@ -22,6 +22,8 @@ license; credit the original authors when you reuse their material.
 | `content/devops/devops-tools.md` | DevOps | [tungbq/devops-basics](https://github.com/tungbq/devops-basics), 47 tool pages | Apache 2.0 |
 | `content/devops/kubernetes-the-hard-way.md` | DevOps | Study guide written for Atlas CE, linking [kelseyhightower/kubernetes-the-hard-way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (CC BY-NC-SA, not copied) | this repository's license |
 | `content/ai/` | AI & LLMs | [mlabonne/llm-course](https://github.com/mlabonne/llm-course), [microsoft/generative-ai-for-beginners](https://github.com/microsoft/generative-ai-for-beginners), [dair-ai/Prompt-Engineering-Guide](https://github.com/dair-ai/Prompt-Engineering-Guide), [huggingface/course](https://github.com/huggingface/course) | Apache 2.0, MIT, MIT, Apache 2.0 |
+| `content/uidesign/` | UI Design | Study guides written for Atlas CE, distilling *Refactoring UI* by Adam Wathan & Steve Schoger ([refactoringui.com](https://www.refactoringui.com), all rights reserved, not copied) | this repository's license |
+| `content/craft/` | Craft | Study guides written for Atlas CE, distilling *Clean Code* by Robert C. Martin ([cleancoder.com](https://cleancoder.com)) and *Cracking the Coding Interview* by Gayle Laakmann McDowell ([careercup.com](https://www.careercup.com/book)), all rights reserved, not copied | this repository's license |
 
 ## System Design Atlas
 
@@ -145,6 +147,38 @@ with the javascript.info chapter linked as further reading.
 Tailwind CSS, Qt and Spring Boot are written from scratch: Tailwind's docs
 aren't openly licensed, Qt's are GNU FDL (incompatible with CC BY-SA), and
 the Spring guides are CC BY-ND, which forbids adapted versions.
+
+## UI Design
+
+`content/uidesign/` is 9 modules (one per book chapter, 51 topics in all)
+distilling **Refactoring UI** by Adam Wathan and Steve Schoger:
+starting from scratch, hierarchy, layout and spacing, text, color, depth,
+images, finishing touches and practice habits.
+
+The book is commercial and all rights are reserved, so nothing is copied.
+Each module is a study guide written for Atlas CE — the ideas restated as
+frontend design norms with original CSS examples — and links to
+[refactoringui.com](https://www.refactoringui.com) so the book itself gets
+the credit and the sale.
+
+## Craft
+
+`content/craft/` is 17 modules (88 topics in all) from two commercial books,
+both distilled as study guides written for Atlas CE — the ideas restated in
+this site's own words with original examples, nothing copied:
+
+- **Clean Code** by Robert C. Martin ([cleancoder.com](https://cleancoder.com)):
+  11 modules following the book's chapters — what clean code is, meaningful
+  names, functions, comments, formatting, objects vs. data structures, error
+  handling and boundaries, unit tests, classes and systems, emergence and
+  refinement, and the smells-and-heuristics checklist.
+- **Cracking the Coding Interview** by Gayle Laakmann McDowell
+  ([careercup.com](https://www.careercup.com/book)): 6 modules following the
+  strategy sections — the interview process and what happens behind the
+  scenes, preparing before the interview, behavioral questions, Big O, the
+  technical-question method, and the per-chapter approach cheat sheets plus
+  offer and negotiation. The book's 189 question solutions are not reproduced;
+  the Algorithms track covers that ground.
 
 ## Waiting
 

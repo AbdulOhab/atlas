@@ -53,6 +53,10 @@
   --interview-soft: rgba(3, 105, 161, 0.1);
   --security: #4338ca;
   --security-soft: rgba(67, 56, 202, 0.1);
+  --uidesign: #0891b2;
+  --uidesign-soft: rgba(8, 145, 178, 0.1);
+  --craft: #a16207;
+  --craft-soft: rgba(161, 98, 7, 0.1);
 
   /* Status tones for HTTP method and status badges. */
   --tone-green: #1a7f4e;
@@ -120,6 +124,10 @@
   --interview-soft: rgba(56, 189, 248, 0.12);
   --security: #818cf8;
   --security-soft: rgba(129, 140, 248, 0.12);
+  --uidesign: #22d3ee;
+  --uidesign-soft: rgba(34, 211, 238, 0.12);
+  --craft: #fde047;
+  --craft-soft: rgba(253, 224, 71, 0.12);
 
   --tone-green: #5cc98f;
   --tone-green-soft: rgba(92, 201, 143, 0.1);
@@ -397,7 +405,9 @@ html.section-collapsed-fde [data-section="fde"] [data-section-body],
 html.section-collapsed-languages [data-section="languages"] [data-section-body],
 html.section-collapsed-ai [data-section="ai"] [data-section-body],
 html.section-collapsed-interview [data-section="interview"] [data-section-body],
-html.section-collapsed-security [data-section="security"] [data-section-body] {
+html.section-collapsed-security [data-section="security"] [data-section-body],
+html.section-collapsed-uidesign [data-section="uidesign"] [data-section-body],
+html.section-collapsed-craft [data-section="craft"] [data-section-body] {
   display: none;
 }
 

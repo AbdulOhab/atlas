@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Bot, Boxes, Braces, Network, Server, ShieldCheck, Sparkles, Terminal, type LucideIcon } from "lucide-react";
+import { ArrowRight, Bot, Boxes, Braces, Hammer, Network, Palette, Server, ShieldCheck, Sparkles, Terminal, type LucideIcon } from "lucide-react";
 import { getDocsByGroup, toMeta } from "@/lib/content";
 import { docHref } from "@/lib/utils";
 import type { DocMeta } from "@/lib/types";
@@ -32,6 +32,8 @@ export default function HomePage() {
   const languages = getDocsByGroup("languages").map(toMeta);
   const security = getDocsByGroup("security").map(toMeta);
   const ai = getDocsByGroup("ai").map(toMeta);
+  const uidesign = getDocsByGroup("uidesign").map(toMeta);
+  const craft = getDocsByGroup("craft").map(toMeta);
 
   const sections: Section[] = [
     {
@@ -122,6 +124,28 @@ export default function HomePage() {
       docs: fde,
       start: [...fde].sort(byOrder).slice(0, 4),
     },
+    {
+      id: "uidesign",
+      kicker: "UI Design",
+      title: "Frontend design norms, from Refactoring UI.",
+      body: "Visual hierarchy, layout and spacing, typography, color, depth, images and finishing touches — the rules that make an interface feel designed.",
+      href: "/uidesign",
+      accent: "var(--uidesign)",
+      icon: Palette,
+      docs: uidesign,
+      start: [...uidesign].sort(byOrder).slice(0, 4),
+    },
+    {
+      id: "craft",
+      kicker: "Craft",
+      title: "Clean code, and how to defend it in an interview.",
+      body: "Names, functions, comments, tests and smells from Clean Code, then the interview process, behavioral prep, Big O and the technical-question method from Cracking the Coding Interview.",
+      href: "/craft",
+      accent: "var(--craft)",
+      icon: Hammer,
+      docs: craft,
+      start: [...craft].sort(byOrder).slice(0, 4),
+    },
   ];
 
   return (
@@ -134,7 +158,7 @@ export default function HomePage() {
             Everything a software engineer studies, in one place.
           </h1>
           <p className="mt-4 text-lead text-inkMuted">
-            Algorithms, languages, backend, system design, DevOps, security, AI and forward deployed engineering: eight tracks in the order you’d learn them, each readable on its own. Pick one to start.
+            Algorithms, languages, backend, system design, DevOps, security, AI, forward deployed engineering, UI design and craft: ten tracks in the order you’d learn them, each readable on its own. Pick one to start.
           </p>
         </header>
 

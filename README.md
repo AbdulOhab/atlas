@@ -6,7 +6,7 @@ security and AI, in one place with one sidebar, one search and one way of readin
 
 Atlas CE ("community edition") started as
 [System Design Atlas](https://github.com/mertkahyaoglu/atlas) by Mert Kahyaoğlu
-and grows it into eight tracks. Most of the new material is adapted from openly
+and grows it into ten tracks. Most of the new material is adapted from openly
 licensed documentation and courses, and every page says where it came from; see
 [CONTENT.md](CONTENT.md) for each source and its license.
 
@@ -20,6 +20,8 @@ licensed documentation and courses, and every page says where it came from; see
 | Security | `/security` | The OWASP Cheat Sheet Series in 11 modules: injection, XSS, auth, access control, APIs, cryptography, cloud, AI |
 | AI & LLMs | `/ai` | LLM fundamentals, the scientist path (pre-training, fine-tuning, alignment) and the engineer path (RAG, agents, deployment) |
 | Forward Deployed Engineering | `/fde` | Agentic engineering, building a Claude Code-style agent from scratch, agentic system design and platform engineering |
+| UI Design | `/uidesign` | Frontend design norms distilled from Refactoring UI: hierarchy, spacing, typography, color, depth, images, finishing touches |
+| Craft | `/craft` | Clean Code's rules for names, functions, tests and smells, plus Cracking the Coding Interview's process, behavioral prep and technical-question method |
 
 What reading looks like:
 

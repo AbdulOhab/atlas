@@ -20,7 +20,7 @@ const WORDS_PER_MINUTE = 200;
 const MERGE_BELOW_WORDS = 250;
 
 /** Tracks whose modules are lists of topics, one page per `##` topic. */
-const TOPIC_TRACKS = new Set<DocGroup>(["languages", "security", "interview", "ai"]);
+const TOPIC_TRACKS = new Set<DocGroup>(["languages", "security", "interview", "ai", "uidesign", "craft"]);
 
 export interface DocPart extends DocPartMeta {
   content: string;

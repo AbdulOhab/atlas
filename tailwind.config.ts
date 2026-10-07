@@ -34,6 +34,8 @@ const config: Config = {
         ai: "var(--ai)",
         interview: "var(--interview)",
         security: "var(--security)",
+        uidesign: "var(--uidesign)",
+        craft: "var(--craft)",
         conceptSoft: "var(--concept-soft)",
         designSoft: "var(--design-soft)",
         techSoft: "var(--tech-soft)",
@@ -46,6 +48,8 @@ const config: Config = {
         aiSoft: "var(--ai-soft)",
         interviewSoft: "var(--interview-soft)",
         securitySoft: "var(--security-soft)",
+        uidesignSoft: "var(--uidesign-soft)",
+        craftSoft: "var(--craft-soft)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],

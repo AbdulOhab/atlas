@@ -40,6 +40,8 @@ const GROUP_DIR: Record<DocGroup, string> = {
   ai: "ai",
   interview: "interview",
   security: "security",
+  uidesign: "uidesign",
+  craft: "craft",
 };
 
 /**
@@ -47,7 +49,7 @@ const GROUP_DIR: Record<DocGroup, string> = {
  * Coding, learn, devops, backend, fde and languages sit last because they are separate tracks with
  * their own routes, not steps in the system design sequence.
  */
-const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops", "backend", "fde", "languages", "security", "interview", "ai"];
+const GROUP_ORDER: DocGroup[] = ["concept", "tech", "design", "coding", "learn", "devops", "backend", "fde", "languages", "security", "interview", "ai", "uidesign", "craft"];
 
 const WORDS_PER_MINUTE = 200;
 
@@ -473,7 +475,7 @@ export function getDocsByGroup(group: DocGroup): Doc[] {
  */
 const inTrack = (doc: DocMeta, track: ContentTrack) =>
   track === "sysdesign"
-    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops" && doc.group !== "backend" && doc.group !== "fde" && doc.group !== "languages" && doc.group !== "ai" && doc.group !== "interview" && doc.group !== "security"
+    ? doc.group !== "coding" && doc.group !== "learn" && doc.group !== "devops" && doc.group !== "backend" && doc.group !== "fde" && doc.group !== "languages" && doc.group !== "ai" && doc.group !== "interview" && doc.group !== "security" && doc.group !== "uidesign" && doc.group !== "craft"
     : doc.group === track;
 
 export function getDocsInTrack(track: ContentTrack): Doc[] {

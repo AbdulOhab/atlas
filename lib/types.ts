@@ -1,4 +1,4 @@
-export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn" | "devops" | "backend" | "fde" | "languages" | "security" | "interview" | "ai";
+export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn" | "devops" | "backend" | "fde" | "languages" | "security" | "interview" | "ai" | "uidesign" | "craft";
 
 /**
  * The halves of the atlas the switcher offers. Coding and learn share one
@@ -8,13 +8,13 @@ export type DocGroup = "concept" | "design" | "tech" | "coding" | "learn" | "dev
  * own route, /devops, so is Backend, /backend, and Forward
  * Deployed Engineering, /fde, and Languages, /languages.
  */
-export type Track = "sysdesign" | "algorithms" | "devops" | "backend" | "fde" | "languages" | "security" | "ai";
+export type Track = "sysdesign" | "algorithms" | "devops" | "backend" | "fde" | "languages" | "security" | "ai" | "uidesign" | "craft";
 
 /**
  * Scope for content lookups: finer-grained than `Track` so a slug that exists
  * in both /coding and /learn (or /devops) can never resolve to the wrong page.
  */
-export type ContentTrack = "sysdesign" | "coding" | "learn" | "devops" | "backend" | "fde" | "languages" | "security" | "interview" | "ai";
+export type ContentTrack = "sysdesign" | "coding" | "learn" | "devops" | "backend" | "fde" | "languages" | "security" | "interview" | "ai" | "uidesign" | "craft";
 
 /** Facets used by the filter bar. Kept as a union so new facets fail loudly. */
 export type TagKind = "concept" | "tech" | "pattern";

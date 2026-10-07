@@ -36,6 +36,8 @@ export function docHref(doc: Pick<DocMeta, "group" | "slug">) {
   if (doc.group === "ai") return `/ai/${doc.slug}`;
   if (doc.group === "interview") return `/interview/${doc.slug}`;
   if (doc.group === "security") return `/security/${doc.slug}`;
+  if (doc.group === "uidesign") return `/uidesign/${doc.slug}`;
+  if (doc.group === "craft") return `/craft/${doc.slug}`;
   return `/docs/${doc.slug}`;
 }
 
@@ -50,5 +52,7 @@ export function trackOf(pathname: string): Track {
   if (pathname === "/ai" || pathname.startsWith("/ai/")) return "ai";
   if (pathname === "/interview" || pathname.startsWith("/interview/")) return "algorithms";
   if (pathname === "/security" || pathname.startsWith("/security/")) return "security";
+  if (pathname === "/uidesign" || pathname.startsWith("/uidesign/")) return "uidesign";
+  if (pathname === "/craft" || pathname.startsWith("/craft/")) return "craft";
   return "sysdesign";
 }

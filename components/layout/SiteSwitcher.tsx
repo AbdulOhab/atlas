@@ -64,6 +64,20 @@ const TRACKS: { id: Track; label: string; blurb: string; href: string; accent: s
     href: "/fde",
     accent: "var(--fde)",
   },
+  {
+    id: "uidesign",
+    label: "ui design",
+    blurb: "Frontend design norms from Refactoring UI: hierarchy, spacing, typography, color, depth and finishing touches",
+    href: "/uidesign",
+    accent: "var(--uidesign)",
+  },
+  {
+    id: "craft",
+    label: "craft",
+    blurb: "Clean Code and Cracking the Coding Interview: names, functions, tests and smells, plus the interview process, behavioral prep and the technical-question method",
+    href: "/craft",
+    accent: "var(--craft)",
+  },
 ];
 
 /** The sidebar logo doubles as the switch between the two halves of the atlas. */
